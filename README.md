@@ -1,4 +1,4 @@
-# CPCB Data Pipeline & PostGIS Schema — Person 2, Task 1
+﻿# CPCB Data Pipeline & PostGIS Schema — Person 2, Task 1
 
 > **Air Quality Attribution Engine** — Phase 1: Data ingestion foundation that produces the `trigger_station` block of the immutable JSON data contract.
 
@@ -112,3 +112,4 @@ DATABASE_URL="sqlite:///:memory:" python scripts/run_demo.py --dry-run
 # Run live ingestion
 python scripts/run_demo.py
 ```
+
