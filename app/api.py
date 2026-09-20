@@ -1,4 +1,4 @@
-﻿"""FastAPI application — full attribution pipeline endpoint (Prompt 2D).
+"""FastAPI application — full attribution pipeline endpoint (Prompt 2D).
 
 Wires together all components (Task 1 + 2A–2D) into a single API that produces
 the complete data-contract JSON response.
@@ -379,6 +379,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from .ai_router import router as ai_router
+app.include_router(ai_router)
 
 
 # --------------------------------------------------------------------------- #

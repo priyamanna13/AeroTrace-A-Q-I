@@ -1,4 +1,4 @@
-﻿/**
+/**
  * AeroTrace A-Q-I — Centralized API Client
  * Fixed: BASE_URL corrected to port 8000 (FastAPI/Uvicorn).
  * Added: getAllWindCones(), getAttributionLive(), graceful error handling on every method.
@@ -81,6 +81,33 @@ export const API = {
     return apiFetch(
       `/api/v1/replay/${encodeURIComponent(stationName)}?timestamp=${encodeURIComponent(timestamp)}`
     );
+  },
+
+  /** GET /api/v1/ai/status — check active AI service status */
+  async getAIStatus() {
+    return apiFetch('/api/v1/ai/status');
+  },
+
+  /** POST /api/v1/ai/insight — generate grounded screen insight */
+  async getAIInsight(context) {
+    return apiFetch('/api/v1/ai/insight', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ context }),
+    });
+  },
+
+  /** POST /api/v1/ai/chat — interactive grounded chat query */
+  async sendAIChat(message, context, conversationHistory = []) {
+    return apiFetch('/api/v1/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        context,
+        conversation_history: conversationHistory,
+      }),
+    });
   },
 };
 
