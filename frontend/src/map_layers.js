@@ -1,5 +1,5 @@
-/**
- * AeroTrace AI ΓÇö Map Layer Renderer Module
+﻿/**
+ * AeroTrace A-Q-I ΓÇö Map Layer Renderer Module
  * ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
  * Modular Leaflet rendering engine for 3 core forensic layers:
  *   1. Station Grid Layer (monitoring stations with AQI-aware pulse)
@@ -466,3 +466,4 @@ export const MapRenderer = {
 };
 
 export default MapRenderer;
+

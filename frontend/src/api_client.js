@@ -1,5 +1,5 @@
-/**
- * AeroTrace AI — Centralized API Client
+﻿/**
+ * AeroTrace A-Q-I — Centralized API Client
  * Fixed: BASE_URL corrected to port 8000 (FastAPI/Uvicorn).
  * Added: getAllWindCones(), getAttributionLive(), graceful error handling on every method.
  */
@@ -83,3 +83,4 @@ export const API = {
     );
   },
 };
+

@@ -1,5 +1,5 @@
-/**
- * AeroTrace AI — Real-time WebSocket Client
+﻿/**
+ * AeroTrace A-Q-I — Real-time WebSocket Client
  * Fixed: URL corrected to port 8000 (FastAPI/Uvicorn).
  * The WS only handles SPIKE_ALERT toast notifications;
  * main dashboard data comes from REST API calls, not WS.
@@ -83,3 +83,4 @@ export class WebSocketClient {
     }
   }
 }
+
