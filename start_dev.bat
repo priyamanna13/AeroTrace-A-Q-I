@@ -1,8 +1,8 @@
-@echo off
+﻿@echo off
 cd /d "%~dp0"
-title Air Quality Intelligence Setup
+title AeroTrace A-Q-I Setup
 echo ===================================================
-echo Starting Air Quality Intelligence Platform (Task 1 & 2)
+echo Starting AeroTrace A-Q-I Platform (Task 1 & 2)
 echo ===================================================
 echo.
 
@@ -31,3 +31,4 @@ echo - Look at the 'Ngrok Tunnel' window to find your 'Forwarding' URL.
 echo - Give that URL to your team!
 echo ===================================================
 pause
+
