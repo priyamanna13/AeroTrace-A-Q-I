@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { API } from '../../api_client';
-import { globalVoice } from '../../utils/voice';
+import { voiceService } from '../../services/voiceService';
 
 /**
  * AiInsightCard — Contextual AI Environmental Intelligence Summary Card
- * (Anish — Intelligence Subsystem)
+ * (Anish — Intelligence Subsystem | AeroTrace NGEC 2026)
+ * 
+ * Implements P1 Contextual Voice integration with 5-state lifecycle:
+ *   - 'idle': Speaker icon 🔊 (Listen)
+ *   - 'loading': Buffering / spinner icon ⏳ (Loading...)
+ *   - 'playing': Active animated stop icon ⏹ (Stop)
+ *   - 'stopped': Resets to 'idle'
+ *   - 'failed': Warning icon ⚠️ with inline "Retry" button (Text remains 100% visible)
  * 
  * Props:
  *   - context: AIContext object (city, station, pollutant, screen_id, provenance, etc.)
@@ -14,15 +21,23 @@ export default function AiInsightCard({ context, onAskAeroTrace }) {
   const [insight, setInsight] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceState, setVoiceState] = useState('idle');
+  const [voiceError, setVoiceError] = useState(null);
 
+  // Subscribe to voiceService state changes
   useEffect(() => {
-    globalVoice.onStateChange = (state) => setIsSpeaking(state);
+    const unsubscribe = voiceService.subscribe((state, err) => {
+      setVoiceState(state);
+      setVoiceError(err ? (err.message || 'Voice playback failed') : null);
+    });
+
     return () => {
-      globalVoice.stop();
+      voiceService.stop();
+      unsubscribe();
     };
   }, []);
 
+  // Fetch contextual insight on context change
   useEffect(() => {
     if (!context) return;
     setLoading(true);
@@ -48,14 +63,18 @@ export default function AiInsightCard({ context, onAskAeroTrace }) {
   ]);
 
   const handleToggleVoice = () => {
-    if (isSpeaking) {
-      globalVoice.stop();
+    if (voiceState === 'playing' || voiceState === 'loading') {
+      voiceService.stop();
+    } else if (voiceState === 'failed') {
+      voiceService.retry();
     } else if (insight?.response_text) {
-      globalVoice.speak(insight.response_text, context?.language || 'en');
+      voiceService.speak(insight.response_text, {
+        lang: context?.language || 'en',
+      });
     }
   };
 
-  // Helper for provenance styling
+  // Helper for provenance badge styling
   const getProvenanceBadge = () => {
     const prov = insight?.provenance || context?.provenance;
     if (context?.is_simulated || prov === 'simulation') {
@@ -90,7 +109,52 @@ export default function AiInsightCard({ context, onAskAeroTrace }) {
     };
   };
 
+  // Localized text helpers for voice controls
+  const getVoiceButtonContent = () => {
+    const lang = context?.language || 'en';
+
+    if (voiceState === 'loading') {
+      return {
+        icon: '⏳',
+        label: lang === 'hi' ? 'लोड हो रहा है...' : lang === 'mr' ? 'लोड होत आहे...' : 'Loading...',
+        color: '#f59e0b',
+        bg: 'rgba(245, 158, 11, 0.12)',
+        border: 'rgba(245, 158, 11, 0.3)',
+      };
+    }
+
+    if (voiceState === 'playing') {
+      return {
+        icon: '⏹',
+        label: lang === 'hi' ? 'रोकें' : lang === 'mr' ? 'थांबवा' : 'Stop',
+        color: '#f87171',
+        bg: 'rgba(239, 68, 68, 0.18)',
+        border: 'rgba(239, 68, 68, 0.4)',
+      };
+    }
+
+    if (voiceState === 'failed') {
+      return {
+        icon: '🔄',
+        label: lang === 'hi' ? 'पुनः प्रयास' : lang === 'mr' ? 'पुन्हा प्रयत्न' : 'Retry',
+        color: '#fb923c',
+        bg: 'rgba(251, 146, 60, 0.15)',
+        border: 'rgba(251, 146, 60, 0.35)',
+      };
+    }
+
+    // Default 'idle' / 'stopped'
+    return {
+      icon: '🔊',
+      label: lang === 'hi' ? 'सुनें' : lang === 'mr' ? 'ऐका' : 'Listen',
+      color: '#cbd5e1',
+      bg: 'rgba(255, 255, 255, 0.06)',
+      border: 'rgba(255, 255, 255, 0.12)',
+    };
+  };
+
   const badge = getProvenanceBadge();
+  const voiceBtn = getVoiceButtonContent();
 
   return (
     <div
@@ -169,32 +233,46 @@ export default function AiInsightCard({ context, onAskAeroTrace }) {
           </span>
         </div>
 
-        {/* Voice Trigger Button */}
-        <button
-          onClick={handleToggleVoice}
-          disabled={loading || !insight?.response_text}
-          style={{
-            background: isSpeaking ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.06)',
-            border: `1px solid ${isSpeaking ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.12)'}`,
-            borderRadius: '8px',
-            color: isSpeaking ? '#f87171' : '#cbd5e1',
-            padding: '4px 10px',
-            fontSize: '11px',
-            fontWeight: 600,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.2s ease',
-          }}
-        >
-          <span>{isSpeaking ? '⏹' : '🔊'}</span>
-          <span>
-            {isSpeaking
-              ? (context?.language === 'hi' ? 'रोकें' : context?.language === 'mr' ? 'थांबवा' : 'Stop')
-              : (context?.language === 'hi' ? 'सुनें' : context?.language === 'mr' ? 'ऐका' : 'Listen')}
-          </span>
-        </button>
+        {/* Voice Trigger / State Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {voiceState === 'failed' && (
+            <span
+              style={{
+                fontSize: '10px',
+                color: '#f87171',
+                fontFamily: 'monospace',
+              }}
+              title={voiceError || 'Voice synthesis error'}
+            >
+              ⚠️ Voice unavailable
+            </span>
+          )}
+
+          <button
+            onClick={handleToggleVoice}
+            disabled={loading || !insight?.response_text}
+            style={{
+              background: voiceBtn.bg,
+              border: `1px solid ${voiceBtn.border}`,
+              borderRadius: '8px',
+              color: voiceBtn.color,
+              padding: '4px 10px',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s ease',
+              outline: 'none',
+              boxShadow: voiceState === 'playing' ? '0 0 10px rgba(239, 68, 68, 0.3)' : 'none',
+            }}
+            title={voiceState === 'failed' ? (voiceError || 'Click to retry audio') : undefined}
+          >
+            <span>{voiceBtn.icon}</span>
+            <span>{voiceBtn.label}</span>
+          </button>
+        </div>
       </div>
 
       {/* Body Content */}
