@@ -1,4 +1,4 @@
-"""FastAPI application — full attribution pipeline endpoint (Prompt 2D).
+﻿"""FastAPI application — full attribution pipeline endpoint (Prompt 2D).
 
 Wires together all components (Task 1 + 2A–2D) into a single API that produces
 the complete data-contract JSON response.
@@ -285,7 +285,7 @@ def _fetch_real_aqi(station_name: str) -> tuple[int | None, str | None, dict | N
 
     # ── Source 3: WAQI climatology third-level fallback ─────────────────────────
     uid = _WAQI_STATION_UIDS.get(station_name)
-    waqi_token = _os.getenv("WAQI_TOKEN", "40014a89b088dc86c3a3c61551241981bd32f715")
+    waqi_token = _os.getenv("WAQI_TOKEN", "")
     if uid and waqi_token:
         waqi_url = f"https://api.waqi.info/feed/@{uid}/?token={waqi_token}"
         try:
@@ -1169,3 +1169,4 @@ async def trigger_spike(
     await manager.broadcast(ws_payload)
 
     return res
+
