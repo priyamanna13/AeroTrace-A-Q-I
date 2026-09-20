@@ -1,4 +1,4 @@
-"""Pytest config: force an in-memory SQLite DB and rebuild the schema per test.
+﻿"""Pytest config: force an in-memory SQLite DB and rebuild the schema per test.
 
 Tests run entirely without PostGIS so they execute anywhere. The production
 Geometry path is exercised separately via docker-compose (see README).
@@ -12,6 +12,21 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 import pytest
 
+@pytest.fixture(autouse=True)
+def mock_network_calls(monkeypatch):
+    """Mock external network calls to prevent hangs."""
+    import requests
+    
+    class MockResponse:
+        def __init__(self, *args, **kwargs):
+            self.status_code = 200
+        def json(self):
+            return {"elements": []}
+        def raise_for_status(self):
+            pass
+            
+    monkeypatch.setattr(requests, "post", lambda *args, **kwargs: MockResponse())
+    monkeypatch.setattr(requests, "get", lambda *args, **kwargs: MockResponse())
 
 @pytest.fixture()
 def fresh_db(monkeypatch):
