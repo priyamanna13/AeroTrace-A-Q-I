@@ -107,3 +107,55 @@ class TestStations:
         r = client.get("/api/v1/stations")
         data = r.json()
         assert len(data["stations"]) > 0
+
+
+# --------------------------------------------------------------------------- #
+# Multi-City Endpoints (Phase 1 Contracts)
+# --------------------------------------------------------------------------- #
+class TestCities:
+    def test_list_cities_returns_200(self):
+        r = client.get("/api/v1/cities")
+        assert r.status_code == 200
+        cities = r.json()
+        assert len(cities) == 7
+        city_names = {c["name"] for c in cities}
+        assert "Pune" in city_names
+        assert "Delhi" in city_names
+        for c in cities:
+            assert "current_aqi" in c
+            assert "aqi_category" in c
+            assert "station_count" in c
+            assert "data_source" in c
+            assert "data_timestamp" in c
+            assert "is_stale" in c
+
+    def test_city_overview_returns_200(self):
+        r = client.get("/api/v1/cities/pune/overview")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["city"] == "Pune"
+        assert data["station_count"] == 4
+        assert "current_aqi" in data
+        assert "pm25" in data
+        assert "pm10" in data
+        assert "data_source" in data
+
+    def test_city_stations_returns_verified_physical_only(self):
+        for city in ["pune", "mumbai", "delhi", "bengaluru", "kolkata", "hyderabad", "chennai"]:
+            r = client.get(f"/api/v1/cities/{city}/stations")
+            assert r.status_code == 200
+            stations = r.json()
+            assert len(stations) == 4
+            for s in stations:
+                assert "station_id" in s
+                assert "name" in s
+                assert "network" in s
+                assert s["network"].endswith("_CAAQMS")
+                assert "coordinates" in s
+                assert len(s["coordinates"]) == 2
+                assert "pollutants" in s
+
+    def test_city_overview_not_found(self):
+        r = client.get("/api/v1/cities/atlantis/overview")
+        assert r.status_code == 404
+
