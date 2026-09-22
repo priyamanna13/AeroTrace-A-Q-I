@@ -1,0 +1,60 @@
+# city_configs/mumbai.yml — Mumbai, Maharashtra
+city:
+  name: "Mumbai"
+  state: "Maharashtra"
+  country: "IN"
+  timezone: "Asia/Kolkata"
+  center:
+    lat: 19.0760
+    lon: 72.8777
+  bbox:
+    south: 18.89
+    west: 72.77
+    north: 19.28
+    east: 73.01
+  utm_srid: 32643  # UTM Zone 43N
+
+stations:
+  - name: "Bandra"
+    cpcb_station_id: "site_5103"
+    lat: 19.0657
+    lon: 72.8687
+    network: "CPCB_CAAQMS"
+    elevation_m: 10
+
+  - name: "Colaba"
+    cpcb_station_id: "site_5104"
+    lat: 18.9067
+    lon: 72.8147
+    network: "CPCB_CAAQMS"
+    elevation_m: 12
+
+  - name: "Worli"
+    cpcb_station_id: "site_5105"
+    lat: 19.0178
+    lon: 72.8183
+    network: "CPCB_CAAQMS"
+    elevation_m: 14
+
+  - name: "Kurla"
+    cpcb_station_id: "site_5106"
+    lat: 19.0726
+    lon: 72.8845
+    network: "CPCB_CAAQMS"
+    elevation_m: 8
+
+polling:
+  cpcb_interval_minutes: 15
+  owm_interval_minutes: 10
+  overpass_refresh_hours: 6
+
+thresholds:
+  spike_aqi: 150
+  spike_exceedance: 1.5
+  rate_of_change_delta: 50
+  rate_of_change_window_seconds: 3600
+
+search:
+  max_radius_m: 5000
+  min_radius_m: 1500
+  wind_speed_radius_scale: 40

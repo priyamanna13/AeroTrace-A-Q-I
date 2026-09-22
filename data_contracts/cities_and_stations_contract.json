@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_name": "AeroTrace NGEC 2026 - Phase 1 Cities and Physical Stations Contract",
+  "version": "1.1.0",
+  "last_updated": "2026-09-21T12:55:00+05:30",
+  "owners": {
+    "provider": "Adarsh (Backend / Data)",
+    "consumers": ["Priya (Frontend / Maps)", "Anish (AI / Analytics)"]
+  },
+  "endpoints": {
+    "GET /api/v1/cities": {
+      "description": "Screen 1 (India Overview) entry contract. Returns all 7 target cities with aggregate AQI, centroid coordinates, and provider transparency metadata.",
+      "sample_response": [
+        {
+          "name": "Pune",
+          "state": "Maharashtra",
+          "coordinates": [73.8567, 18.5204],
+          "current_aqi": 182.5,
+          "aqi_category": "Moderate",
+          "dominant_pollutant": "PM2.5",
+          "station_count": 4,
+          "data_source": "CPCB_CAAQMS",
+          "data_timestamp": "2026-09-21T12:30:00+05:30",
+          "last_polled_at": "2026-09-21T12:50:30+05:30",
+          "is_stale": false,
+          "is_simulated": false
+        },
+        {
+          "name": "Mumbai",
+          "state": "Maharashtra",
+          "coordinates": [72.8777, 19.076],
+          "current_aqi": 145.0,
+          "aqi_category": "Moderate",
+          "dominant_pollutant": "PM10",
+          "station_count": 4,
+          "data_source": "CPCB_CAAQMS",
+          "data_timestamp": "2026-09-21T12:30:00+05:30",
+          "last_polled_at": "2026-09-21T12:50:30+05:30",
+          "is_stale": false,
+          "is_simulated": false
+        },
+        {
+          "name": "Delhi",
+          "state": "Delhi",
+          "coordinates": [77.209, 28.6139],
+          "current_aqi": 278.0,
+          "aqi_category": "Poor",
+          "dominant_pollutant": "PM2.5",
+          "station_count": 4,
+          "data_source": "CPCB_CAAQMS",
+          "data_timestamp": "2026-09-21T12:30:00+05:30",
+          "last_polled_at": "2026-09-21T12:50:30+05:30",
+          "is_stale": false,
+          "is_simulated": false
+        },
+        {
+          "name": "Bengaluru",
+          "state": "Karnataka",
+          "coordinates": [77.5946, 12.9716],
+          "current_aqi": 68.0,
+          "aqi_category": "Satisfactory",
+          "dominant_pollutant": "O3",
+          "station_count": 4,
+          "data_source": "CPCB_CAAQMS",
+          "data_timestamp": "2026-09-21T12:30:00+05:30",
+          "last_polled_at": "2026-09-21T12:50:30+05:30",
+          "is_stale": false,
+          "is_simulated": false
+        },
+        {
+          "name": "Kolkata",
+          "state": "West Bengal",
+          "coordinates": [88.3639, 22.5726],
+          "current_aqi": 162.0,
+          "aqi_category": "Moderate",
+          "dominant_pollutant": "PM2.5",
+          "station_count": 4,
+          "data_source": "CPCB_CAAQMS",
+          "data_timestamp": "2026-09-21T12:30:00+05:30",
+          "last_polled_at": "2026-09-21T12:50:30+05:30",
+          "is_stale": false,
+          "is_simulated": false
+        },
+        {
+          "name": "Hyderabad",
+          "state": "Telangana",
+          "coordinates": [78.4867, 17.385],
+          "current_aqi": 112.0,
+          "aqi_category": "Moderate",
+          "dominant_pollutant": "NO2",
+          "station_count": 4,
+          "data_source": "CPCB_CAAQMS",
+          "data_timestamp": "2026-09-21T12:30:00+05:30",
+          "last_polled_at": "2026-09-21T12:50:30+05:30",
+          "is_stale": false,
+          "is_simulated": false
+        },
+        {
+          "name": "Chennai",
+          "state": "Tamil Nadu",
+          "coordinates": [80.2707, 13.0827],
+          "current_aqi": 85.0,
+          "aqi_category": "Satisfactory",
+          "dominant_pollutant": "PM10",
+          "station_count": 4,
+          "data_source": "CPCB_CAAQMS",
+          "data_timestamp": "2026-09-21T12:30:00+05:30",
+          "last_polled_at": "2026-09-21T12:50:30+05:30",
+          "is_stale": false,
+          "is_simulated": false
+        }
+      ]
+    },
+    "GET /api/v1/cities/{city_name}/overview": {
+      "description": "Screen 2 (City Intelligence) header contract. Aggregates current city readings and exposes provider timestamps.",
+      "sample_response": {
+        "city": "Mumbai",
+        "state": "Maharashtra",
+        "center": [72.8777, 19.076],
+        "station_count": 4,
+        "current_aqi": 145.0,
+        "aqi_category": "Moderate",
+        "dominant_pollutant": "PM10",
+        "pm25": 54.2,
+        "pm10": 128.6,
+        "data_source": "CPCB_CAAQMS",
+        "data_timestamp": "2026-09-21T12:30:00+05:30",
+        "last_polled_at": "2026-09-21T12:50:30+05:30",
+        "is_stale": false,
+        "is_simulated": false
+      }
+    },
+    "GET /api/v1/cities/{city_name}/stations": {
+      "description": "Screen 2 (City Intelligence) map pins contract. RETURNS ONLY VERIFIED PHYSICAL MONITORING STATIONS (CPCB CAAQMS). No model grid points or centroids.",
+      "sample_response": [
+        {
+          "station_id": "site_5103",
+          "name": "Bandra",
+          "network": "CPCB_CAAQMS",
+          "city": "Mumbai",
+          "state": "Maharashtra",
+          "coordinates": [72.8687, 19.0657],
+          "elevation_m": 10,
+          "current_aqi": 165.0,
+          "aqi_category": "Moderate",
+          "dominant_pollutant": "PM2.5",
+          "pollutants": {
+            "pm25": 65.4,
+            "pm10": 134.0,
+            "no2": 42.1,
+            "so2": 18.5,
+            "co": 1.2,
+            "o3": 38.0
+          },
+          "data_source": "CPCB_CAAQMS",
+          "data_timestamp": "2026-09-21T12:30:00+05:30",
+          "last_polled_at": "2026-09-21T12:50:30+05:30",
+          "is_stale": false,
+          "is_simulated": false
+        },
+        {
+          "station_id": "site_5104",
+          "name": "Colaba",
+          "network": "CPCB_CAAQMS",
+          "city": "Mumbai",
+          "state": "Maharashtra",
+          "coordinates": [72.8147, 18.9067],
+          "elevation_m": 12,
+          "current_aqi": 115.0,
+          "aqi_category": "Moderate",
+          "dominant_pollutant": "PM10",
+          "pollutants": {
+            "pm25": 41.0,
+            "pm10": 102.5,
+            "no2": 28.0,
+            "so2": 14.2,
+            "co": 0.9,
+            "o3": 44.0
+          },
+          "data_source": "CPCB_CAAQMS",
+          "data_timestamp": "2026-09-21T12:30:00+05:30",
+          "last_polled_at": "2026-09-21T12:50:30+05:30",
+          "is_stale": false,
+          "is_simulated": false
+        },
+        {
+          "station_id": "site_5105",
+          "name": "Worli",
+          "network": "CPCB_CAAQMS",
+          "city": "Mumbai",
+          "state": "Maharashtra",
+          "coordinates": [72.8183, 19.0178],
+          "elevation_m": 14,
+          "current_aqi": 138.0,
+          "aqi_category": "Moderate",
+          "dominant_pollutant": "PM2.5",
+          "pollutants": {
+            "pm25": 52.0,
+            "pm10": 118.0,
+            "no2": 35.5,
+            "so2": 16.0,
+            "co": 1.1,
+            "o3": 36.5
+          },
+          "data_source": "CPCB_CAAQMS",
+          "data_timestamp": "2026-09-21T12:30:00+05:30",
+          "last_polled_at": "2026-09-21T12:50:30+05:30",
+          "is_stale": false,
+          "is_simulated": false
+        },
+        {
+          "station_id": "site_5106",
+          "name": "Kurla",
+          "network": "CPCB_CAAQMS",
+          "city": "Mumbai",
+          "state": "Maharashtra",
+          "coordinates": [72.8845, 19.0726],
+          "elevation_m": 8,
+          "current_aqi": 162.0,
+          "aqi_category": "Moderate",
+          "dominant_pollutant": "PM10",
+          "pollutants": {
+            "pm25": 61.5,
+            "pm10": 142.0,
+            "no2": 48.0,
+            "so2": 19.8,
+            "co": 1.4,
+            "o3": 31.0
+          },
+          "data_source": "CPCB_CAAQMS",
+          "data_timestamp": "2026-09-21T12:30:00+05:30",
+          "last_polled_at": "2026-09-21T12:50:30+05:30",
+          "is_stale": false,
+          "is_simulated": false
+        }
+      ]
+    }
+  }
+}

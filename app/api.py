@@ -285,7 +285,7 @@ def _fetch_real_aqi(station_name: str) -> tuple[int | None, str | None, dict | N
 
     # ── Source 3: WAQI climatology third-level fallback ─────────────────────────
     uid = _WAQI_STATION_UIDS.get(station_name)
-    waqi_token = _os.getenv("WAQI_TOKEN", "")
+    waqi_token = _os.getenv("WAQI_TOKEN") or _os.getenv("WAQI_API_KEY", "")
     if uid and waqi_token:
         waqi_url = f"https://api.waqi.info/feed/@{uid}/?token={waqi_token}"
         try:
@@ -385,11 +385,112 @@ app.include_router(ai_router)
 
 
 # --------------------------------------------------------------------------- #
-# Health
+# Health & Observability
 # --------------------------------------------------------------------------- #
-@app.get("/health")
+@app.get("/health", tags=["Meta"])
 def health():
-    return {"status": "ok", "version": "3.1.0"}
+    """Observability & health endpoint for AeroTrace NGEC 2026."""
+    from .cities import list_available_cities
+    cities = list_available_cities()
+
+    db_connected = False
+    has_postgis = False
+    db_error_msg = None
+
+    try:
+        from .db import get_session
+        from sqlalchemy import text
+        with get_session() as session:
+            session.execute(text("SELECT 1"))
+            db_connected = True
+            try:
+                has_postgis = bool(session.execute(
+                    text("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname='postgis')")
+                ).scalar())
+            except Exception:
+                has_postgis = False
+    except Exception as exc:
+        db_error_msg = str(exc)
+
+    return {
+        "status": "ok",
+        "service": "AeroTrace Environmental Intelligence API",
+        "version": "3.1.0",
+        "pipeline_version": "3.1.0",
+        "database": {
+            "connected": db_connected,
+            "postgis_enabled": has_postgis,
+            "error": db_error_msg,
+        },
+        "multi_city": {
+            "configured_count": len(cities),
+            "cities": cities,
+        },
+        "cadence": {
+            "application_refresh_seconds": 30,
+            "staleness_threshold_minutes": 60,
+        },
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Multi-City & Verified Physical Station Endpoints (Phase 1 Contracts)
+# --------------------------------------------------------------------------- #
+@app.get("/api/v1/cities", tags=["Cities"])
+def get_cities():
+    """Screen 1 (India Overview) Contract: List all 7 target cities with aggregate AQI."""
+    from .cities import get_all_cities_summary
+    try:
+        from .db import get_session
+        with get_session() as s:
+            return get_all_cities_summary(s)
+    except Exception:
+        return get_all_cities_summary(None)
+
+
+@app.get("/api/v1/cities/{city_name}/overview", tags=["Cities"])
+def get_city_overview_endpoint(city_name: str):
+    """Screen 2 (City Intelligence) Contract: Overview metrics and aggregate AQI for a city."""
+    from .cities import get_city_overview
+    overview = None
+    try:
+        from .db import get_session
+        with get_session() as s:
+            overview = get_city_overview(city_name, s)
+    except Exception:
+        overview = get_city_overview(city_name, None)
+
+    if not overview:
+        raise HTTPException(
+            status_code=404,
+            detail=f"City not configured or not found: {city_name!r}",
+        )
+    return overview
+
+
+@app.get("/api/v1/cities/{city_name}/stations", tags=["Cities"])
+def get_city_stations_endpoint(city_name: str):
+    """Screen 2 (City Intelligence) Contract: VERIFIED PHYSICAL MONITORING STATIONS ONLY.
+    
+    Guarantees:
+    - Only physical CAAQMS stations are returned (never model grid points).
+    - Preserves data source, source timestamp, and staleness status.
+    """
+    from .cities import get_city_verified_stations
+    stations = None
+    try:
+        from .db import get_session
+        with get_session() as s:
+            stations = get_city_verified_stations(city_name, s)
+    except Exception:
+        stations = get_city_verified_stations(city_name, None)
+
+    if stations is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"City not configured or not found: {city_name!r}",
+        )
+    return stations
 
 
 # --------------------------------------------------------------------------- #
