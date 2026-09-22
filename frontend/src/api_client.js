@@ -109,5 +109,51 @@ export const API = {
       }),
     });
   },
+
+  /** GET /api/v1/cities — Screen 1: list all 7 metros */
+  async getCities() {
+    return apiFetch('/api/v1/cities');
+  },
+
+  /** GET /api/v1/cities/{city}/overview — Screen 2: city header */
+  async getCityOverview(cityName) {
+    return apiFetch(`/api/v1/cities/${encodeURIComponent(cityName)}/overview`);
+  },
+
+  /** GET /api/v1/cities/{city}/stations — Screen 2: verified physical CAAQMS stations */
+  async getCityStations(cityName) {
+    return apiFetch(`/api/v1/cities/${encodeURIComponent(cityName)}/stations`);
+  },
+
+  /** GET /api/v1/alerts — all active metropolitan alerts */
+  async getAllAlerts() {
+    return apiFetch('/api/v1/alerts');
+  },
+
+  /** GET /api/v1/alerts/{city} — active alerts for a specific city */
+  async getCityAlerts(cityName) {
+    return apiFetch(`/api/v1/alerts/${encodeURIComponent(cityName)}`);
+  },
+
+  /** GET /api/v1/analytics/{city}?range=24H — Screen 7 historical trends & diurnal physics */
+  async getCityAnalytics(cityName, range = '24H') {
+    return apiFetch(`/api/v1/analytics/${encodeURIComponent(cityName)}?range=${encodeURIComponent(range)}`);
+  },
+
+  /** GET /api/v1/ai/cities/{city}/insight — auto-grounded city insight */
+  async getCityAIInsight(cityName, lang = 'en') {
+    return apiFetch(`/api/v1/ai/cities/${encodeURIComponent(cityName)}/insight?lang=${encodeURIComponent(lang)}`);
+  },
+
+  /** GET /api/v1/ai/cities/{city}/stations/{station}/insight — auto-grounded station insight */
+  async getStationAIInsight(cityName, stationName, lang = 'en') {
+    return apiFetch(`/api/v1/ai/cities/${encodeURIComponent(cityName)}/stations/${encodeURIComponent(stationName)}/insight?lang=${encodeURIComponent(lang)}`);
+  },
+
+  /** GET /api/v1/ai/analytics/{city}/insight — auto-grounded Screen 7 analytics insight */
+  async getAnalyticsAIInsight(cityName, range = '24H', lang = 'en') {
+    return apiFetch(`/api/v1/ai/analytics/${encodeURIComponent(cityName)}/insight?range=${encodeURIComponent(range)}&lang=${encodeURIComponent(lang)}`);
+  },
 };
+
 

@@ -60,3 +60,105 @@ def chat_endpoint(req: AIChatRequest) -> AIResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Environmental chat error: {str(exc)}",
         )
+
+
+@router.get("/cities/{city_name}/insight", response_model=AIResponse)
+def get_city_insight_endpoint(city_name: str, lang: str = "en") -> AIResponse:
+    """Generate an AI insight directly grounded in the live /api/v1/cities/{city}/overview payload."""
+    from .cities import get_city_overview
+    from .ai_models import AIContext
+
+    overview = None
+    try:
+        from .db import get_session
+        with get_session() as s:
+            overview = get_city_overview(city_name, s)
+    except Exception:
+        overview = get_city_overview(city_name, None)
+
+    if not overview:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"City not configured or found: {city_name!r}",
+        )
+
+    ctx = AIContext.from_city_overview(overview, screen_id="screen_2_city", language=lang)
+    service = get_ai_service()
+    return service.generate_insight(ctx)
+
+
+@router.get("/cities/{city_name}/stations/{station_name}/insight", response_model=AIResponse)
+def get_station_insight_endpoint(city_name: str, station_name: str, lang: str = "en") -> AIResponse:
+    """Generate an AI insight grounded in verified physical CAAQMS station telemetry."""
+    from .cities import get_city_verified_stations
+    from .ai_models import AIContext
+
+    stations = None
+    try:
+        from .db import get_session
+        with get_session() as s:
+            stations = get_city_verified_stations(city_name, s)
+    except Exception:
+        stations = get_city_verified_stations(city_name, None)
+
+    if not stations:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No verified stations available for city: {city_name!r}",
+        )
+
+    target_norm = station_name.strip().lower()
+    target_station = next(
+        (s for s in stations if s.get("name", "").strip().lower() == target_norm or s.get("station_id", "").strip().lower() == target_norm),
+        None,
+    )
+    if not target_station:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Station {station_name!r} not found in {city_name!r}",
+        )
+
+    ctx = AIContext.from_station_telemetry(target_station, screen_id="screen_3_station", language=lang)
+    service = get_ai_service()
+    return service.generate_insight(ctx)
+
+
+@router.get("/analytics/{city_name}/insight", response_model=AIResponse)
+def get_analytics_insight_endpoint(city_name: str, range: str = "24H", lang: str = "en") -> AIResponse:
+    """Generate Screen 7 AI analytics insight explaining historical trends and diurnal patterns."""
+    from .analytics import generate_city_analytics
+    from .ai_models import AIContext
+
+    try:
+        analytics = generate_city_analytics(city_name, time_range=range)
+    except ValueError as err:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(err))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate analytics for {city_name!r}: {exc}",
+        )
+
+    an_dict = {
+        "trend_direction": analytics.trend.trend_direction,
+        "morning_peak_aqi": analytics.trend.diurnal_patterns.morning_peak_aqi,
+        "midday_dip_aqi": analytics.trend.diurnal_patterns.midday_dip_aqi,
+        "evening_peak_aqi": analytics.trend.diurnal_patterns.evening_peak_aqi,
+        "time_range": analytics.time_range,
+    }
+
+    ctx = AIContext(
+        screen_id="screen_7_analytics",
+        city=analytics.city,
+        current_aqi=analytics.current_aqi,
+        dominant_pollutant=analytics.dominant_pollutant,
+        data_source=analytics.data_source,
+        data_timestamp=analytics.data_timestamp,
+        is_simulated=analytics.is_simulated,
+        is_stale=analytics.is_stale,
+        language=lang,
+        analytics=an_dict,
+    )
+    service = get_ai_service()
+    return service.generate_insight(ctx)
+

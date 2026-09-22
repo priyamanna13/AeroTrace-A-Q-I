@@ -5,6 +5,8 @@ import dataContract from '../../data_contract_sample.json';
 import { API } from './api_client';
 import { MapRenderer } from './map_layers';
 import { WebSocketClient } from './ws_client';
+import AiInsightCard from './components/ai/AiInsightCard';
+import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
 
 // ─── LEAFLET DEFAULT ICON FIX (Vite asset pipeline) ────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl;
@@ -801,6 +803,7 @@ function PlaybackBanner({ timestamp, isLoading, isGap }) {
 
 export default function App() {
   // ── UI state
+  const [activeView,   setActiveView]   = useState('radar'); // 'radar' | 'analytics'
   const [activeLang,   setActiveLang]   = useState('en');
   const [activeSource, setActiveSource] = useState(null);
   const [currentStation, setCurrentStation] = useState('Shivajinagar');
@@ -1136,6 +1139,60 @@ export default function App() {
   }, [currentStation]);
 
   // ── RENDER ────────────────────────────────────────────────────────────────────
+  if (activeView === 'analytics') {
+    return (
+      <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: '#08080a', overflow: 'hidden' }}>
+        <div style={{
+          height: 48,
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          background: 'rgba(14,14,18,0.95)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 24px',
+          flexShrink: 0,
+          zIndex: 100,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              onClick={() => setActiveView('radar')}
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                color: '#f4f4f5',
+                padding: '5px 12px',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              &larr; Back to Radar View
+            </button>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#a1a1aa' }}>
+              AeroTrace Intelligence / Screen 7
+            </span>
+          </div>
+          <div style={{ fontSize: 11, color: '#71717a', fontFamily: 'monospace' }}>
+            AQ_INTEL_ANALYTICS &middot; v3.1.0
+          </div>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <AnalyticsDashboard
+            initialCity={activeData?.trigger_station?.city || 'Pune'}
+            onNavigate={(deepLink) => {
+              if (deepLink?.station) setCurrentStation(deepLink.station);
+              setActiveView('radar');
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="aq-root">
 
@@ -1371,6 +1428,41 @@ export default function App() {
           })}
         </div>
 
+        {/* ── SCREEN 7 / VIEW TOGGLE ── */}
+        <div style={{
+          position: 'absolute', top: '20px', right: '20px', zIndex: 1000,
+          background: 'rgba(8,8,10,0.85)', padding: '4px',
+          borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)',
+          backdropFilter: 'blur(20px)', display: 'flex', gap: '4px',
+        }}>
+          <button
+            onClick={() => setActiveView('radar')}
+            style={{
+              padding: '6px 12px', borderRadius: '7px', cursor: 'pointer',
+              background: activeView === 'radar' ? 'rgba(59,130,246,0.2)' : 'transparent',
+              border: activeView === 'radar' ? '1px solid rgba(59,130,246,0.35)' : '1px solid transparent',
+              color: activeView === 'radar' ? '#60a5fa' : '#a1a1aa',
+              fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px',
+            }}
+          >
+            <span>🗺️</span>
+            <span>Radar</span>
+          </button>
+          <button
+            onClick={() => setActiveView('analytics')}
+            style={{
+              padding: '6px 12px', borderRadius: '7px', cursor: 'pointer',
+              background: activeView === 'analytics' ? 'rgba(251,146,60,0.2)' : 'transparent',
+              border: activeView === 'analytics' ? '1px solid rgba(251,146,60,0.35)' : '1px solid transparent',
+              color: activeView === 'analytics' ? '#fb923c' : '#a1a1aa',
+              fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px',
+            }}
+          >
+            <span>📊</span>
+            <span>Screen 7: Analytics</span>
+          </button>
+        </div>
+
         {/* ── MET STRIP ── */}
         <div className="met-badge">
           <span className="met-icon">&#x1F321;&#xFE0F;</span>
@@ -1574,6 +1666,26 @@ export default function App() {
               isGap={timelineGap && !playbackFrame}
             />
           )}
+
+          {/* ── AI INSIGHT CARD (WITH CONTEXTUAL VOICE READ-ALOUD) ── */}
+          <div style={{ marginBottom: 4 }}>
+            <AiInsightCard
+              context={{
+                screen_id: 'screen_3_station',
+                city: activeData?.trigger_station?.city || 'Pune',
+                station: currentStation,
+                pollutant: activeData?.trigger_station?.reading?.dominant_pollutant || 'PM2.5',
+                current_aqi: currentStationAqi,
+                data_source: activeData?.trigger_station?.reading?.data_source || 'CPCB CAAQMS',
+                data_timestamp: activeData?.trigger_station?.reading?.timestamp,
+                is_simulated: spikeActive || Boolean(activeData?.is_simulated),
+                language: activeLang,
+              }}
+              onAskAeroTrace={() => {
+                setActiveView('analytics');
+              }}
+            />
+          </div>
 
           {/* ── ACTION ADVISORY ── */}
           <div>

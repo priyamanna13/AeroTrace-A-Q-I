@@ -494,6 +494,61 @@ def get_city_stations_endpoint(city_name: str):
 
 
 # --------------------------------------------------------------------------- #
+# Contextual Alerts Subsystem Endpoints (Screen 8 & Contextual In-Screen Cards)
+# --------------------------------------------------------------------------- #
+@app.get("/api/v1/alerts", tags=["Alerts"])
+def get_all_alerts():
+    """Retrieve all active contextual alerts across all 7 metropolitan cities."""
+    from .alerts import evaluate_all_cities_alerts
+    try:
+        from .db import get_session
+        with get_session() as s:
+            return evaluate_all_cities_alerts(s)
+    except Exception:
+        return evaluate_all_cities_alerts(None)
+
+
+@app.get("/api/v1/alerts/{city_name}", tags=["Alerts"])
+def get_city_alerts_endpoint(city_name: str):
+    """Retrieve active contextual alerts for a specific city and its physical CAAQMS stations."""
+    from .alerts import evaluate_city_alerts
+    from .cities import get_city_config
+    if not get_city_config(city_name):
+        raise HTTPException(
+            status_code=404,
+            detail=f"City not configured or not found: {city_name!r}",
+        )
+    try:
+        from .db import get_session
+        with get_session() as s:
+            return evaluate_city_alerts(city_name, s)
+    except Exception:
+        return evaluate_city_alerts(city_name, None)
+
+
+# --------------------------------------------------------------------------- #
+# Analytics & Historical Trends Endpoints (Screen 7 Analytics)
+# --------------------------------------------------------------------------- #
+@app.get("/api/v1/analytics/{city_name}", tags=["Analytics"])
+def get_city_analytics_endpoint(city_name: str, range: str = "24H"):
+    """Retrieve historical trends, diurnal pattern analysis, and AI interpretation for Screen 7."""
+    from .analytics import generate_city_analytics
+    from .cities import get_city_config
+    if not get_city_config(city_name):
+        raise HTTPException(
+            status_code=404,
+            detail=f"City not configured or not found: {city_name!r}",
+        )
+    try:
+        from .db import get_session
+        with get_session() as s:
+            return generate_city_analytics(city_name, time_range=range, session=s)
+    except Exception:
+        return generate_city_analytics(city_name, time_range=range, session=None)
+
+
+
+# --------------------------------------------------------------------------- #
 # Shared pipeline builder (eliminates duplication between dry-run & simulation)
 # --------------------------------------------------------------------------- #
 def _build_attribution(scenario, target_time: datetime | None = None) -> dict:

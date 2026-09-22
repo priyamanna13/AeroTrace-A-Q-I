@@ -116,3 +116,77 @@ def test_ai_chat_endpoint_grounding(client):
     assert "Hinjewadi Construction Cluster" in data["response_text"]
     assert "88%" in data["response_text"]
     assert data["is_grounded"] is True
+
+
+def test_ai_context_from_city_overview(client):
+    overview = {
+        "city": "Pune",
+        "current_aqi": 182.0,
+        "dominant_pollutant": "PM2.5",
+        "pm25": 78.4,
+        "pm10": 156.2,
+        "data_source": "CPCB_CAAQMS",
+        "data_timestamp": "2026-09-22T18:00:00+05:30",
+        "is_simulated": False,
+        "is_stale": False,
+    }
+    ctx = AIContext.from_city_overview(overview, language="en")
+    assert ctx.city == "Pune"
+    assert ctx.current_aqi == 182.0
+    assert ctx.provenance == InformationProvenance.MEASURED_FACT
+    assert ctx.pollutants["pm25"] == 78.4
+
+    service = get_ai_service()
+    res = service.generate_insight(ctx)
+    assert "Pune" in res.response_text
+    assert "182" in res.response_text
+    assert "CPCB_CAAQMS" in res.response_text or "CPCB_CAAQMS" in res.confidence_note
+    assert res.context_summary["voice_script"] is not None
+
+
+def test_screen_7_analytics_insight_mr(client):
+    payload = {
+        "context": {
+            "screen_id": "screen_7_analytics",
+            "city": "Pune",
+            "current_aqi": 182,
+            "dominant_pollutant": "PM2.5",
+            "data_source": "CPCB_CAAQMS",
+            "data_timestamp": "2026-09-22T18:00:00+05:30",
+            "provenance": "measured_fact",
+            "language": "mr",
+            "analytics": {
+                "trend_direction": "cyclical",
+                "morning_peak_aqi": 245,
+                "midday_dip_aqi": 136,
+                "evening_peak_aqi": 227,
+            }
+        }
+    }
+    response = client.post("/api/v1/ai/insight", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "Pune" in data["response_text"]
+    assert "२४५" in data["response_text"] or "245" in data["response_text"]
+    assert data["language"] == "mr"
+    assert "voice_script" in data["context_summary"]
+
+
+def test_copernicus_model_estimate_provenance(client):
+    payload = {
+        "context": {
+            "screen_id": "screen_2_city",
+            "city": "Bengaluru",
+            "current_aqi": 85,
+            "data_source": "Open-Meteo Air Quality (Copernicus CAMS)",
+            "data_timestamp": "2026-09-22T18:00:00+05:30",
+            "language": "en"
+        }
+    }
+    response = client.post("/api/v1/ai/insight", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["provenance"] == "model_estimate"
+    assert "Copernicus CAMS" in data["confidence_note"]
+    assert "Measured physical sensor data" not in data["confidence_note"]
+
