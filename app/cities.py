@@ -181,91 +181,19 @@ def _get_live_station_reading(session: Any, station_name: str) -> Optional[dict[
 def get_city_verified_stations(
     city_name: str,
     session: Any = None,
+    force_refresh: bool = False,
 ) -> Optional[list[dict[str, Any]]]:
-    """Return verified physical monitoring stations only for a city.
+    """Return verified physical monitoring stations only for a city with live telemetry.
     
     Guarantees:
     - Zero model grid points or fake stations.
     - All entries are verified physical monitoring instruments.
+    - 4-Tier Provider Fallback Cascade (CPCB -> Open-Meteo -> WAQI -> Emergency Simulation).
+    - Exposes full data freshness & source transparency metadata.
     """
-    from .standards import compute_aqi, _category_for_index
+    from .ingestion import fetch_city_stations_telemetry
+    return fetch_city_stations_telemetry(city_name, session=session, force_refresh=force_refresh)
 
-    cfg = get_city_config(city_name)
-    if not cfg or "stations" not in cfg:
-        return None
-
-    now_ist = datetime.now(IST)
-    city_key = _normalize_name(city_name)
-    city_display = cfg["city"]["name"]
-    state_display = cfg["city"].get("state", "")
-    baseline = _CITY_BASELINES.get(city_key, _CITY_BASELINES["pune"])
-
-    verified_stations = []
-    station_offsets = [0.0, 15.0, -12.0, 8.0, -6.0, 18.0]
-
-    for idx, st_cfg in enumerate(cfg["stations"]):
-        st_name = st_cfg["name"]
-        st_id = st_cfg.get("cpcb_station_id", f"site_{st_name.lower()}")
-        coords = [float(st_cfg["lon"]), float(st_cfg["lat"])]
-        elevation_m = int(st_cfg.get("elevation_m", 500))
-        network = st_cfg.get("network", "CPCB_CAAQMS")
-
-        live_reading = _get_live_station_reading(session, st_name)
-
-        if live_reading:
-            aqi_val = round(float(live_reading["aqi"]), 1)
-            pollutants = live_reading["pollutants"]
-            dom_pollutant = live_reading["dominant_pollutant"]
-            data_source = live_reading["data_source"]
-            data_ts_str = live_reading["timestamp"]
-            is_sim = live_reading.get("is_simulated", False)
-        else:
-            offset = station_offsets[idx % len(station_offsets)]
-            pollutants = {
-                "pm25": max(5.0, round(baseline["pm25"] + offset * 0.4, 1)),
-                "pm10": max(10.0, round(baseline["pm10"] + offset * 0.8, 1)),
-                "no2": max(5.0, round(baseline["no2"] + offset * 0.2, 1)),
-                "so2": max(2.0, round(baseline["so2"] + offset * 0.1, 1)),
-                "co": max(0.2, round(baseline["co"] + offset * 0.005, 1)),
-                "o3": max(5.0, round(baseline["o3"] - offset * 0.1, 1)),
-            }
-            aqi_res = compute_aqi(pollutants)
-            aqi_val = float(aqi_res.total_aqi) if aqi_res.total_aqi is not None else max(25.0, round(baseline["base_aqi"] + offset, 1))
-            dom_pollutant = (aqi_res.dominant_pollutant or baseline["dominant"]).upper()
-            data_source = "SIMULATED — live source unreachable"
-            data_ts_str = (now_ist - timedelta(minutes=10)).isoformat()
-            is_sim = True
-
-        is_stale = False
-        try:
-            ts_parsed = datetime.fromisoformat(data_ts_str)
-            if ts_parsed.tzinfo is None:
-                ts_parsed = ts_parsed.replace(tzinfo=IST)
-            if (now_ist - ts_parsed).total_seconds() > 3600:
-                is_stale = True
-        except Exception:
-            pass
-
-        verified_stations.append({
-            "station_id": st_id,
-            "name": st_name,
-            "network": network,
-            "city": city_display,
-            "state": state_display,
-            "coordinates": coords,
-            "elevation_m": elevation_m,
-            "current_aqi": aqi_val,
-            "aqi_category": _category_for_index(aqi_val),
-            "dominant_pollutant": dom_pollutant,
-            "pollutants": pollutants,
-            "data_source": data_source,
-            "data_timestamp": data_ts_str,
-            "last_polled_at": now_ist.isoformat(),
-            "is_stale": is_stale,
-            "is_simulated": is_sim,
-        })
-
-    return verified_stations
 
 
 def get_city_overview(city_name: str, session: Any = None) -> Optional[dict[str, Any]]:
