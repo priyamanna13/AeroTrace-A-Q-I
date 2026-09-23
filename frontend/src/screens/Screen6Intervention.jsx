@@ -1,30 +1,31 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../i18n';
+import AiInsightCard from '../components/ai/AiInsightCard';
 
 export default function Screen6Intervention() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
 
   return (
     <div className="w-full min-h-[calc(100vh-64px)] bg-[#08080a] text-zinc-100 px-4 sm:px-8 py-8">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono">
-          <Link to="/" className="hover:text-zinc-200">Home</Link>
+          <Link to="/" className="hover:text-zinc-200">{t('nav.breadcrumbHome')}</Link>
           <span>/</span>
-          <Link to="/prediction" className="hover:text-zinc-200">Prediction</Link>
+          <Link to="/prediction" className="hover:text-zinc-200">{t('nav.prediction')}</Link>
           <span>/</span>
-          <span className="text-emerald-400">Intervention Sandbox</span>
+          <span className="text-emerald-400">{t('nav.intervention')}</span>
         </div>
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
           <div>
             <div className="text-xs font-mono uppercase tracking-widest text-emerald-400">
-              Screen 6 · Impact & Policy Intervention
+              {t('screen6.tag')}
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white mt-1">
-              Counterfactual Policy & Intervention Simulator
+              {t('screen6.title')}
             </h1>
           </div>
           <div className="flex items-center gap-2 text-xs">
@@ -32,7 +33,7 @@ export default function Screen6Intervention() {
               Phase 1 Routing Skeleton
             </span>
             <span className="px-2.5 py-1 rounded bg-cyan-950/40 border border-cyan-800/40 text-cyan-400 font-mono">
-              Phase 5 Milestone
+              Phase 5 Milestone (Priya & Adarsh)
             </span>
           </div>
         </div>
@@ -41,9 +42,22 @@ export default function Screen6Intervention() {
         <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-400 flex items-start gap-3">
           <span className="text-lg">🛡️</span>
           <div>
-            <span className="font-semibold text-zinc-200">Phase 5 Deliverable:</span> Interactive municipal policy levers (smog guns, traffic diversions, construction halts) with counterfactual AQI reduction delta curves will be implemented in Phase 5 according to <code className="text-emerald-400">docs/06_IMPLEMENTATION_PLAN.md</code>.
+            <span className="font-semibold text-zinc-200">Phase 5 Deliverable:</span> {t('screen6.phaseNotice')}
           </div>
         </div>
+
+        {/* Contextual AI Insight Card */}
+        <AiInsightCard
+          context={{
+            screen_id: 'screen_6',
+            city: 'Pune',
+            station_name: 'Shivajinagar',
+            current_aqi: 310,
+            language: lang,
+            provenance: 'simulation',
+            is_simulated: true,
+          }}
+        />
 
         {/* Levers Prototype Card */}
         <div className="p-6 rounded-xl bg-zinc-900/40 border border-zinc-800 space-y-4">

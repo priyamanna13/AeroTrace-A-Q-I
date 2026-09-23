@@ -7,12 +7,12 @@ export default function Screen0Landing() {
 
   const cities = [
     { name: 'Pune', state: 'Maharashtra', stations: 4, type: 'Forensic Baseline' },
-    { name: 'Mumbai', state: 'Maharashtra', stations: 8, type: 'Coastal Airshed' },
-    { name: 'Delhi', state: 'NCR', stations: 40, type: 'Northern Basin' },
-    { name: 'Bengaluru', state: 'Karnataka', stations: 10, type: 'Plateau Urban' },
-    { name: 'Kolkata', state: 'West Bengal', stations: 7, type: 'Delta Plains' },
-    { name: 'Hyderabad', state: 'Telangana', stations: 6, type: 'Deccan Interior' },
-    { name: 'Chennai', state: 'Tamil Nadu', stations: 5, type: 'Southern Coastal' },
+    { name: 'Mumbai', state: 'Maharashtra', stations: 4, type: 'Coastal Airshed' },
+    { name: 'Delhi', state: 'NCR', stations: 4, type: 'Northern Basin' },
+    { name: 'Bengaluru', state: 'Karnataka', stations: 4, type: 'Plateau Urban' },
+    { name: 'Kolkata', state: 'West Bengal', stations: 4, type: 'Delta Plains' },
+    { name: 'Hyderabad', state: 'Telangana', stations: 4, type: 'Deccan Interior' },
+    { name: 'Chennai', state: 'Tamil Nadu', stations: 4, type: 'Southern Coastal' },
   ];
 
   const journeySteps = [
@@ -21,7 +21,7 @@ export default function Screen0Landing() {
     { num: '03', title: t('landing.step3Title'), desc: t('landing.step3Desc'), link: '/station/Shivajinagar', icon: '📍' },
     { num: '04', title: t('landing.step4Title'), desc: t('landing.step4Desc'), link: '/investigate/Shivajinagar', icon: '🔬', highlight: true },
     { num: '05', title: t('landing.step5Title'), desc: t('landing.step5Desc'), link: '/prediction', icon: '📈' },
-    { num: '06', title: t('landing.metricsIntervention'), desc: 'Simulate municipal interventions and evaluate counterfactual AQI impact curves.', link: '/intervention', icon: '🛡️' },
+    { num: '06', title: t('landing.metricsIntervention'), desc: t('screen6.phaseNotice'), link: '/intervention', icon: '🛡️' },
   ];
 
   return (
@@ -125,9 +125,9 @@ export default function Screen0Landing() {
       <div className="max-w-5xl w-full mt-14 mb-8">
         <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
           <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
-            Target Metropolitan Regions (30s Cadence)
+            {t('landing.targetRegionsTitle')}
           </h3>
-          <span className="text-xs text-zinc-400 font-mono">CPCB + Open-Meteo Verified Cascade</span>
+          <span className="text-xs text-zinc-400 font-mono">{t('landing.cascadeNotice')}</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
           {cities.map((c) => (

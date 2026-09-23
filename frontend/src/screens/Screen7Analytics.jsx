@@ -1,28 +1,29 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../i18n';
+import AiInsightCard from '../components/ai/AiInsightCard';
 
 export default function Screen7Analytics() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
 
   return (
     <div className="w-full min-h-[calc(100vh-64px)] bg-[#08080a] text-zinc-100 px-4 sm:px-8 py-8">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono">
-          <Link to="/" className="hover:text-zinc-200">Home</Link>
+          <Link to="/" className="hover:text-zinc-200">{t('nav.breadcrumbHome')}</Link>
           <span>/</span>
-          <span className="text-emerald-400">Analytics</span>
+          <span className="text-emerald-400">{t('nav.analytics')}</span>
         </div>
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
           <div>
             <div className="text-xs font-mono uppercase tracking-widest text-emerald-400">
-              Screen 7 · Environmental Analytics & Trends
+              {t('screen7.tag')}
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white mt-1">
-              Historical Patterns & Multi-Airshed Analytics
+              {t('screen7.title')}
             </h1>
           </div>
           <div className="flex items-center gap-2 text-xs">
@@ -39,9 +40,20 @@ export default function Screen7Analytics() {
         <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-400 flex items-start gap-3">
           <span className="text-lg">📊</span>
           <div>
-            <span className="font-semibold text-zinc-200">Phase 3 Deliverable:</span> Screen 7 Analytics UI and alert correlation engines are owned by Anish in Phase 3, with ECharts trend visualizations integrated by Priya according to <code className="text-emerald-400">docs/06_IMPLEMENTATION_PLAN.md</code>.
+            <span className="font-semibold text-zinc-200">Phase 3 Deliverable:</span> {t('screen7.phaseNotice')}
           </div>
         </div>
+
+        {/* AI Insight Card */}
+        <AiInsightCard
+          context={{
+            screen_id: 'screen_7',
+            city: 'Pune',
+            range: '24H',
+            language: lang,
+            provenance: 'sensor_measurement',
+          }}
+        />
       </div>
     </div>
   );

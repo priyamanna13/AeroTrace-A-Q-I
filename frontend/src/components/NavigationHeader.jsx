@@ -6,18 +6,24 @@ export default function NavigationHeader() {
   const { lang, setLang, t, languages } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const navLinks = [
+  // Core spatial journey screens
+  const spatialLinks = [
     { to: '/', label: t('nav.landing'), exact: true },
     { to: '/national', label: t('nav.national') },
     { to: '/city/Pune', label: t('nav.city') },
-    { to: '/station/Shivajinagar', label: t('nav.station') },
     { to: '/investigate/Shivajinagar', label: t('nav.investigation'), highlight: true },
+  ];
+
+  // Extended analytics and intelligence modules
+  const moduleLinks = [
     { to: '/prediction', label: t('nav.prediction') },
     { to: '/intervention', label: t('nav.intervention') },
     { to: '/analytics', label: t('nav.analytics') },
     { to: '/alerts', label: t('nav.alerts') },
-    { to: '/ai', label: t('nav.ai') },
+    { to: '/ai', label: t('nav.ai'), ai: true },
   ];
+
+  const allLinks = [...spatialLinks, ...moduleLinks];
 
   return (
     <header className="w-full bg-[#08080a] border-b border-zinc-800/80 sticky top-0 z-50 backdrop-blur-md bg-opacity-90">
@@ -40,27 +46,55 @@ export default function NavigationHeader() {
         </div>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden xl:flex items-center gap-1 overflow-x-auto no-scrollbar py-1" aria-label="Main Navigation">
-          {navLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={link.exact}
-              className={({ isActive }) =>
-                `px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 whitespace-nowrap ${
-                  isActive
-                    ? link.highlight
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                      : 'bg-zinc-800 text-white border border-zinc-700'
-                    : link.highlight
-                      ? 'text-emerald-400/90 hover:bg-emerald-950/30 hover:text-emerald-300'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'
-                }`
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
+        <nav className="hidden lg:flex items-center gap-1 overflow-x-auto no-scrollbar py-1" aria-label="Main Navigation">
+          {/* Spatial Section */}
+          <div className="flex items-center gap-1">
+            {spatialLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.exact}
+                className={({ isActive }) =>
+                  `px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 whitespace-nowrap ${
+                    isActive
+                      ? link.highlight
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                        : 'bg-zinc-800 text-white border border-zinc-700'
+                      : link.highlight
+                        ? 'text-emerald-400/90 hover:bg-emerald-950/30 hover:text-emerald-300'
+                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'
+                  }`
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
+
+          <span className="h-4 w-px bg-zinc-800 mx-1.5 shrink-0" />
+
+          {/* Modules Section */}
+          <div className="flex items-center gap-1">
+            {moduleLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className={({ isActive }) =>
+                  `px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 whitespace-nowrap ${
+                    isActive
+                      ? link.ai
+                        ? 'bg-purple-950/40 text-purple-300 border border-purple-700/50 shadow-sm'
+                        : 'bg-zinc-800 text-white border border-zinc-700'
+                      : link.ai
+                        ? 'text-purple-400 hover:text-purple-300 hover:bg-purple-950/20'
+                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'
+                  }`
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
         </nav>
 
         {/* Right Section: Cadence Badge + Language Switcher + Mobile Toggle */}
@@ -68,7 +102,7 @@ export default function NavigationHeader() {
           {/* Live Cadence Indicator */}
           <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900/90 border border-zinc-800 text-[11px] font-mono text-zinc-300">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>30s Refresh</span>
+            <span>{t('nav.cadenceBadge')}</span>
           </div>
 
           {/* Language Switcher */}
@@ -97,7 +131,7 @@ export default function NavigationHeader() {
           {/* Mobile menu button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="xl:hidden p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white"
+            className="lg:hidden p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white"
             aria-label="Toggle navigation menu"
             aria-expanded={mobileMenuOpen}
           >
@@ -114,16 +148,16 @@ export default function NavigationHeader() {
 
       {/* Mobile Navigation Dropdown */}
       {mobileMenuOpen && (
-        <div className="xl:hidden bg-[#0a0a0d] border-b border-zinc-800 px-4 pt-2 pb-4 space-y-1">
+        <div className="lg:hidden bg-[#0a0a0d] border-b border-zinc-800 px-4 pt-2 pb-4 space-y-1">
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-zinc-800/60 text-xs text-zinc-400 font-mono">
             <span>AeroTrace Navigation</span>
             <span className="text-emerald-400 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              30s Cadence
+              {t('common.refreshRate')}
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {navLinks.map((link) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            {allLinks.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
