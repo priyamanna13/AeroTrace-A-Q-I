@@ -11,3 +11,5 @@ PMJIT/
 *.pdf
 scripts/test_phase1_endpoints.py
 scripts/show_db.py
+.agent/
+.agents/
