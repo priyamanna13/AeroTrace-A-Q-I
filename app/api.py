@@ -491,6 +491,51 @@ def get_city_stations_endpoint(city_name: str):
 
 
 # --------------------------------------------------------------------------- #
+# Analytics & Historical Trends Endpoint (Phase 3 Contract)
+# --------------------------------------------------------------------------- #
+@app.get("/api/v1/analytics", tags=["Analytics"])
+def get_analytics(
+    city: str = Query(default="Pune", description="Target city name"),
+    station: Optional[str] = Query(default=None, description="Specific station name, or omit for city-wide"),
+    pollutant: Optional[str] = Query(default="pm25", description="Target pollutant key (pm25, pm10, no2, so2, co, o3)"),
+    range: str = Query(default="24h", description="Time horizon: 24h, 7d, 30d, 1y"),
+):
+    """Screen 3 & Screen 7 Contract: Historical timeline, trend statistics, anomalies, and availability notes.
+    
+    Guarantees:
+    - Real hourly historical data from Copernicus CAMS reanalysis or local datastore.
+    - Non-fabrication: If range is unsupported or offline, returns explicit data_availability_note without inventing data.
+    """
+    from .analytics import fetch_historical_analytics
+    try:
+        from .db import get_session
+        with get_session() as s:
+            return fetch_historical_analytics(
+                city=city,
+                station=station,
+                pollutant=pollutant,
+                range_str=range,
+                session=s,
+            )
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as exc:
+        try:
+            return fetch_historical_analytics(
+                city=city,
+                station=station,
+                pollutant=pollutant,
+                range_str=range,
+                session=None,
+            )
+        except ValueError as ve2:
+            raise HTTPException(status_code=404, detail=str(ve2))
+        except Exception as exc2:
+            raise HTTPException(status_code=500, detail=f"Analytics query failed: {exc2}")
+
+
+
+# --------------------------------------------------------------------------- #
 # Shared pipeline builder (eliminates duplication between dry-run & simulation)
 # --------------------------------------------------------------------------- #
 def _build_attribution(scenario, target_time: datetime | None = None) -> dict:
