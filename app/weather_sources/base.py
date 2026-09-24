@@ -68,13 +68,15 @@ class WeatherSourceAdapter(ABC):
 
 
 def get_weather_source(kind: str = "mock", **kwargs) -> WeatherSourceAdapter:
-    """Factory: ``mock`` (default, deterministic) or ``live`` (IMD adapter)."""
+    """Factory: ``mock`` (deterministic) or ``live`` (Open-Meteo live adapter)."""
     kind = (kind or "mock").lower()
     if kind == "mock":
         from .mock import MockIMDSource
 
         return MockIMDSource(**kwargs)
-    if kind in ("live", "imd"):
-        # Reserved for a real IMD adapter; not implemented in the mock path.
-        raise NotImplementedError("Live IMD source is not implemented; use --source mock")
+    if kind in ("live", "open_meteo", "openmeteo", "imd"):
+        from .open_meteo import LiveOpenMeteoSource
+
+        return LiveOpenMeteoSource(**kwargs)
     raise ValueError(f"Unknown weather source kind: {kind!r}")
+

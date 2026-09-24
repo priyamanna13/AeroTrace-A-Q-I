@@ -567,6 +567,513 @@ _KOTHRUD = DemoScenario(
 
 
 # =========================================================================== #
+# Multi-City Field Squads & Regional Candidates (FR-037 & FR-038)
+# =========================================================================== #
+CITY_FIELD_SQUADS: dict[str, dict[str, Any]] = {
+    "pune": {
+        "team_id": "PMC-AQ-SQUAD-07",
+        "team_lead": "Inspector R. S. Kulkarni",
+        "contact": "+91-20-2550-XXXX",
+        "jurisdiction": "Pune Municipal Corporation (PMC) & MPCB",
+        "eta_minutes": 18,
+    },
+    "mumbai": {
+        "team_id": "MPCB-MUM-RAPID-01",
+        "team_lead": "Inspector A. P. Shinde",
+        "contact": "+91-22-2401-XXXX",
+        "jurisdiction": "Brihanmumbai Municipal Corporation (BMC) & MPCB",
+        "eta_minutes": 22,
+    },
+    "delhi": {
+        "team_id": "DPCC-ENF-SQUAD-04",
+        "team_lead": "Inspector R. K. Sharma",
+        "contact": "+91-11-2386-XXXX",
+        "jurisdiction": "Delhi Pollution Control Committee (DPCC)",
+        "eta_minutes": 20,
+    },
+    "bengaluru": {
+        "team_id": "KSPCB-BLR-TASK-03",
+        "team_lead": "Inspector K. Suresh",
+        "contact": "+91-80-2558-XXXX",
+        "jurisdiction": "Karnataka State Pollution Control Board (KSPCB) & BBMP",
+        "eta_minutes": 25,
+    },
+    "kolkata": {
+        "team_id": "WBPCB-KOL-SQUAD-02",
+        "team_lead": "Inspector S. Banerjee",
+        "contact": "+91-33-2335-XXXX",
+        "jurisdiction": "West Bengal Pollution Control Board (WBPCB) & KMC",
+        "eta_minutes": 30,
+    },
+    "hyderabad": {
+        "team_id": "TGPCB-HYD-FLYING-01",
+        "team_lead": "Inspector M. Venkat Rao",
+        "contact": "+91-40-2388-XXXX",
+        "jurisdiction": "Telangana State Pollution Control Board (TGPCB) & GHMC",
+        "eta_minutes": 24,
+    },
+    "chennai": {
+        "team_id": "TNPCB-CHN-MOBILE-05",
+        "team_lead": "Inspector T. Ramanathan",
+        "contact": "+91-44-2235-XXXX",
+        "jurisdiction": "Tamil Nadu Pollution Control Board (TNPCB) & GCC",
+        "eta_minutes": 28,
+    },
+}
+
+_CITY_CANDIDATE_TEMPLATES: dict[str, list[dict[str, Any]]] = {
+    "delhi": [
+        {
+            "slug": "anand-vihar-transit-corridor",
+            "name": "Anand Vihar Freight & Transit Corridor",
+            "type": "traffic",
+            "description": "Heavy interstate diesel bus and commercial freight logistics corridor near UP border.",
+            "d_lon": -0.012, "d_lat": 0.008,
+            "permit_id": None,
+            "compliance_status": "compliance data not available for this city",
+            "compliance_note": "compliance data not available for this city",
+            "near_school": True, "school_name": "DAV Public School, Anand Vihar", "school_distance_m": 420,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": False, "dust_suppression_observed": False,
+            "last_inspection_date": None, "violation_count_90d": 0,
+        },
+        {
+            "slug": "ghazipur-waste-complex",
+            "name": "Ghazipur Waste Processing & Landfill Embankment",
+            "type": "waste_burning",
+            "description": "Municipal solid waste handling and spontaneous smouldering plume generation at landfill site.",
+            "d_lon": 0.015, "d_lat": -0.010,
+            "permit_id": None,
+            "compliance_status": "compliance data not available for this city",
+            "compliance_note": "compliance data not available for this city",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": True, "hospital_name": "Lal Bahadur Shastri Hospital", "hospital_distance_m": 650,
+            "dust_suppression_required": False, "dust_suppression_observed": False,
+            "last_inspection_date": None, "violation_count_90d": 0,
+        },
+        {
+            "slug": "badarpur-industrial-cluster",
+            "name": "Badarpur Industrial & Boiler Fabrication Cluster",
+            "type": "industrial",
+            "description": "Medium-scale industrial fabrication, boiler operations, and metal casting cluster.",
+            "d_lon": -0.009, "d_lat": -0.014,
+            "permit_id": "DPCC/IND/DL/2024/0981",
+            "compliance_status": "violation_flagged",
+            "compliance_note": "Particulate stack emissions exceeded DPCC standards",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": True, "dust_suppression_observed": False,
+            "last_inspection_date": "2026-04-12", "violation_count_90d": 2,
+        },
+        {
+            "slug": "barapullah-phase3-construction",
+            "name": "Barapullah Phase-3 Elevated Corridor Infrastructure Site",
+            "type": "construction",
+            "description": "Elevated expressway viaduct construction with active earth-moving, piling, and dry aggregate transport.",
+            "d_lon": 0.016, "d_lat": 0.012,
+            "permit_id": "DPCC/CONST/2026/0122",
+            "compliance_status": "compliant",
+            "compliance_note": "Water misting cannons and dust barriers verified active on-site",
+            "near_school": True, "school_name": "Kendriya Vidyalaya Pragati Vihar", "school_distance_m": 480,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": True, "dust_suppression_observed": True,
+            "last_inspection_date": "2026-06-01", "violation_count_90d": 0,
+        },
+    ],
+    "mumbai": [
+        {
+            "slug": "bkc-metro-infrastructure",
+            "name": "Bandra-Kurla Complex (BKC) Infrastructure & Metro Works",
+            "type": "construction",
+            "description": "Metro Line underground station construction and commercial high-rise foundation excavation.",
+            "d_lon": 0.010, "d_lat": 0.012,
+            "permit_id": "MMRDA/METRO/2026/0411",
+            "compliance_status": "violation_flagged",
+            "compliance_note": "Uncovered debris transit flagged by municipal squad",
+            "near_school": True, "school_name": "Dhirubhai Ambani International School", "school_distance_m": 390,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": True, "dust_suppression_observed": False,
+            "last_inspection_date": "2026-05-10", "violation_count_90d": 1,
+        },
+        {
+            "slug": "deonar-waste-smouldering",
+            "name": "Deonar Waste Management Complex",
+            "type": "waste_burning",
+            "description": "Municipal waste handling facility with subsurface smouldering generating particulate and methane plumes.",
+            "d_lon": 0.020, "d_lat": -0.015,
+            "permit_id": None,
+            "compliance_status": "compliance data not available for this city",
+            "compliance_note": "compliance data not available for this city",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": True, "hospital_name": "Shatabdi Hospital Govandi", "hospital_distance_m": 580,
+            "dust_suppression_required": False, "dust_suppression_observed": False,
+            "last_inspection_date": None, "violation_count_90d": 0,
+        },
+        {
+            "slug": "weh-commercial-corridor",
+            "name": "Western Express Highway (WEH) Commercial Transit Bottleneck",
+            "type": "traffic",
+            "description": "Heavy arterial expressway with bumper-to-bumper diesel commercial vehicle stop-and-go congestion.",
+            "d_lon": -0.014, "d_lat": 0.006,
+            "permit_id": None,
+            "compliance_status": "compliance data not available for this city",
+            "compliance_note": "compliance data not available for this city",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": False, "dust_suppression_observed": False,
+            "last_inspection_date": None, "violation_count_90d": 0,
+        },
+        {
+            "slug": "mumbai-port-petroleum-silos",
+            "name": "Mumbai Port Trust & Chemical Bulk Storage Silos",
+            "type": "industrial",
+            "description": "Maritime logistics, petroleum loading gantries, and chemical transfer tanks.",
+            "d_lon": -0.008, "d_lat": -0.018,
+            "permit_id": "MPCB/MUM/2025/0843",
+            "compliance_status": "compliant",
+            "compliance_note": "Vapor recovery units operational",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": True, "hospital_name": "St. George Hospital", "hospital_distance_m": 720,
+            "dust_suppression_required": False, "dust_suppression_observed": False,
+            "last_inspection_date": "2026-03-22", "violation_count_90d": 0,
+        },
+    ],
+    "bengaluru": [
+        {
+            "slug": "peenya-metal-fabrication-cluster",
+            "name": "Peenya Industrial Area Stage 1-4 Metal Finishing & Fabrication",
+            "type": "industrial",
+            "description": "Major industrial estate housing electroplating, metallurgy, casting, and engineering units.",
+            "d_lon": -0.016, "d_lat": 0.014,
+            "permit_id": "KSPCB/IND/BNG/2024/0445",
+            "compliance_status": "violation_flagged",
+            "compliance_note": "Acid mist scrubber bypass detected during inspection",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": True, "dust_suppression_observed": False,
+            "last_inspection_date": "2026-04-18", "violation_count_90d": 2,
+        },
+        {
+            "slug": "silk-board-interchange-corridor",
+            "name": "Silk Board Interchange Heavy Diesel Transport Corridor",
+            "type": "traffic",
+            "description": "Crucial expressway junction with peak commercial bus and truck flow connecting to Electronic City.",
+            "d_lon": 0.012, "d_lat": -0.016,
+            "permit_id": None,
+            "compliance_status": "compliance data not available for this city",
+            "compliance_note": "compliance data not available for this city",
+            "near_school": True, "school_name": "St. John's High School", "school_distance_m": 450,
+            "near_hospital": True, "hospital_name": "St. John's Medical College Hospital", "hospital_distance_m": 520,
+            "dust_suppression_required": False, "dust_suppression_observed": False,
+            "last_inspection_date": None, "violation_count_90d": 0,
+        },
+        {
+            "slug": "orr-metro-construction-cluster",
+            "name": "Outer Ring Road (ORR) Metro Line Elevated Construction Site",
+            "type": "construction",
+            "description": "Elevated metro rail construction with continuous cement mixing, batching, and material hauling.",
+            "d_lon": 0.015, "d_lat": 0.010,
+            "permit_id": "BBMP/CONST/2026/0912",
+            "compliance_status": "compliant",
+            "compliance_note": "Barricading and dust suppression screens verified",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": True, "dust_suppression_observed": True,
+            "last_inspection_date": "2026-05-30", "violation_count_90d": 0,
+        },
+        {
+            "slug": "bommasandra-boiler-units",
+            "name": "Bommasandra Industrial Cluster Boiler Units",
+            "type": "industrial",
+            "description": "Light manufacturing and pharmaceutical boiler facilities.",
+            "d_lon": -0.010, "d_lat": -0.018,
+            "permit_id": None,
+            "compliance_status": "compliance data not available for this city",
+            "compliance_note": "compliance data not available for this city",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": False, "dust_suppression_observed": False,
+            "last_inspection_date": None, "violation_count_90d": 0,
+        },
+    ],
+    "kolkata": [
+        {
+            "slug": "howrah-foundry-cluster",
+            "name": "Howrah Foundry & Engineering Casting Works",
+            "type": "industrial",
+            "description": "Traditional iron foundries, metal fabrication, and secondary smelting cupolas.",
+            "d_lon": -0.018, "d_lat": 0.008,
+            "permit_id": "WBPCB/IND/HWH/2024/0772",
+            "compliance_status": "violation_flagged",
+            "compliance_note": "Wet scrubber pressure drop outside statutory bounds",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": True, "dust_suppression_observed": False,
+            "last_inspection_date": "2026-03-15", "violation_count_90d": 3,
+        },
+        {
+            "slug": "taratala-freight-corridor",
+            "name": "Taratala / Hyde Road Freight & Logistics Corridor",
+            "type": "traffic",
+            "description": "Port-bound container freight terminal and arterial heavy trucking route.",
+            "d_lon": -0.012, "d_lat": -0.015,
+            "permit_id": None,
+            "compliance_status": "compliance data not available for this city",
+            "compliance_note": "compliance data not available for this city",
+            "near_school": True, "school_name": "St. Thomas' Boys' School", "school_distance_m": 410,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": False, "dust_suppression_observed": False,
+            "last_inspection_date": None, "violation_count_90d": 0,
+        },
+        {
+            "slug": "bantala-leather-complex",
+            "name": "Bantala Kolkata Leather Complex Effluent & Incineration Zone",
+            "type": "industrial",
+            "description": "Tannery estate with central effluent treatment and solid waste incineration operations.",
+            "d_lon": 0.022, "d_lat": -0.010,
+            "permit_id": "WBPCB/IND/KLC/2025/0119",
+            "compliance_status": "compliant",
+            "compliance_note": "Common Effluent Treatment Plant online monitoring active",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": True, "dust_suppression_observed": True,
+            "last_inspection_date": "2026-04-20", "violation_count_90d": 0,
+        },
+        {
+            "slug": "em-bypass-metro-extension",
+            "name": "EM Bypass Metro Extension Construction Site",
+            "type": "construction",
+            "description": "Arterial roadway expansion and elevated metro pillar erection generating fugitive dust.",
+            "d_lon": 0.014, "d_lat": 0.012,
+            "permit_id": None,
+            "compliance_status": "compliance data not available for this city",
+            "compliance_note": "compliance data not available for this city",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": True, "hospital_name": "Ruby General Hospital", "hospital_distance_m": 350,
+            "dust_suppression_required": False, "dust_suppression_observed": False,
+            "last_inspection_date": None, "violation_count_90d": 0,
+        },
+    ],
+    "hyderabad": [
+        {
+            "slug": "sanathnagar-industrial-units",
+            "name": "Sanathnagar & Balanagar Industrial Development Area Units",
+            "type": "industrial",
+            "description": "Precision engineering, metal processing, and industrial chemical formulation units.",
+            "d_lon": -0.015, "d_lat": 0.012,
+            "permit_id": "TGPCB/IND/HYD/2024/0631",
+            "compliance_status": "violation_flagged",
+            "compliance_note": "VOC emissions exceed permissible workplace limits",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": True, "dust_suppression_observed": False,
+            "last_inspection_date": "2026-05-02", "violation_count_90d": 1,
+        },
+        {
+            "slug": "jeedimetla-effluent-stacks",
+            "name": "Jeedimetla Industrial Estate Chemical Stacks & Effluent Line",
+            "type": "industrial",
+            "description": "Chemical and active pharmaceutical ingredient (API) intermediate production facilities.",
+            "d_lon": 0.014, "d_lat": 0.018,
+            "permit_id": "TGPCB/IND/JED/2025/0284",
+            "compliance_status": "compliant",
+            "compliance_note": "Zero liquid discharge and bag filter systems compliant",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": False, "dust_suppression_observed": False,
+            "last_inspection_date": "2026-04-10", "violation_count_90d": 0,
+        },
+        {
+            "slug": "miyapur-transit-corridor",
+            "name": "Miyapur - Kukatpally Commercial Transit Corridor",
+            "type": "traffic",
+            "description": "High-density transit artery with multi-axle freight and bus transport exhaust.",
+            "d_lon": -0.012, "d_lat": -0.014,
+            "permit_id": None,
+            "compliance_status": "compliance data not available for this city",
+            "compliance_note": "compliance data not available for this city",
+            "near_school": True, "school_name": "Jawaharlal Nehru Technological University Campus", "school_distance_m": 490,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": False, "dust_suppression_observed": False,
+            "last_inspection_date": None, "violation_count_90d": 0,
+        },
+        {
+            "slug": "hitec-city-highrise-construction",
+            "name": "HITEC City Commercial High-Rise Construction Zone",
+            "type": "construction",
+            "description": "Commercial IT tower construction with deep excavation and concrete pumping operations.",
+            "d_lon": 0.018, "d_lat": -0.008,
+            "permit_id": "GHMC/CONST/2026/0331",
+            "compliance_status": "compliant",
+            "compliance_note": "Automated tire washing and mist spraying operational",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": True, "hospital_name": "Medicover Hospitals MADHAPUR", "hospital_distance_m": 540,
+            "dust_suppression_required": True, "dust_suppression_observed": True,
+            "last_inspection_date": "2026-05-25", "violation_count_90d": 0,
+        },
+    ],
+    "chennai": [
+        {
+            "slug": "manali-refinery-petrochemical-complex",
+            "name": "Manali Petrochemical & Heavy Refinery Complex",
+            "type": "industrial",
+            "description": "Petroleum refining, fertilizer synthesis, and organic chemical manufacturing estate.",
+            "d_lon": 0.010, "d_lat": 0.020,
+            "permit_id": "TNPCB/IND/MNL/2024/0198",
+            "compliance_status": "violation_flagged",
+            "compliance_note": "Sulfur recovery unit flare monitoring discrepancy detected",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": True, "dust_suppression_observed": False,
+            "last_inspection_date": "2026-04-14", "violation_count_90d": 2,
+        },
+        {
+            "slug": "ennore-thermal-transit-route",
+            "name": "Ennore Thermal Power & Port Transit Logistics Route",
+            "type": "industrial",
+            "description": "Coal-fired thermal power generation, coal yard handling, and port transit conveyor routes.",
+            "d_lon": 0.018, "d_lat": 0.016,
+            "permit_id": "TNPCB/IND/ENR/2025/0512",
+            "compliance_status": "compliant",
+            "compliance_note": "Electrostatic precipitators and covered conveyors certified",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": True, "dust_suppression_observed": True,
+            "last_inspection_date": "2026-05-18", "violation_count_90d": 0,
+        },
+        {
+            "slug": "kathipara-gst-freight-corridor",
+            "name": "Kathipara Junction & GST Road Heavy Freight Corridor",
+            "type": "traffic",
+            "description": "Multi-level cloverleaf intersection and National Highway corridor with heavy diesel movement.",
+            "d_lon": -0.014, "d_lat": -0.012,
+            "permit_id": None,
+            "compliance_status": "compliance data not available for this city",
+            "compliance_note": "compliance data not available for this city",
+            "near_school": True, "school_name": "Kendriya Vidyalaya Gill Nagar", "school_distance_m": 440,
+            "near_hospital": True, "hospital_name": "MIOT International Hospital", "hospital_distance_m": 610,
+            "dust_suppression_required": False, "dust_suppression_observed": False,
+            "last_inspection_date": None, "violation_count_90d": 0,
+        },
+        {
+            "slug": "omr-expressway-construction-site",
+            "name": "OMR IT Expressway Elevated Road Construction Site",
+            "type": "construction",
+            "description": "Elevated expressway viaduct construction and surface repaving generating particulate dust.",
+            "d_lon": 0.012, "d_lat": -0.016,
+            "permit_id": "GCC/CONST/2026/0884",
+            "compliance_status": "compliant",
+            "compliance_note": "Continuous street sweeper and water sprinkling verified",
+            "near_school": False, "school_name": None, "school_distance_m": None,
+            "near_hospital": False, "hospital_name": None, "hospital_distance_m": None,
+            "dust_suppression_required": True, "dust_suppression_observed": True,
+            "last_inspection_date": "2026-05-22", "violation_count_90d": 0,
+        },
+    ],
+}
+
+
+def _build_dynamic_scenario(
+    st_cfg: dict[str, Any],
+    city_cfg: dict[str, Any],
+    city_key: str,
+) -> DemoScenario:
+    """Build a fully-formed DemoScenario for any verified physical monitoring station."""
+    st_name = st_cfg["name"]
+    city_name = city_cfg.get("city", {}).get("name", city_key.title())
+    state = city_cfg.get("city", {}).get("state", "India")
+    network = st_cfg.get("network", "CPCB_CAAQMS")
+    s_lon = float(st_cfg["lon"])
+    s_lat = float(st_cfg["lat"])
+    elev = int(st_cfg.get("elevation_m", 500))
+
+    from .cities import _CITY_BASELINES
+    base_info = _CITY_BASELINES.get(city_key, _CITY_BASELINES["pune"])
+    dominant = base_info.get("dominant", "pm25")
+    spike_aqi = int(base_info.get("base_aqi", 200.0) * 1.5)
+
+    templates = _CITY_CANDIDATE_TEMPLATES.get(city_key, _CITY_CANDIDATE_TEMPLATES.get("delhi", []))
+    candidates = []
+    for tmpl in templates:
+        cand_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{city_key}-{st_name}-{tmpl['slug']}"))
+        c_lon = round(s_lon + tmpl["d_lon"], 4)
+        c_lat = round(s_lat + tmpl["d_lat"], 4)
+        candidates.append({
+            "id": cand_id,
+            "name": tmpl["name"],
+            "type": tmpl["type"],
+            "description": tmpl["description"],
+            "geometry": {"type": "Point", "coordinates": [c_lon, c_lat]},
+            "permit_id": tmpl.get("permit_id"),
+            "compliance_status": tmpl.get("compliance_status", "compliance data not available for this city"),
+            "compliance_note": tmpl.get("compliance_note", "compliance data not available for this city"),
+            "schedule_start": "06:00",
+            "schedule_end": "22:00",
+            "near_school": tmpl.get("near_school", False),
+            "school_name": tmpl.get("school_name"),
+            "school_distance_m": tmpl.get("school_distance_m"),
+            "near_hospital": tmpl.get("near_hospital", False),
+            "hospital_name": tmpl.get("hospital_name"),
+            "hospital_distance_m": tmpl.get("hospital_distance_m"),
+            "dust_suppression_required": tmpl.get("dust_suppression_required", False),
+            "dust_suppression_observed": tmpl.get("dust_suppression_observed", False),
+            "last_inspection_date": tmpl.get("last_inspection_date"),
+            "violation_count_90d": tmpl.get("violation_count_90d", 0),
+        })
+
+    field_team = CITY_FIELD_SQUADS.get(city_key, CITY_FIELD_SQUADS["pune"])
+
+    return DemoScenario(
+        station_name=st_name,
+        city=city_name,
+        state=state,
+        network=network,
+        coordinates=(s_lon, s_lat),
+        elevation_m=elev,
+        spike_aqi=spike_aqi,
+        spike_local_time="08:30",
+        dominant_pollutant=dominant,
+        base_profile={
+            "pm25": float(base_info.get("pm25", 50.0)),
+            "pm10": float(base_info.get("pm10", 100.0)),
+            "no2": float(base_info.get("no2", 35.0)),
+            "so2": float(base_info.get("so2", 15.0)),
+            "co": float(base_info.get("co", 1.0)),
+            "o3": float(base_info.get("o3", 30.0)),
+        },
+        peak_ratios={
+            "pm25_pm10": 0.45,
+            "no2": 0.22,
+            "so2": 0.15,
+            "o3": 0.12,
+            "co_per_pm10": 0.008,
+        },
+        weather_overrides={
+            "wind_speed_kmh": 12.0,
+            "wind_direction_deg": 270,
+            "temperature_c": 28.0,
+            "relative_humidity_pct": 65,
+            "pressure_hpa": 1008.0,
+            "cloud_cover_oktas": 2,
+            "precipitation_mm_last_1h": 0.0,
+            "visibility_km": 6.0,
+            "mixing_layer_height_m": 750,
+        },
+        candidates=candidates,
+        pre_alerts={
+            "source": f"{candidates[0]['name'] if candidates else 'Regional Industrial Cluster'}",
+            "eta_minutes": 30,
+            "estimated_aqi_increase": 45,
+            "advisory": (
+                f"Elevated {dominant.upper()} levels detected in {city_name} airshed near {st_name}. "
+                "Atmospheric dispersion monitoring and localized field investigation initiated."
+            ),
+        },
+        field_team=field_team,
+    )
+
+
+# =========================================================================== #
 # Registry
 # =========================================================================== #
 _SCENARIOS: dict[str, DemoScenario] = {
@@ -577,14 +1084,57 @@ _SCENARIOS: dict[str, DemoScenario] = {
 }
 
 
+def _populate_all_scenarios() -> None:
+    """Pre-populate _SCENARIOS with all 28 physical CAAQMS stations across all 7 cities."""
+    # Ensure baseline Pune scenario candidates also have compliance fields per FR-037
+    for s in _SCENARIOS.values():
+        for c in s.candidates:
+            if "compliance_status" not in c:
+                if c.get("permit_id"):
+                    c["compliance_status"] = "compliant" if c.get("violation_count_90d", 0) == 0 else "violation_flagged"
+                    c["compliance_note"] = "Permit verified by State Pollution Control Board"
+                else:
+                    c["compliance_status"] = "compliance data not available for this city"
+                    c["compliance_note"] = "compliance data not available for this city"
+
+    try:
+        from .cities import get_all_city_configs, _normalize_name
+        configs = get_all_city_configs()
+        for city_key, cfg in configs.items():
+            for st in cfg.get("stations", []):
+                key = _normalize_name(st["name"])
+                if key not in _SCENARIOS:
+                    _SCENARIOS[key] = _build_dynamic_scenario(st, cfg, city_key)
+    except Exception:
+        pass
+
+
+_populate_all_scenarios()
+
+
 def get_scenario(station_name: str) -> DemoScenario:
     """Look up a demo scenario by station name (case-insensitive).
 
-    Falls back to Shivajinagar if the station is unknown.
+    Supports all 28 physical stations across 7 cities. Falls back to Shivajinagar if unknown.
     """
-    return _SCENARIOS.get(station_name.strip().lower(), _SHIVAJINAGAR)
+    key = station_name.strip().lower()
+    if key in _SCENARIOS:
+        return _SCENARIOS[key]
+
+    # Attempt dynamic construction if newly added or non-canonical lookup
+    from .cities import get_all_city_configs, _normalize_name
+    configs = get_all_city_configs()
+    for city_key, cfg in configs.items():
+        for st in cfg.get("stations", []):
+            if _normalize_name(st["name"]) == key or st["name"].lower() == key:
+                scenario = _build_dynamic_scenario(st, cfg, city_key)
+                _SCENARIOS[key] = scenario
+                return scenario
+
+    return _SHIVAJINAGAR
 
 
 def list_scenario_names() -> list[str]:
     """Return all available demo station names."""
     return [s.station_name for s in _SCENARIOS.values()]
+
