@@ -1,42 +1,31 @@
-"""Asynchronous live AQI poller for the Pune region via WAQI API.
+"""Asynchronous Multi-City AQI Revalidation Loop & Anomaly Detection Service.
 
-Polls the World Air Quality Index (WAQI) feed every POLL_INTERVAL_SECONDS
-seconds. When a reading breaches SPIKE_THRESHOLD, it fires the PostGIS
-attribution pipeline and broadcasts the enriched telemetry frame to all
-connected WebSocket clients via the shared ConnectionManager.
-
-Start alongside the FastAPI app — in app/api.py add to the lifespan startup:
-    asyncio.create_task(start_live_aqi_pipeline())
+Cycles through all 7 configured target cities on a 30-second cadence:
+  - Revalidates in-memory telemetry cache across all 28 verified physical CAAQMS stations.
+  - Persists fresh readings to PostgreSQL/SQLite when a database connection is active.
+  - Detects AQI spikes (> SPIKE_THRESHOLD = 150) and anomalous pollution events.
+  - Triggers source attribution on spikes and broadcasts live telemetry frames to
+    all connected WebSocket clients.
 """
 from __future__ import annotations
 
 import asyncio
 import logging
 import os
+from datetime import datetime
+from typing import Any, Optional
+from zoneinfo import ZoneInfo
 
-import httpx
+from .cities import list_available_cities, get_city_config
+from .ingestion import fetch_city_stations_telemetry, IST
 
 log = logging.getLogger(__name__)
 
-# ─── Configuration ────────────────────────────────────────────────────────────
-# Set WAQI_TOKEN env var with a valid token from https://aqicn.org/api/
-# Falls back to a demo/mock flow if the token is missing or invalid.
-_WAQI_TOKEN = os.getenv("WAQI_TOKEN", "")
-# Pune Shivajinagar CAAQMS — UID 3760 (verified via WAQI search API).
-# Slug-based feeds return "Unknown station"; geo-based snaps to Delhi.
-# UID-based is the only reliable method for these offline CPCB stations.
-WAQI_API_URL = (
-    f"https://api.waqi.info/feed/@3760/?token={_WAQI_TOKEN}"
-)
 POLL_INTERVAL_SECONDS: int = 30
 SPIKE_THRESHOLD: float = 150.0
 
-
-# ─── Startup mock payload ─────────────────────────────────────────────────────
-# Broadcast immediately on startup so the frontend exits the loading spinner
-# before the first 30-second WAQI poll cycle completes.
-# NOTE: is_spike=False so the dashboard loads in NOMINAL state on boot.
-# Users activate the spike deliberately via the 'Toggle Spike Data' button.
+# ─── Startup Heartbeat Payload ────────────────────────────────────────────────
+# Broadcast immediately on startup so frontend exits loading spinner immediately.
 _STARTUP_MOCK_PAYLOAD: dict = {
     "type": "LIVE_TELEMETRY",
     "station": "Shivajinagar",
@@ -46,159 +35,162 @@ _STARTUP_MOCK_PAYLOAD: dict = {
     "dominant_pollutant": "PM2.5",
     "wind": {
         "speed": "14.5 km/h",
-        "direction": "WNW - 250\u00b0",
+        "direction": "WNW - 250°",
     },
     "action_advisory": (
-        "Live telemetry stream initializing — Pune air quality is currently within acceptable limits. "
-        "All four CAAQMS monitoring stations are online. No active spike events detected. "
-        "System is polling WAQI feed every 30 seconds."
+        "Live multi-city telemetry stream initialized — monitoring 7 national cities. "
+        "All verified CAAQMS monitoring stations online. "
+        "System is polling upstream provider feeds on a 30-second cadence."
     ),
     "is_spike": False,
     "attribution": [],
     "geo": [18.5314, 73.8446],
-    "_source": "startup_nominal",  # internal marker — not shown in UI
+    "_source": "startup_nominal",
 }
 
 
-# ─── Live AQI fetch ────────────────────────────────────────────────────────────
-async def fetch_live_pune_aqi() -> dict | None:
-    """Fetch live CPCB AQI data for Pune using _fetch_real_aqi."""
-    try:
-        from .api import _fetch_real_aqi
-        from datetime import datetime
-        from zoneinfo import ZoneInfo
-        aqi, pol, conc = _fetch_real_aqi("Shivajinagar")
-        if aqi is not None:
-            ts_now = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M:%S")
-            return {
-                "aqi": float(aqi),
-                "dominentpol": pol or "PM2.5",
-                "time": {"s": ts_now},
-                "city": {"name": "Shivajinagar", "geo": [18.5314, 73.8446]},
-                "concentrations": conc or {},
-            }
-    except Exception as exc:  # noqa: BLE001
-        log.error("Live telemetry polling exception: %s", str(exc))
-    return None
-
-
-# ─── Attribution helper (wraps the existing app-level pipeline) ───────────────
-def _calculate_attribution(sensor_aqi: float, pollutant: str) -> list[dict]:
-    """Invoke the PostGIS wind-cone attribution pipeline.
-
-    Delegates to _build_attribution in app.api using the scenario that best
-    matches the dominant pollutant. Returns a simplified list of source dicts
-    suitable for direct WebSocket broadcast.
-    """
+def _calculate_attribution(sensor_aqi: float, pollutant: str, city_name: str = "Pune") -> list[dict]:
+    """Invoke the PostGIS wind-cone attribution pipeline for anomalous readings."""
     from .api import _build_attribution
     from .demo_scenarios import get_scenario
 
-    # Pick the scenario whose dominant pollutant most closely matches the live feed.
     _POLLUTANT_SCENARIO_MAP: dict[str, str] = {
-        "pm25":  "Kothrud",
+        "pm25": "Kothrud",
         "pm2.5": "Kothrud",
-        "pm10":  "Shivajinagar",
-        "no2":   "Swargate",
-        "so2":   "Hadapsar",
-        "o3":    "Kothrud",
-        "co":    "Swargate",
+        "pm10": "Shivajinagar",
+        "no2": "Swargate",
+        "so2": "Hadapsar",
+        "o3": "Kothrud",
+        "co": "Swargate",
     }
     scenario_name = _POLLUTANT_SCENARIO_MAP.get(pollutant.lower(), "Shivajinagar")
 
     try:
         scenario = get_scenario(scenario_name)
-        # Patch the scenario AQI so the pipeline uses the live value.
         scenario.spike_aqi = int(sensor_aqi)
         result = _build_attribution(scenario)
 
-        # Extract ranked sources into a flat, broadcast-friendly format.
         raw_sources: list[dict] = []
         for i, block in enumerate(result.get("ranked_candidates", []), start=1):
-            raw_sources.append(
-                {
-                    "id": i,
-                    "type": (block.get("source_type", "industrial")).upper(),
-                    "source": block.get("name", "Unknown Source"),
-                    "confidence": f"{round(float(block.get('composite_score', 0)) * 100, 0):.0f}%",
-                }
-            )
-        return raw_sources[:5]  # top 5 candidates max
-    except Exception as exc:  # noqa: BLE001
-        log.warning("Attribution pipeline error during live spike: %s", exc)
+            raw_sources.append({
+                "id": i,
+                "type": (block.get("source_type", "industrial")).upper(),
+                "source": block.get("name", "Unknown Source"),
+                "confidence": f"{round(float(block.get('composite_score', 0)) * 100, 0):.0f}%",
+            })
+        return raw_sources[:5]
+    except Exception as exc:
+        log.warning("Attribution pipeline exception during live spike: %s", exc)
         return []
 
 
-# ─── Main poller loop ─────────────────────────────────────────────────────────
-async def start_live_aqi_pipeline() -> None:
-    """Entry-point coroutine — schedule with asyncio.create_task() on startup."""
-    # Lazy imports to avoid circular dependency at module load time.
+def run_single_poll_cycle(session: Any = None) -> dict[str, Any]:
+    """Synchronously execute a single poll and revalidation cycle across all 7 cities.
+    
+    Used by automated tests and background tasks to verify multi-city data ingestion.
+    """
+    cities = list_available_cities()
+    cycle_summary: dict[str, Any] = {
+        "timestamp": datetime.now(IST).isoformat(),
+        "cities_polled": len(cities),
+        "total_stations": 0,
+        "spikes_detected": [],
+        "city_results": {},
+    }
+
+    for city in cities:
+        try:
+            stations = fetch_city_stations_telemetry(city, session=session, force_refresh=True)
+            if stations:
+                cycle_summary["total_stations"] += len(stations)
+                cycle_summary["city_results"][city] = len(stations)
+                for st in stations:
+                    if st.get("current_aqi", 0) > SPIKE_THRESHOLD:
+                        cycle_summary["spikes_detected"].append({
+                            "city": city,
+                            "station": st.get("name"),
+                            "aqi": st.get("current_aqi"),
+                            "dominant": st.get("dominant_pollutant"),
+                        })
+        except Exception as exc:
+            log.warning("Error during poll cycle for city %s: %s", city, exc)
+
+    return cycle_summary
+
+
+async def start_multi_city_revalidation_loop() -> None:
+    """Continuous 30-second multi-city revalidation loop running in the FastAPI lifespan."""
     from .api import manager, _enrich_broadcast
 
-    log.info("Initializing Asynchronous Live Pune Ingestion Stream...")
+    log.info("Initializing Asynchronous Multi-City 30-Second Revalidation Loop (7 Cities)...")
+    await asyncio.sleep(0.5)
 
-    # ── Startup heartbeat: unblock the frontend loading spinner immediately ──
-    # The WAQI poll runs every 30 s. Without this, newly connected clients stare
-    # at the spinner for up to 30 seconds (or forever if the token is missing).
-    # We broadcast a fully-enriched mock reading so the UI renders immediately
-    # and the real telemetry replaces it on the first successful poll.
-    await asyncio.sleep(0.5)  # tiny yield so manager is fully ready
-    log.info("Broadcasting startup heartbeat payload to unblock frontend.")
-    await manager.broadcast(_STARTUP_MOCK_PAYLOAD)
+    # Initial heartbeat broadcast to unblock frontend loading states
+    try:
+        await manager.broadcast(_STARTUP_MOCK_PAYLOAD)
+    except Exception as exc:
+        log.debug("Initial heartbeat broadcast skipped: %s", exc)
 
     while True:
-        data = await fetch_live_pune_aqi()
+        try:
+            # Check DB session availability safely
+            session = None
+            try:
+                from .db import get_session
+                session_cm = get_session()
+                session = session_cm.__enter__()
+            except Exception:
+                session = None
 
-        if data:
-            current_aqi = float(data.get("aqi", 0))
-            dominant_pollutant: str = data.get("dominentpol", "PM2.5")
-            time_stamp: str = data.get("time", {}).get("s", "")
-            # WAQI city name (e.g. "Pune Shivajinagar") → last word as station hint
-            waqi_city_name: str = data.get("city", {}).get("name", "Shivajinagar")
-            station_hint = waqi_city_name.split()[-1] if waqi_city_name else "Shivajinagar"
+            cities = list_available_cities()
 
-            is_spike = current_aqi > SPIKE_THRESHOLD
+            for city in cities:
+                try:
+                    stations = fetch_city_stations_telemetry(city, session=session, force_refresh=False)
+                    if not stations:
+                        continue
 
-            # Debug: confirm data is landing in the terminal
-            print(f"CPCB Data Received: AQI={current_aqi}, pollutant={dominant_pollutant}, spike={is_spike}")
+                    # Check for spikes across stations in this city
+                    for st in stations:
+                        aqi_val = float(st.get("current_aqi", 0))
+                        is_spike = aqi_val > SPIKE_THRESHOLD
 
-            attribution_results: list[dict] = []
-            if is_spike:
-                log.warning(
-                    "CRITICAL REAL-TIME ANOMALY DETECTED IN PUNE: AQI %.1f",
-                    current_aqi,
-                )
-                # Fires PostGIS wind-cone slicing and industrial ranking logic.
-                attribution_results = _calculate_attribution(
-                    sensor_aqi=current_aqi,
-                    pollutant=dominant_pollutant,
-                )
-            else:
-                log.info("Live poll OK \u2014 AQI %.1f (%s), nominal.", current_aqi, dominant_pollutant)
+                        if is_spike:
+                            dom = st.get("dominant_pollutant", "PM2.5")
+                            st_name = st.get("name", "Unknown Station")
+                            log.warning("SPIKE DETECTED in %s (%s): AQI %.1f [%s]", city, st_name, aqi_val, dom)
 
-            # Packaging the standardised telemetry frame for the frontend.
-            payload: dict = {
-                "type": "LIVE_TELEMETRY",
-                "station": station_hint,
-                "timestamp": time_stamp,
-                "city": "Pune",
-                "aqi": current_aqi,
-                "dominant_pollutant": dominant_pollutant,
-                "is_spike": is_spike,
-                "attribution": attribution_results,
-                "geo": data.get("city", {}).get("geo", [18.5314, 73.8446]),
-            }
+                            attribution_results = _calculate_attribution(aqi_val, dom, city)
 
-            # Enrich with wind, action_advisory, and structured attribution
-            # so the right sidebar always renders even if the live API is sparse.
-            payload = _enrich_broadcast(payload)
+                            payload = {
+                                "type": "LIVE_TELEMETRY",
+                                "station": st_name,
+                                "timestamp": st.get("data_timestamp", ""),
+                                "city": city,
+                                "aqi": aqi_val,
+                                "dominant_pollutant": dom,
+                                "is_spike": True,
+                                "attribution": attribution_results,
+                                "geo": [st["coordinates"][1], st["coordinates"][0]] if len(st["coordinates"]) == 2 else [18.53, 73.85],
+                                "data_source": st.get("data_source"),
+                            }
+                            enriched = _enrich_broadcast(payload)
+                            await manager.broadcast(enriched)
 
-            # Direct persistent WebSocket broadcast to all active clients.
-            await manager.broadcast(payload)
-        else:
-            log.warning(
-                "CPCB Data Received: 0 rows found. "
-                "Check WAQI_TOKEN env var or network connectivity."
-            )
-            print("CPCB Data Received: 0 rows found.")
+                except Exception as city_exc:
+                    log.warning("Poller loop exception for city %s: %s", city, city_exc)
+
+            if session:
+                try:
+                    session_cm.__exit__(None, None, None)
+                except Exception:
+                    pass
+
+        except Exception as loop_exc:
+            log.error("Unhandled error in multi-city revalidation loop: %s", loop_exc)
 
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
+
+
+# Backward-compatible alias for existing lifespan references
+start_live_aqi_pipeline = start_multi_city_revalidation_loop

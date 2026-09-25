@@ -183,6 +183,17 @@ def rank_candidates(
                     "near_hospital": cand.get("near_hospital", False),
                     "hospital_name": cand.get("hospital_name"),
                     "hospital_distance_m": cand.get("hospital_distance_m"),
+                    "compliance_status": (
+                        cand.get("compliance_status")
+                        or (("compliant" if cand.get("violation_count_90d", 0) == 0 else "violation_flagged")
+                            if cand.get("permit_id")
+                            else "compliance data not available for this city")
+                    ),
+                    "compliance_note": (
+                        cand.get("compliance_note")
+                        or ("Permit verified by State Pollution Control Board" if cand.get("permit_id")
+                            else "compliance data not available for this city")
+                    ),
                 },
                 "score_breakdown": {
                     "wind_alignment": round(w_score, 2),

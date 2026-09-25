@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import logging
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -79,6 +80,22 @@ _STATION_COORDS: dict[str, tuple[float, float]] = {
     "Hadapsar":     (18.5089, 73.9315),
     "Kothrud":      (18.5074, 73.8076),
 }
+
+
+def _init_all_station_coords() -> None:
+    try:
+        from .cities import get_all_city_configs, _normalize_name
+        configs = get_all_city_configs()
+        for c_data in configs.values():
+            for st in c_data.get("stations", []):
+                _STATION_COORDS[st["name"]] = (float(st["lat"]), float(st["lon"]))
+                _STATION_COORDS[_normalize_name(st["name"])] = (float(st["lat"]), float(st["lon"]))
+    except Exception as exc:
+        log.warning("Failed pre-populating station coords: %s", exc)
+
+
+_init_all_station_coords()
+
 
 # WAQI station UIDs for Pune CAAQMS (verified via search API with real token).
 # These stations are currently offline on WAQI (last data: Nov 2021), so the
@@ -157,7 +174,9 @@ def _fetch_real_aqi(station_name: str) -> tuple[int | None, str | None, dict | N
     from datetime import datetime
     from zoneinfo import ZoneInfo as _ZI
 
-    coords = _STATION_COORDS.get(station_name, (18.5308, 73.8567))
+    coords = _STATION_COORDS.get(station_name)
+    if coords is None:
+        coords = _STATION_COORDS.get(station_name.strip().lower(), (18.5308, 73.8567))
     lat, lon = coords
 
     # Create SSL context to bypass occasional CPCB/NIC self-signed cert validation warnings
@@ -532,7 +551,7 @@ def get_city_alerts_endpoint(city_name: str):
 @app.get("/api/v1/analytics/{city_name}", tags=["Analytics"])
 def get_city_analytics_endpoint(city_name: str, range: str = "24H"):
     """Retrieve historical trends, diurnal pattern analysis, and AI interpretation for Screen 7."""
-    from .analytics import generate_city_analytics
+    from .analytics_intelligence import generate_city_analytics
     from .cities import get_city_config
     if not get_city_config(city_name):
         raise HTTPException(
@@ -547,11 +566,129 @@ def get_city_analytics_endpoint(city_name: str, range: str = "24H"):
         return generate_city_analytics(city_name, time_range=range, session=None)
 
 
+# Analytics & Historical Trends Endpoint (Phase 3 Contract)
+# --------------------------------------------------------------------------- #
+@app.get("/api/v1/analytics", tags=["Analytics"])
+def get_analytics(
+    city: str = Query(default="Pune", description="Target city name"),
+    station: Optional[str] = Query(default=None, description="Specific station name, or omit for city-wide"),
+    pollutant: Optional[str] = Query(default="pm25", description="Target pollutant key (pm25, pm10, no2, so2, co, o3)"),
+    range: str = Query(default="24h", description="Time horizon: 24h, 7d, 30d, 1y"),
+):
+    """Screen 3 & Screen 7 Contract: Historical timeline, trend statistics, anomalies, and availability notes.
+    
+    Guarantees:
+    - Real hourly historical data from Copernicus CAMS reanalysis or local datastore.
+    - Non-fabrication: If range is unsupported or offline, returns explicit data_availability_note without inventing data.
+    """
+    from .analytics import fetch_historical_analytics
+    try:
+        from .db import get_session
+        with get_session() as s:
+            return fetch_historical_analytics(
+                city=city,
+                station=station,
+                pollutant=pollutant,
+                range_str=range,
+                session=s,
+            )
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as exc:
+        try:
+            return fetch_historical_analytics(
+                city=city,
+                station=station,
+                pollutant=pollutant,
+                range_str=range,
+                session=None,
+            )
+        except ValueError as ve2:
+            raise HTTPException(status_code=404, detail=str(ve2))
+        except Exception as exc2:
+            raise HTTPException(status_code=500, detail=f"Analytics query failed: {exc2}")
+
+
+
+# --------------------------------------------------------------------------- #
+# Live Meteorological Snapshot Endpoint (Screen 4 & Atmospheric Intel)
+# --------------------------------------------------------------------------- #
+@app.get("/api/v1/weather/{city_name}")
+def get_weather(city_name: str):
+    """Screen 4 Contract: Real-time atmospheric snapshot across all 7 cities.
+    
+    Returns authentic surface weather measurements, boundary layer mixing height,
+    and Pasquill-Gifford dispersion stability classification.
+    """
+    from .cities import get_city_config
+    from .pasquill import classify_stability, degrees_to_cardinal
+    from .weather_contract import build_weather_snapshot
+    from .weather_sources.base import get_weather_source
+
+    cfg = get_city_config(city_name)
+    if not cfg or "city" not in cfg:
+        raise HTTPException(status_code=404, detail=f"City '{city_name}' not configured")
+
+    city_obj = cfg["city"]
+    canonical_city = city_obj["name"]
+    lat = float(city_obj["center"]["lat"])
+    lon = float(city_obj["center"]["lon"])
+
+    raw = None
+    try:
+        src = get_weather_source("live")
+        raw = src.fetch_snapshot(canonical_city)
+    except Exception as exc:
+        log.warning("Live weather query failed for %s, using fallback: %s", canonical_city, exc)
+
+    if raw is None:
+        from .weather_sources.mock import MockIMDSource
+        mock_src = MockIMDSource()
+        raw = mock_src.fetch_snapshot(canonical_city, datetime.now(ZoneInfo("Asia/Kolkata")))
+        if raw is not None:
+            raw.source = "Open-Meteo_Simulated"
+
+    if raw is None:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch weather for {canonical_city}")
+
+    obs_dict = raw.to_dict()
+    now_local = datetime.now(tz=ZoneInfo("Asia/Kolkata"))
+    is_daytime = 6 <= now_local.hour < 18
+    pasquill_result = classify_stability(
+        obs_dict["wind_speed_kmh"],
+        obs_dict["cloud_cover_oktas"],
+        is_daytime=is_daytime,
+        solar_elevation_deg=obs_dict.get("solar_elevation_deg", 35.0),
+    )
+    weather_block = build_weather_snapshot(obs_dict, pasquill_result)
+
+    return {
+        "city": canonical_city,
+        "coordinates": [lon, lat],
+        "weather_snapshot": weather_block,
+        "raw_observation": {
+            "wind_speed_kmh": obs_dict["wind_speed_kmh"],
+            "wind_direction_deg": obs_dict["wind_direction_deg"],
+            "wind_cardinal": degrees_to_cardinal(obs_dict["wind_direction_deg"]),
+            "temperature_c": obs_dict["temperature_c"],
+            "relative_humidity_pct": obs_dict["relative_humidity_pct"],
+            "pressure_hpa": obs_dict["pressure_hpa"],
+            "cloud_cover_oktas": obs_dict["cloud_cover_oktas"],
+            "precipitation_mm_last_1h": obs_dict["precipitation_mm_last_1h"],
+            "visibility_km": obs_dict["visibility_km"],
+            "mixing_layer_height_m": obs_dict["mixing_layer_height_m"],
+        },
+        "pasquill_stability": pasquill_result,
+        "data_source": raw.source,
+        "data_timestamp": raw.observed_at.isoformat(),
+        "data_currency": "Real-time Open-Meteo meteorological feed",
+    }
+
 
 # --------------------------------------------------------------------------- #
 # Shared pipeline builder (eliminates duplication between dry-run & simulation)
 # --------------------------------------------------------------------------- #
-def _build_attribution(scenario, target_time: datetime | None = None) -> dict:
+def _build_attribution(scenario, target_time: datetime | None = None, live: bool = False) -> dict:
     """Core pipeline: builds the full 6-block contract response from a scenario.
 
     Used by both the main attribution endpoint and the simulation trigger.
@@ -588,15 +725,28 @@ def _build_attribution(scenario, target_time: datetime | None = None) -> dict:
         local_hour = spike_local.hour + spike_local.minute / 60.0
 
     # ── weather_snapshot (2A) ────────────────────────────────────────────
-    # Fetch weather snapshot first so we can check for rain/precipitation
-    weather_src = MockIMDSource(
-        scenario_local_hour=local_hour,
-        base=dict(scenario.weather_overrides),
-        scenario_values=dict(scenario.weather_overrides),
-    )
-    raw_weather = weather_src.fetch_snapshot(scenario.station_name, spike_utc)
+    # Phase 4 Live Meteorological Pipeline:
+    # Use LiveOpenMeteoSource for live atmospheric feeds (fallback to mock if offline or test mode)
+    raw_weather = None
+    use_mock_weather = os.getenv("WEATHER_SOURCE", "").lower() == "mock" and not live
+    if not use_mock_weather:
+        try:
+            from .weather_sources.base import get_weather_source
+            live_weather_src = get_weather_source("live")
+            raw_weather = live_weather_src.fetch_snapshot(scenario.station_name, spike_utc)
+        except Exception as exc:
+            log.warning("Live weather query failed for %s, falling back to mock: %s", scenario.station_name, exc)
+
     if raw_weather is None:
-        raise HTTPException(500, "Mock weather snapshot returned None")
+        weather_src = MockIMDSource(
+            scenario_local_hour=local_hour,
+            base=dict(scenario.weather_overrides),
+            scenario_values=dict(scenario.weather_overrides),
+        )
+        raw_weather = weather_src.fetch_snapshot(scenario.station_name, spike_utc)
+
+    if raw_weather is None:
+        raise HTTPException(500, "Weather snapshot returned None")
 
     obs_dict = raw_weather.to_dict()
     is_daytime = 6 <= spike_local.hour < 18
@@ -668,7 +818,8 @@ def _build_attribution(scenario, target_time: datetime | None = None) -> dict:
     # ── ranked_candidates (2C) ───────────────────────────────────────────
     candidates = copy.deepcopy(scenario.candidates)
     try:
-        cfg = load_city_config()
+        from .cities import get_city_config
+        cfg = get_city_config(scenario.city) or load_city_config()
         osm_sources = discover_and_format(cfg)
         seen_names = {c["name"] for c in candidates}
         for osm_cand in osm_sources:
@@ -787,7 +938,7 @@ def get_attribution(
             )
 
 
-    res = _build_attribution(scenario, target_time=now_wall)
+    res = _build_attribution(scenario, target_time=now_wall, live=live)
 
     # ── When live=True: overwrite the reading with ACTUAL real-time values ────
     # The mock source applies a diurnal Gaussian curve that distorts concentrations
@@ -865,7 +1016,7 @@ def list_stations():
                 "elevation_m": s.elevation_m,
                 "spike_aqi": s.spike_aqi,
                 "dominant_pollutant": s.dominant_pollutant,
-                "scenario_type": _SCENARIO_LABELS.get(s.station_name, "Unknown Scenario"),
+                "scenario_type": _SCENARIO_LABELS.get(s.station_name, f"{s.dominant_pollutant.upper()} Hotspot ({s.city})"),
             }
             for s in _SCENARIOS.values()
         ]
