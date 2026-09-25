@@ -84,11 +84,8 @@ const GLOBAL_STYLES = `
     50%       { box-shadow: 0 0 0 5px rgba(251,191,36,0.15), 0 0 28px rgba(251,191,36,0.85); }
   }
 
-  /* ── Reset ── */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  /* ── Root layout ── */
-  html, body, #root { width: 100%; height: 100%; overflow: hidden; background: #08080a; }
+  /* ── Scoped Reset for Screen 4 ── */
+  .aq-root, .aq-root *, .aq-root *::before, .aq-root *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   .aq-root {
     width: 100%; height: calc(100vh - 64px); display: flex;

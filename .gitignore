@@ -4,3 +4,8 @@ __pycache__/
 .venv/
 .agent/
 .agents/
+*screenshot*
+take_screenshot.mjs
+.screen1-v0-source/
+.webgl-design-source/
+dist/

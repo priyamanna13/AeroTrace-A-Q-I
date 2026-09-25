@@ -1,28 +1,201 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
 /* Tailwind v4 explicitly targets paths inside CSS source maps */
 @source "../index.html";
 @source "./**/*.{js,ts,jsx,tsx}";
 
-/* Custom Design Utility Tokens for Apple theme mapping */
 @theme {
   --color-obsidian: #09090b;
-  --color-obsidian-panel: rgba(20, 20, 25, 0.4);
-  --color-obsidian-card: rgba(255, 255, 255, 0.02);
+  --color-primary-teal: #235347;
+  --color-secondary-teal: #063F47;
+  --color-terracotta: #C96A4A;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-copper: var(--copper);
+  --color-teal: var(--teal);
+  --color-surface: var(--surface);
+
+  --color-aqi-good: var(--aqi-good);
+  --color-aqi-satisfactory: var(--aqi-satisfactory);
+  --color-aqi-moderate: var(--aqi-moderate);
+  --color-aqi-poor: var(--aqi-poor);
+  --color-aqi-very-poor: var(--aqi-very-poor);
+  --color-aqi-severe: var(--aqi-severe);
+}
+
+:root {
+  --font-display: 'Bodoni Moda', 'Bodoni 72', Didot, 'Times New Roman', serif;
+  --font-sans: 'Archivo', var(--font-deva-sans), 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Cascadia Code', 'SFMono-Regular', ui-monospace, Consolas, var(--font-deva-sans), sans-serif, monospace;
+
+  --font-archivo: 'Archivo', 'Segoe UI', system-ui, sans-serif;
+  --font-bodoni: 'Bodoni Moda', 'Bodoni 72', Didot, serif;
+  --font-deva-sans: 'Noto Sans Devanagari', sans-serif;
+  --font-deva-serif: 'Noto Serif Devanagari', serif;
+
+  color-scheme: dark;
+  --radius: 0.75rem;
+
+  /* Default dark theme tokens (matching brand specification & V0 globals.css) */
+  --background: oklch(0.2156 0.0031 196.9);
+  --foreground: oklch(0.954 0.0094 100);
+  --surface: oklch(0.245 0.006 196);
+  --card: oklch(0.25 0.007 196);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.235 0.006 196);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.405 0.0564 174.6);
+  --primary-foreground: oklch(0.954 0.0094 100);
+  --secondary: oklch(0.28 0.008 190);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.28 0.008 190);
+  --muted-foreground: oklch(0.6976 0.0161 164.5);
+  --accent: oklch(0.3 0.03 174);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.7 0.19 22);
+  --border: oklch(0.3316 0.0071 182.6);
+  --input: oklch(0.3316 0.0071 182.6);
+  --ring: oklch(0.6502 0.1171 180.1);
+  --copper: oklch(0.6278 0.1292 39.2);
+  --teal: oklch(0.6502 0.1171 180.1);
+
+  --map-water: oklch(0.185 0.006 210);
+  --map-glow: oklch(0.45 0.08 180 / 0.28);
+  --map-graticule: oklch(0.7 0.05 180 / 0.07);
+  --map-neighbour: oklch(0.245 0.008 196);
+  --map-neighbour-stroke: oklch(0.32 0.01 190);
+  --map-land: oklch(0.43 0.075 177);
+  --map-land-hover: oklch(0.48 0.085 177);
+  --map-state-border: oklch(0.25 0.03 185 / 0.9);
+  --map-outline: oklch(0.72 0.1 178);
+  --map-shadow: oklch(0 0 0 / 0.55);
+  --pin-ring: oklch(0.2 0.005 196);
+  --label-bg: oklch(0.2 0.005 196 / 0.88);
+
+  --aqi-good: #10b981;
+  --aqi-satisfactory: #84cc16;
+  --aqi-moderate: #f59e0b;
+  --aqi-poor: #f97316;
+  --aqi-very-poor: #ef4444;
+  --aqi-severe: #a855f7;
+}
+
+/* Light theme overrides */
+html.light, :root.light {
+  color-scheme: light;
+  --background: oklch(0.972 0.006 100);
+  --foreground: oklch(0.22 0.01 196);
+  --surface: oklch(0.945 0.009 110);
+  --card: oklch(0.99 0.004 100);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.985 0.004 100);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.405 0.0564 174.6);
+  --primary-foreground: oklch(0.975 0.006 100);
+  --secondary: oklch(0.93 0.01 150);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.935 0.008 120);
+  --muted-foreground: oklch(0.45 0.02 174);
+  --accent: oklch(0.92 0.025 174);
+  --accent-foreground: oklch(0.3 0.04 174);
+  --destructive: oklch(0.58 0.2 27);
+  --border: oklch(0.86 0.012 150);
+  --input: oklch(0.86 0.012 150);
+  --ring: oklch(0.55 0.1 180);
+  --copper: oklch(0.58 0.14 39.2);
+  --teal: oklch(0.52 0.1 180.1);
+
+  --map-water: oklch(0.945 0.012 200);
+  --map-glow: oklch(0.88 0.05 180 / 0.55);
+  --map-graticule: oklch(0.55 0.03 200 / 0.12);
+  --map-neighbour: oklch(0.915 0.008 110);
+  --map-neighbour-stroke: oklch(0.8 0.01 120);
+  --map-land: oklch(0.78 0.075 176);
+  --map-land-hover: oklch(0.74 0.09 176);
+  --map-state-border: oklch(0.98 0.01 176 / 0.85);
+  --map-outline: oklch(0.36 0.05 176);
+  --map-shadow: oklch(0.35 0.04 176 / 0.22);
+  --pin-ring: oklch(0.99 0 0);
+  --label-bg: oklch(0.99 0.004 100 / 0.92);
+
+  --aqi-good: #0f9f6e;
+  --aqi-satisfactory: #65a30d;
+  --aqi-moderate: #d97706;
+  --aqi-poor: #ea580c;
+  --aqi-very-poor: #dc2626;
+  --aqi-severe: #9333ea;
 }
 
 body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  background-color: #09090b;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  color: #f4f4f5;
+  background-color: var(--background);
+  font-family: var(--font-sans);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.apple-panel-blur {
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-sans {
+  font-family: var(--font-sans);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Explicit layout enforcement for National Overview to guarantee 36% / 64% split matching V0 */
+@media (min-width: 1024px) {
+  .national-grid-layout {
+    display: grid !important;
+    grid-template-columns: minmax(400px, 36%) 1fr !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+  .national-panel-layout {
+    display: flex !important;
+    min-height: 0 !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    border-right-width: 1px !important;
+    padding-left: 2.5rem !important;
+    padding-right: 2.5rem !important;
+    padding-top: max(5.5rem, 12vh) !important;
+    padding-bottom: 2.5vh !important;
+  }
+}
+
+/* Guaranteed padding and card spacing for AQI box so context never touches the edge */
+.aqi-summary-card {
+  padding: 1.75rem 2rem !important;
+  gap: 1.25rem !important;
+  border-radius: 1rem !important;
+  border-width: 1px !important;
+  border-color: var(--border) !important;
+  background-color: var(--card) !important;
 }
 
 /* Custom utility code to hide default scrollbar tracks */
@@ -32,4 +205,60 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Subtle atmospheric radial glow */
+.landing-radial-glow {
+  background: radial-gradient(
+    circle at 75% 50%,
+    rgba(35, 83, 71, 0.16) 0%,
+    rgba(6, 63, 71, 0.08) 40%,
+    transparent 70%
+  );
+}
+
+/* Specular button sheen animation */
+@keyframes specularSheen {
+  0% {
+    transform: translateX(-150%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(250%) skewX(-20deg);
+  }
+}
+
+.specular-sheen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.22) 50%,
+    transparent 100%
+  );
+  animation: specularSheen 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+/* India Pin Beacon Pulse */
+@keyframes pinPulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.8;
+  }
+  70% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.pin-pulse-ring {
+  animation: pinPulse 2.4s ease-out infinite;
 }
