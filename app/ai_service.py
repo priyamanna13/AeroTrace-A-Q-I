@@ -20,6 +20,7 @@ from .ai_models import (
     InformationProvenance,
 )
 from .intelligence import generate_localized_advisory, generate_priority_justification
+from .weather_context import get_weather_context, format_weather_for_prompt
 
 log = logging.getLogger("ai_service")
 
@@ -114,29 +115,36 @@ class TemplateFallbackAIService(BaseAIService):
         # ── Screen 3: Station Intelligence ──────────────────────────────────
         elif "station" in screen:
             wind = context.weather or {}
+            if not wind and city:
+                wind = get_weather_context(city)
             w_speed = wind.get("wind_speed_kmh", 12.0)
-            w_card = wind.get("wind_direction_cardinal", "WNW")
+            w_card = wind.get("wind_direction_deg", "WNW") # Using deg or cardinal if available
+            if "wind_direction_cardinal" in wind:
+                w_card = wind["wind_direction_cardinal"]
+            pasquill_class = wind.get("pasquill_class", "C")
+            
+            weather_text_en = f"Surface wind is moving at {w_speed} km/h from {w_card}, concentrating particulate dispersion along downwind sectors. Atmospheric boundary layer stability (Class {pasquill_class}) is currently affecting pollutant accumulation."
+            weather_text_hi = f"स्थानीय पवन गति {w_speed} किमी/घंटा ({w_card} दिशा से) मापी गई है, और वायुमंडलीय स्थिरता (श्रेणी {pasquill_class}) फैलाव को प्रभावित कर रही है।"
+            weather_text_mr = f"स्थानिक वाऱ्याचा वेग {w_speed} किमी/तास ({w_card} दिशेकडून) असून, हवेच्या स्थिरतेमुळे (वर्ग {pasquill_class}) प्रदूषकांचा प्रसार होत आहे."
+
             if lang == "hi":
                 text = (
-                    f"{station} स्टेशन पर AQI {aqi} पर है {cite_clause_hi}। स्थानीय पवन गति {w_speed} किमी/घंटा "
-                    f"({w_card} दिशा से) मापी गई है, जो वायुमंडलीय फैलाव को प्रभावित कर रही है।"
+                    f"{station} स्टेशन पर AQI {aqi} पर है {cite_clause_hi}। {weather_text_hi}"
                 )
             elif lang == "mr":
                 text = (
-                    f"{station} स्थानकावर AQI {aqi} नोंदवला गेला आहे {cite_clause_mr}। स्थानिक वाऱ्याचा वेग {w_speed} किमी/तास "
-                    f"({w_card} दिशेकडून) असून, यामुळे प्रदूषकांचा प्रसार होत आहे."
+                    f"{station} स्थानकावर AQI {aqi} नोंदवला गेला आहे {cite_clause_mr}। {weather_text_mr}"
                 )
             else:
                 text = (
-                    f"{station} monitoring station is reporting an AQI of {aqi} {cite_clause_en}. Surface wind is moving at "
-                    f"{w_speed} km/h from {w_card}, concentrating particulate dispersion along downwind sectors."
+                    f"{station} monitoring station is reporting an AQI of {aqi} {cite_clause_en}. {weather_text_en}"
                 )
             follow_ups = [
                 f"Trace source attribution for {pollutant}",
                 f"View forward trajectory projection from {station}",
             ]
             voice_script = (
-                f"{station} station reports an AQI of {aqi}. Surface winds at {w_speed} kilometers per hour are dispersing {pollutant} downwind."
+                f"{station} station reports an AQI of {aqi}. Surface winds at {w_speed} kilometers per hour are dispersing {pollutant} downwind. Stability class {pasquill_class}."
             )
 
         # ── Screen 4: Pollution Investigation / Attribution ────────────────
@@ -419,6 +427,9 @@ class GeminiAIService(BaseAIService):
             log.info("No GEMINI_API_KEY set; AI layer running with grounded template fallback.")
 
     def _build_system_prompt(self, context: AIContext) -> str:
+        weather_data = get_weather_context(context.city or "Pune")
+        weather_prompt_block = format_weather_for_prompt(weather_data)
+        
         return (
             "You are AeroTrace Environmental Intelligence, an expert atmospheric scientist assistant. "
             "You MUST adhere to these strict rules:\n"
@@ -429,7 +440,8 @@ class GeminiAIService(BaseAIService):
             "5. If is_simulated is True, explicitly state that values are simulated due to live source outage.\n"
             "6. When interpreting Screen 7 analytics, explicitly interpret diurnal patterns (morning nocturnal inversion peaks, midday convective turbulence dips, evening accumulation).\n"
             f"7. Respond exclusively in the requested language locale: '{context.language}' ('en' for English, 'hi' for Hindi, 'mr' for Marathi).\n"
-            "8. Keep responses concise, objective, actionable, and suitable for civic decision-makers."
+            "8. Keep responses concise, objective, actionable, and suitable for civic decision-makers.\n\n"
+            f"WEATHER & ATMOSPHERIC PHYSICS CONTEXT:\n{weather_prompt_block}"
         )
 
     def generate_insight(self, context: AIContext) -> AIResponse:

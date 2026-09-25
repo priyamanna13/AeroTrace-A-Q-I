@@ -126,7 +126,7 @@ def get_station_insight_endpoint(city_name: str, station_name: str, lang: str = 
 @router.get("/analytics/{city_name}/insight", response_model=AIResponse)
 def get_analytics_insight_endpoint(city_name: str, range: str = "24H", lang: str = "en") -> AIResponse:
     """Generate Screen 7 AI analytics insight explaining historical trends and diurnal patterns."""
-    from .analytics import generate_city_analytics
+    from .analytics_intelligence import generate_city_analytics
     from .ai_models import AIContext
 
     try:
@@ -161,4 +161,45 @@ def get_analytics_insight_endpoint(city_name: str, range: str = "24H", lang: str
     )
     service = get_ai_service()
     return service.generate_insight(ctx)
+
+
+@router.get("/weather-briefing/{city_name}", response_model=AIResponse)
+def get_weather_briefing_endpoint(city_name: str, lang: str = "en") -> AIResponse:
+    """Weather-grounded environmental intelligence briefing endpoint."""
+    from .weather_context import get_weather_context
+    from .ai_models import AIContext
+    
+    weather = get_weather_context(city_name)
+    if not weather:
+        raise HTTPException(status_code=404, detail="Weather context unavailable")
+        
+    ctx = AIContext(
+        screen_id="screen_4_weather",
+        city=city_name,
+        weather=weather,
+        language=lang,
+    )
+    service = get_ai_service()
+    return service.generate_insight(ctx)
+
+
+@router.get("/prediction-insight/{city_name}", response_model=AIResponse)
+def get_prediction_insight_endpoint(city_name: str, lang: str = "en") -> AIResponse:
+    """Forward-looking AI interpretation using atmospheric conditions."""
+    from .prediction_intelligence import generate_prediction_insight
+    from .ai_models import AIContext
+    
+    prediction = generate_prediction_insight(city_name, lang)
+    
+    ctx = AIContext(
+        screen_id="screen_5_prediction",
+        city=city_name,
+        language=lang,
+    )
+    service = get_ai_service()
+    # Intercept fallback response to insert prediction text
+    res = service.generate_insight(ctx)
+    res.response_text = prediction["prediction_text"]
+    res.context_summary["voice_script"] = prediction["voice_script"]
+    return res
 

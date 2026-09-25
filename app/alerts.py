@@ -253,6 +253,22 @@ def _build_alert_content(
             ],
         }
 
+    from .weather_context import get_weather_context
+    weather = get_weather_context(city)
+    is_stable = weather.get("pasquill_class") in ("E", "F")
+    
+    if is_stable and aqi > 100:
+        stable_msg_en = f" Conditions suggest pollutant accumulation likely over next 6 hours due to stable atmospheric boundary layer (Class {weather.get('pasquill_class')})."
+        stable_msg_hi = f" स्थिर वायुमंडलीय सीमा (श्रेणी {weather.get('pasquill_class')}) के कारण अगले 6 घंटों में प्रदूषक संचय की संभावना है।"
+        stable_msg_mr = f" स्थिर वातावरणीय स्थितीमुळे (वर्ग {weather.get('pasquill_class')}) पुढील ६ तासांत प्रदूषक पातळी वाढण्याची शक्यता आहे."
+        
+        for lang, txt in [("en", stable_msg_en), ("hi", stable_msg_hi), ("mr", stable_msg_mr)]:
+            messages[lang] += txt
+            
+        health["en"].append("Forecast: Atmospheric inversion will trap pollutants. Avoid early morning and late evening exposure.")
+        health["hi"].append("पूर्वानुमान: वायुमंडलीय इनवर्जन प्रदूषकों को रोक कर रखेगा। सुबह-सुबह और देर शाम के संपर्क से बचें।")
+        health["mr"].append("अंदाज: वातावरणीय इनव्हर्जनमुळे प्रदूषक अडकून राहतील. पहाटे आणि रात्री उशिरा घराबाहेर पडणे टाळा.")
+
     return titles, messages, health, civic
 
 
