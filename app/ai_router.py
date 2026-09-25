@@ -196,7 +196,8 @@ def get_prediction_insight_endpoint(city_name: str, lang: str = "en") -> AIRespo
         city=city_name,
         language=lang,
     )
-    service = get_ai_service()
+    from .ai_service import TemplateFallbackAIService
+    service = TemplateFallbackAIService()
     # Intercept fallback response to insert prediction text
     res = service.generate_insight(ctx)
     res.response_text = prediction["prediction_text"]
