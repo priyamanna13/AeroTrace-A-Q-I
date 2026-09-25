@@ -418,8 +418,9 @@ class GeminiAIService(BaseAIService):
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=self.api_key)
-                self._client = genai.GenerativeModel("gemini-1.5-flash")
-                log.info("Gemini AI provider initialized successfully.")
+                model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash").strip()
+                self._client = genai.GenerativeModel(model_name)
+                log.info("Gemini AI provider (%s) initialized successfully.", model_name)
             except Exception as exc:
                 log.warning("Could not initialize Gemini SDK (%s); will use template fallback.", exc)
                 self._client = None

@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Dict
 
-from app.weather_context import get_weather_context
+from .weather_context import get_weather_context
 
 log = logging.getLogger("prediction_intelligence")
 

@@ -3,8 +3,8 @@ from zoneinfo import ZoneInfo
 import logging
 from typing import Any
 
-from app.weather_sources.base import get_weather_source
-from app.pasquill import classify_stability
+from .weather_sources.base import get_weather_source
+from .pasquill import classify_stability
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ def get_weather_context(city_name: str) -> dict[str, Any]:
         wind_speed_kmh=obs["wind_speed_kmh"],
         cloud_cover_oktas=obs["cloud_cover_oktas"],
         is_daytime=is_daytime,
-        solar_elevation_deg=obs.get("extra", {}).get("solar_elevation_deg", 35.0 if is_daytime else -10.0),
+        solar_elevation_deg=35.0 if is_daytime else -10.0,
     )
     
     return {
