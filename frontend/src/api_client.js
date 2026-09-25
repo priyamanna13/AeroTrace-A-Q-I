@@ -354,4 +354,27 @@ export const API = {
   async getAnalyticsAIInsight(cityName, range = '24H', lang = 'en') {
     return apiFetch(`/api/v1/ai/analytics/${encodeURIComponent(cityName)}/insight?range=${encodeURIComponent(range)}&lang=${encodeURIComponent(lang)}`);
   },
+
+  /** GET /api/v1/weather/{city} — real-time meteorological & Pasquill stability snapshot */
+  async getWeather(cityName) {
+    return apiFetch(`/api/v1/weather/${encodeURIComponent(cityName)}`);
+  },
+
+  /** GET /api/v1/ai/weather-briefing/{city} — weather-grounded AI briefing */
+  async getWeatherBriefing(cityName, lang = 'en') {
+    return apiFetch(`/api/v1/ai/weather-briefing/${encodeURIComponent(cityName)}?lang=${encodeURIComponent(lang)}`);
+  },
+
+  /** GET /api/v1/ai/prediction-insight/{city} — forward-looking atmospheric projection insight */
+  async getPredictionInsight(cityName, lang = 'en') {
+    return apiFetch(`/api/v1/ai/prediction-insight/${encodeURIComponent(cityName)}?lang=${encodeURIComponent(lang)}`);
+  },
+
+  /** GET /api/v1/ai/intervention-insight — ERF-grounded intervention scenario explanation */
+  async getInterventionInsight(scenario = 'traffic', cityName = 'Pune', lang = 'en') {
+    return apiFetch(
+      `/api/v1/ai/intervention-insight?scenario=${encodeURIComponent(scenario)}&city=${encodeURIComponent(cityName)}&lang=${encodeURIComponent(lang)}`
+    );
+  },
 };
+

@@ -204,3 +204,28 @@ def get_prediction_insight_endpoint(city_name: str, lang: str = "en") -> AIRespo
     res.context_summary["voice_script"] = prediction["voice_script"]
     return res
 
+
+@router.get("/intervention-insight", response_model=AIResponse)
+def get_intervention_insight_endpoint(
+    scenario: str = "traffic",
+    city: str = "Pune",
+    lang: str = "en",
+) -> AIResponse:
+    """ERF-grounded AI interpretation for Screen 6 intervention scenarios."""
+    from .intervention_intelligence import generate_intervention_insight
+    from .ai_models import AIContext
+    from .ai_service import TemplateFallbackAIService
+
+    insight = generate_intervention_insight(scenario, lang)
+    ctx = AIContext(
+        screen_id="screen_6_intervention",
+        city=city,
+        language=lang,
+    )
+    service = TemplateFallbackAIService()
+    res = service.generate_insight(ctx)
+    res.response_text = insight["intervention_text"]
+    res.context_summary["voice_script"] = insight["voice_script"]
+    res.context_summary["scenario"] = insight["scenario"]
+    return res
+

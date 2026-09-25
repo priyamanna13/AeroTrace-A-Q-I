@@ -190,3 +190,31 @@ def test_copernicus_model_estimate_provenance(client):
     assert "Copernicus CAMS" in data["confidence_note"]
     assert "Measured physical sensor data" not in data["confidence_note"]
 
+
+def test_weather_briefing_endpoint(client):
+    response = client.get("/api/v1/ai/weather-briefing/Pune?lang=en")
+    assert response.status_code == 200
+    data = response.json()
+    assert "response_text" in data
+    assert data["language"] == "en"
+
+
+def test_prediction_insight_endpoint(client):
+    response = client.get("/api/v1/ai/prediction-insight/Pune?lang=hi")
+    assert response.status_code == 200
+    data = response.json()
+    assert "response_text" in data
+    assert data["language"] == "hi"
+    assert "voice_script" in data["context_summary"]
+
+
+def test_intervention_insight_endpoint(client):
+    response = client.get("/api/v1/ai/intervention-insight?scenario=traffic&city=Pune&lang=mr")
+    assert response.status_code == 200
+    data = response.json()
+    assert "ERF" in data["response_text"]
+    assert data["language"] == "mr"
+    assert data["context_summary"]["scenario"] == "traffic"
+    assert "voice_script" in data["context_summary"]
+
+
