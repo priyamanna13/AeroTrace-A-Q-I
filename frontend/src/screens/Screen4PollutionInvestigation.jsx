@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, GeoJSON } from 'react-leaflet';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import dataContract from '../../../data_contract_sample.json';
 import { API } from '../api_client';
@@ -10,6 +10,9 @@ import { BrandMark } from '../components/site-header';
 import { NavigationPanel } from '../components/navigation-panel';
 import { StationInsightCard } from '../components/station/StationInsightCard';
 import { useI18n } from '../i18n';
+import { useLanguage } from '../lib/i18n/language-provider';
+import EChartsWrapper from '../components/EChartsWrapper';
+import { getDemoTrend } from '../lib/demo-trend-data';
 
 // ─── LEAFLET DEFAULT ICON FIX (Vite asset pipeline) ────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl;
@@ -83,10 +86,6 @@ const GLOBAL_STYLES = `
     0%, 100% { opacity: 1;   transform: scale(1);   }
     50%       { opacity: 0.6; transform: scale(0.9); }
   }
-  @keyframes playbackPulse {
-    0%, 100% { box-shadow: 0 0 0 2px rgba(251,191,36,0.35), 0 0 12px rgba(251,191,36,0.5); }
-    50%       { box-shadow: 0 0 0 5px rgba(251,191,36,0.15), 0 0 28px rgba(251,191,36,0.85); }
-  }
 
   /* ── Scoped Reset for Screen 4 ── */
   .aq-root, .aq-root *, .aq-root *::before, .aq-root *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -143,7 +142,7 @@ const GLOBAL_STYLES = `
   .live-text { font-size:10px;font-weight:700;letter-spacing:0.16em;color:#d4d4d8;text-transform:uppercase; }
 
   .met-badge {
-    position:absolute; bottom:80px; left:24px; z-index:1000;
+    position:absolute; bottom:24px; left:24px; z-index:1000;
     background:rgba(8,8,10,0.80); border:1px solid rgba(255,255,255,0.08);
     backdrop-filter:blur(24px); border-radius:13px; padding:11px 18px;
     display:flex; align-items:center; gap:10px;
@@ -202,7 +201,6 @@ const GLOBAL_STYLES = `
   .source-card  { background:rgba(255,255,255,0.016);border:1px solid rgba(255,255,255,0.045);border-radius:14px;padding:13px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:background 0.15s,border-color 0.15s,box-shadow 0.15s; }
   .source-card:hover  { background:rgba(255,255,255,0.032); }
   .source-card.active { background:rgba(251,191,36,0.05);border-color:rgba(251,191,36,0.20);box-shadow:0 0 0 1px rgba(251,191,36,0.08) inset; }
-  .source-card.playback-highlight { border-color:rgba(251,191,36,0.5);animation:playbackPulse 1.8s ease-in-out infinite; }
 
   .source-icon-box { width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.055);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0; }
   .source-info     { flex:1;min-width:0; }
@@ -225,6 +223,34 @@ const GLOBAL_STYLES = `
   .custom-leaflet-marker-trigger,
   .custom-leaflet-marker-source,
   .custom-leaflet-marker-yellow { background:transparent !important; border:none !important; }
+
+  /* Permanent station-name labels pinned to every station marker */
+  .station-name-label.leaflet-tooltip {
+    background: rgba(8,8,10,0.88);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.55);
+    color: #f4f4f5;
+    font-family: 'Inter','Noto Sans Devanagari','Noto Sans',sans-serif;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    padding: 2px 7px;
+    white-space: nowrap;
+  }
+  .station-name-label::before { display: none; } /* hide default Leaflet arrow */
+  .station-name-label.trigger-label {
+    border-color: rgba(239,68,68,0.45);
+    color: #fca5a5;
+  }
+
+  /* ── AQI trend card (sidebar) ── */
+  .trend-card         { background:rgba(255,255,255,0.018);border:1px solid rgba(255,255,255,0.055);border-radius:15px;padding:14px;position:relative;overflow:hidden; }
+  .trend-card::before { content:'';position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(to right, rgba(45,212,191,0.4), transparent); }
+  .trend-head         { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px; }
+  .trend-range-group  { display:flex;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:9px;padding:3px;gap:2px;flex-shrink:0; }
+  .trend-range-btn    { padding:3px 9px;border-radius:7px;border:none;cursor:pointer;font-size:10px;font-weight:700;background:transparent;color:#a1a1aa;transition:background 0.15s,color 0.15s;font-family:'Inter','Noto Sans Devanagari','Noto Sans',sans-serif; }
+  .trend-range-btn.active { background:rgba(255,255,255,0.09);color:#fafafa; }
+  .trend-demo-chip    { font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#fb923c;background:rgba(251,146,60,0.10);border:1px solid rgba(251,146,60,0.28);border-radius:50px;padding:2px 8px;white-space:nowrap; }
 `;
 
 let stylesInjected = false;
@@ -476,26 +502,6 @@ const createSourceIcon = (rank) => {
 };
 
 /**
- * Playback top-rank source — larger amber ring, extra pulse for visibility.
- * Used for the #1 candidate during 24H replay mode.
- */
-const createPlaybackTopSourceIcon = () => {
-  const color = '#fbbf24';
-  return L.divIcon({
-    className: 'custom-leaflet-marker-source',
-    html: `
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;width:32px;height:32px;">
-        <div style="position:absolute;width:100%;height:100%;background:${color}18;border-radius:50%;animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;"></div>
-        <div style="position:absolute;width:70%;height:70%;background:${color}28;border-radius:50%;animation:pulse 1.3s ease-in-out infinite;"></div>
-        <div style="width:12px;height:12px;background:${color};border-radius:50%;border:2px solid rgba(0,0,0,0.5);box-shadow:0 0 14px ${color}cc;z-index:2;position:relative;"></div>
-      </div>
-    `,
-    iconSize:   [32, 32],
-    iconAnchor: [16, 16],
-  });
-};
-
-/**
  * Yellow dot — shown for non-trigger CPCB monitoring stations.
  * Small, distinct; ensures every data point is visible on the map.
  */
@@ -741,48 +747,6 @@ function SimulationBanner({ onRevert, loading }) {
   );
 }
 
-// ─── PLAYBACK BANNER (sidebar) ────────────────────────────────────────────────────
-function PlaybackBanner({ timestamp, isLoading, isGap }) {
-  if (isGap) {
-    return (
-      <div style={{
-        background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.22)',
-        borderRadius: 10, padding: '10px 14px',
-      }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#818cf8', letterSpacing: '0.05em', marginBottom: 4 }}>
-          &#x26A0;&#xFE0F;&nbsp; HISTORICAL DATA UNAVAILABLE
-        </div>
-        <div style={{ fontSize: 10, color: '#6366f1', lineHeight: 1.5 }}>
-          Backend replay endpoint returned no data for this timestamp.
-          Showing live attribution as reference.
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div style={{
-      background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.22)',
-      borderRadius: 10, padding: '8px 14px',
-      display: 'flex', alignItems: 'center', gap: 10,
-    }}>
-      <span style={{ fontSize: 13 }}>
-        {isLoading ? '\u23F3' : '\u23EE\uFE0F'}
-      </span>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#fbbf24', letterSpacing: '0.05em' }}>
-          {isLoading ? 'Loading historical frames\u2026' : 'REPLAY MODE'}
-        </div>
-        {timestamp && !isLoading && (
-          <div style={{ fontSize: 10, color: '#a1a1aa', marginTop: 2, fontFamily: 'monospace' }}>
-            {new Date(timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            &nbsp;&middot;&nbsp;<span style={{ color: '#78716c', fontSize: 9 }}>mock historical</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ─── APP ──────────────────────────────────────────────────────────────────────────
 
 export default function Screen4PollutionInvestigation() {
@@ -842,28 +806,14 @@ export default function Screen4PollutionInvestigation() {
   // Always allow triggering spike simulation for hackathon demo
   const showSpikeButton = true;
 
-  // ── 24H Timeline / Playback
-  const [isAnimating, setIsAnimating]           = useState(false);
-  const [currentHourIndex, setCurrentHourIndex] = useState(23);
-  const [timelineTimestamps, setTimelineTimestamps] = useState([]);
-  const [replayCache, setReplayCache]           = useState({});  // { timestamp: fullAttribution }
-  const [replayLoading, setReplayLoading]       = useState(false);
-  const [timelineGap, setTimelineGap]           = useState(false);
-
   // ── WebSocket alert toast
   const [websocketAlert, setWebsocketAlert] = useState(null);
 
   // ── Derived: what data to actually show ──────────────────────────────────────
-  // During playback at a past frame, show that frame's data; otherwise live.
-  const isInPlayback      = isAnimating || currentHourIndex < 23;
-  const currentTimestamp  = timelineTimestamps[currentHourIndex];
-  const playbackFrame     = currentTimestamp ? replayCache[currentTimestamp] : null;
-
   // activeData is the single source of truth for all rendering downstream.
-  // Priority: playbackFrame (during replay) → dashboardData (live) → dataContract (true offline fallback)
+  // Priority: dashboardData (live) → dataContract (true offline fallback)
   const usingCachedFallback = !dashboardData && !loading;
   const activeData = (() => {
-    if (isInPlayback && playbackFrame) return playbackFrame;
     if (dashboardData) return dashboardData;
     if (!loading) return dataContract;   // hard offline — static JSON, labelled in UI
     return null;
@@ -899,6 +849,7 @@ export default function Screen4PollutionInvestigation() {
 
   const windDeg     = weather_snapshot?.wind_direction_deg ?? 0;
   const t           = I18N[activeLang] ?? I18N.en;
+  const gt          = useLanguage().t;   // global dictionaries (trend card labels)
   const selSrc      = ranked_candidates?.find((s) => s?.id === activeSource) ?? null;
   const compassDeg  = selSrc?.weather_snapshot?.wind_direction_deg    ?? windDeg;
   const compassCard = selSrc?.weather_snapshot?.wind_direction_cardinal ?? weather_snapshot?.wind_direction_cardinal ?? '\u2014';
@@ -958,8 +909,6 @@ export default function Screen4PollutionInvestigation() {
     // Immediate first fetch on station switch
     setLoading(true);
     setActiveSource(null);
-    setCurrentHourIndex(23);
-    setIsAnimating(false);
     pollFailureCount.current = 0;
     console.log('[Poll] Starting poll loop for station:', currentStation);
 
@@ -996,6 +945,51 @@ export default function Screen4PollutionInvestigation() {
     return () => ws.disconnect();
   }, []); // ws connection is station-independent
 
+  // ── AQI TREND (sidebar): observed station analytics → labeled demo fallback ──
+  const [trendRange, setTrendRange]     = useState('24H');
+  const [trendPoints, setTrendPoints]   = useState([]);
+  const [trendLoading, setTrendLoading] = useState(false);
+  const [trendIsDemo, setTrendIsDemo]   = useState(true);
+
+  // Serves the CURRENT station's observed series. When the backend is offline
+  // (or returns nothing usable) fall back to the isolated demo dataset — always
+  // labeled DEMO DATA so prototype values are never mistaken for live
+  // measurements (same data-honesty rule as Screen 2's CityTrend).
+  useEffect(() => {
+    let cancelled = false;
+    setTrendLoading(true);
+    API.getCityAnalytics(currentStation, trendRange)
+      .then((payload) => {
+        if (cancelled) return;
+        const list = Array.isArray(payload)
+          ? payload
+          : (payload?.data_points || payload?.points || payload?.series || payload?.readings || []);
+        const cleaned = (list || [])
+          .map((entry) => {
+            if (Array.isArray(entry)) return { timestamp: entry[0], value: Number(entry[1]) };
+            const ts    = entry.timestamp || entry.time || entry.ts;
+            const value = entry.aqi ?? entry.value ?? entry.total_aqi ?? entry.average_aqi;
+            return ts != null && value != null ? { timestamp: ts, value: Number(value) } : null;
+          })
+          .filter((p) => p && Number.isFinite(p.value));
+        setTrendPoints(cleaned);
+        setTrendIsDemo(cleaned.length === 0);
+        setTrendLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTrendPoints([]);
+        setTrendIsDemo(true);
+        setTrendLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [currentStation, trendRange]);
+
+  // Demo series is seeded by the surrounding CITY so its shape matches context.
+  const trendDisplay = trendIsDemo
+    ? getDemoTrend(cityContext || currentStation, trendRange)
+    : { points: trendPoints, label: null };
+
   // ── STATIONS: load immediately on mount, independent of mapRef ──────────────
   // CRITICAL: must NOT depend on mapRef — yellow dot <Marker> elements are
   // inside <MapContainer> and re-render when stationsData state changes.
@@ -1028,69 +1022,6 @@ export default function Screen4PollutionInvestigation() {
       .catch(err => console.warn('[Cones] Failed to fetch all cones:', err));
   }, []); // fetch once on mount; cones are per-station, not per-minute
 
-  // ── TIMELINE: fetch 24h tick list when station changes ───────────────────────
-  useEffect(() => {
-    if (!currentStation) return;
-    setReplayCache({});
-    setTimelineGap(false);
-
-    const fetchTimeline = async () => {
-      try {
-        const ticks = await API.getTimeline(currentStation);
-        if (ticks && ticks.length > 0) {
-          setTimelineTimestamps(ticks.map(tick => tick.timestamp));
-          setCurrentHourIndex(ticks.length - 1);
-        } else {
-          throw new Error('Empty timeline');
-        }
-      } catch (err) {
-        // Regenerate fallback timestamps so scrubber still works
-        const hours = [];
-        const now   = new Date();
-        for (let i = 23; i >= 0; i--) {
-          hours.push(new Date(now - i * 3600_000).toISOString());
-        }
-        setTimelineTimestamps(hours);
-        setCurrentHourIndex(23);
-      }
-    };
-
-    fetchTimeline();
-  }, [currentStation]);
-
-  // ── ON-DEMAND REPLAY FRAME FETCH: fetch historical frame only when scrubbing ──
-  useEffect(() => {
-    if (!isInPlayback || !currentTimestamp || replayCache[currentTimestamp]) return;
-
-    let cancelled = false;
-    setReplayLoading(true);
-    API.getReplay(currentStation, currentTimestamp)
-      .then((data) => {
-        if (cancelled) return;
-        setReplayCache((prev) => ({ ...prev, [currentTimestamp]: data }));
-      })
-      .catch((err) => {
-        console.warn(`[Replay] Failed for timestamp ${currentTimestamp}:`, err);
-      })
-      .finally(() => {
-        if (!cancelled) setReplayLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [isInPlayback, currentTimestamp, currentStation, replayCache]);
-
-  // ── PLAYBACK ANIMATION FRAME ENGINE ──────────────────────────────────────────
-  useEffect(() => {
-    if (!isAnimating) return;
-    const id = setInterval(() => {
-      setCurrentHourIndex((prev) => {
-        if (prev >= 23) { setIsAnimating(false); return 23; }
-        return prev + 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [isAnimating]);
-
   // ── SPIKE / SIMULATION ACTIONS ────────────────────────────────────────────────
   const triggerSpike = useCallback(async () => {
     setSpikeLoading(true);
@@ -1116,8 +1047,6 @@ export default function Screen4PollutionInvestigation() {
         setSpikeActive(true);
         // Lock spike state for 2 minutes so poller cannot auto-revert it
         spikeLockedUntilRef.current = Date.now() + 2 * 60 * 1000;
-        setIsAnimating(false);
-        setCurrentHourIndex(23);
       } else {
         console.warn('[Spike] Trigger returned non-OK status:', res.status);
       }
@@ -1218,13 +1147,14 @@ export default function Screen4PollutionInvestigation() {
         className="pointer-events-none flex w-full shrink-0 items-center justify-between"
         style={{ padding: '20px 40px', zIndex: 1200 }}
       >
-        <div className="pointer-events-auto" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="pointer-events-auto" style={{ display: 'flex', alignItems: 'center', gap: 20, flexShrink: 0 }}>
           <BrandMark />
           <button
+            type="button"
             onClick={() => navigate(`/city/${encodeURIComponent(cityContext)}`)}
-            title="Back to City Intelligence"
+            title={`Back to ${cityContext} — City Intelligence`}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7,
+              display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0,
               background: 'rgba(8,8,10,0.85)', padding: '7px 14px', borderRadius: 10,
               border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)',
               cursor: 'pointer', color: '#d4d4d8', fontSize: 11, fontWeight: 700,
@@ -1235,6 +1165,8 @@ export default function Screen4PollutionInvestigation() {
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#d4d4d8'; }}
           >
             <span aria-hidden="true" style={{ fontSize: 13, lineHeight: 1 }}>←</span>
+            {/* Label is exactly "Back to {city}": renders "BACK TO MUMBAI" on
+                /investigate/Bandra?city=Mumbai. No other text is appended. */}
             Back to {cityContext}
           </button>
         </div>
@@ -1271,12 +1203,9 @@ export default function Screen4PollutionInvestigation() {
               GeoJSON ignores data prop changes without a key change (React-Leaflet limitation). */}
           {Object.entries(stationCones).map(([stationName, coneData]) => {
             const isActive = stationName === currentStation;
-            const geoData = (isActive && isInPlayback && playbackFrame?.wind_cone_geometry)
-              ? playbackFrame.wind_cone_geometry
-              : coneData;
+            const geoData  = coneData;
             if (!geoData) return null;
-            // Include a content hash so the key changes when playback cone updates
-            const coneKey = `cone-${stationName}-${isActive ? `pb${currentHourIndex}` : 'ok'}`;
+            const coneKey = `cone-${stationName}`;
             return (
               <GeoJSON
                 key={coneKey}
@@ -1295,6 +1224,10 @@ export default function Screen4PollutionInvestigation() {
 
           {/* ── TRIGGER STATION MARKER ── */}
           <Marker position={mapCenter} icon={createTriggerIcon(windDeg)}>
+            {/* Permanent station-name label so every marker is readable at a glance */}
+            <Tooltip permanent direction="top" offset={[0, -36]} className="station-name-label trigger-label" opacity={1}>
+              {trigger_station?.name ?? currentStation}
+            </Tooltip>
             <Popup>
               <div className="popup-inner">
                 <div className="popup-station-name">{trigger_station?.name ?? 'Trigger Station'}</div>
@@ -1322,6 +1255,10 @@ export default function Screen4PollutionInvestigation() {
                   position={[st.coordinates[1], st.coordinates[0]]}
                   icon={createYellowDotIcon()}
                 >
+                  {/* Permanent station-name label (all non-trigger stations) */}
+                  <Tooltip permanent direction="right" offset={[11, 0]} className="station-name-label" opacity={1}>
+                    {st.name}
+                  </Tooltip>
                   <Popup>
                     <div className="popup-inner">
                       <div className="popup-station-name">{st.name}</div>
@@ -1342,8 +1279,7 @@ export default function Screen4PollutionInvestigation() {
           {ranked_candidates?.map((src, idx) => {
             const centroid = getCentroid(src?.geometry);
             if (!centroid) return null;          // skip if geometry missing/unreadable
-            const isTop = idx === 0 && isInPlayback;
-            const icon  = isTop ? createPlaybackTopSourceIcon() : createSourceIcon(src.rank);
+            const icon = createSourceIcon(src.rank);
             return (
               <Marker
                 key={src.id ?? idx}
@@ -1394,98 +1330,6 @@ export default function Screen4PollutionInvestigation() {
         {/* ── WIND COMPASS ── */}
         <WindCompass windDeg={compassDeg} cardinal={compassCard} label={t.wind_label} />
 
-        {/* ── 24H PLAYBACK CONTROLLER ── */}
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000,
-          display: 'flex', alignItems: 'center', gap: 0,
-          background: 'rgba(9,9,12,0.95)', borderTop: '1px solid rgba(255,255,255,0.05)',
-          backdropFilter: 'blur(24px)', padding: '10px 20px',
-        }}>
-          {/* Left: MET indicator */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
-            borderRight: '1px solid rgba(255,255,255,0.07)', paddingRight: 16, marginRight: 16,
-            fontSize: 11, fontFamily: 'monospace', color: '#71717a',
-          }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#a855f7', animation: 'livePulse 2s infinite', display: 'inline-block' }}/>
-            <span style={{ fontWeight: 700, color: '#d4d4d8' }}>MET</span>
-            <span>&middot;</span>
-            <span>{weather_snapshot?.wind_speed_kmh ?? '\u2014'} km/h</span>
-            <span>&middot;</span>
-            <span style={{ color: '#a855f7' }}>{weather_snapshot?.wind_direction_cardinal ?? '\u2014'}</span>
-          </div>
-
-          {/* Play / Pause button */}
-          <button
-            onClick={() => {
-              if (currentHourIndex >= 23 && !isAnimating) setCurrentHourIndex(0);
-              setIsAnimating(!isAnimating);
-            }}
-            style={{
-              flexShrink: 0, width: 96, height: 32,
-              borderRadius: 8, border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-              fontSize: 11, fontWeight: 700, fontFamily: 'monospace',
-              background: isAnimating ? '#f59e0b' : '#10b981',
-              color: '#0a0a0a',
-              marginRight: 16,
-              boxShadow: isAnimating ? '0 4px 14px rgba(245,158,11,0.3)' : '0 4px 14px rgba(16,185,129,0.3)',
-            }}
-          >
-            {isAnimating ? (
-              <>
-                <span style={{ display: 'inline-flex', gap: 2 }}>
-                  <span style={{ width: 3, height: 12, background: '#0a0a0a', borderRadius: 1, display: 'inline-block' }}/>
-                  <span style={{ width: 3, height: 12, background: '#0a0a0a', borderRadius: 1, display: 'inline-block' }}/>
-                </span>
-                Pause
-              </>
-            ) : (
-              <>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="#0a0a0a"><path d="M8 5v14l11-7z"/></svg>
-                Play 24h
-              </>
-            )}
-          </button>
-
-          {/* Scrubber + timestamps */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {replayLoading ? (
-              <div style={{ fontSize: 10, color: '#71717a', fontFamily: 'monospace', textAlign: 'center', padding: '4px 0' }}>
-                <span style={{ display: 'inline-block', width: 10, height: 10, border: '1.5px solid #71717a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', marginRight: 6, verticalAlign: 'middle' }}/>
-                Loading replay frames&#x2026;
-              </div>
-            ) : (
-              <>
-                <input
-                  type="range"
-                  min="0"
-                  max={Math.max(0, timelineTimestamps.length - 1)}
-                  value={currentHourIndex}
-                  onChange={(e) => {
-                    setIsAnimating(false);
-                    setCurrentHourIndex(parseInt(e.target.value));
-                  }}
-                  style={{
-                    width: '100%', accentColor: isInPlayback ? '#fbbf24' : '#10b981',
-                    background: 'rgba(255,255,255,0.06)', borderRadius: 4,
-                    appearance: 'none', height: 4, cursor: 'pointer',
-                  }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, fontFamily: 'monospace', color: '#52525b' }}>
-                  <span>&minus;24h</span>
-                  <span style={{ color: isInPlayback ? '#fbbf24' : '#a1a1aa', fontWeight: 600 }}>
-                    {currentTimestamp
-                      ? new Date(currentTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      : '\u2014'}
-                    {isInPlayback && currentHourIndex < 23 ? ' \u25C4 replay' : ' \u25C4 live'}
-                  </span>
-                  <span>Now</span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* ── SIDEBAR ── */}
@@ -1575,14 +1419,6 @@ export default function Screen4PollutionInvestigation() {
               &#x1F4E1; OFFLINE \u2014 cached snapshot
             </div>
           )}
-          {(isInPlayback && currentHourIndex < 23) && (
-            <PlaybackBanner
-              timestamp={currentTimestamp}
-              isLoading={replayLoading}
-              isGap={timelineGap && !playbackFrame}
-            />
-          )}
-
           {/* ── STATION INTELLIGENCE (compact, data-driven, localized + voice + Ask AI) ──
               Replaces the old full advisory paragraph. Reads the CURRENT station's
               attribution data; language follows the global selector (activeLang is
@@ -1768,15 +1604,28 @@ export default function Screen4PollutionInvestigation() {
             </div>
           )}
 
+          {/* ── AQI TREND (observed station analytics; demo fallback is labeled) ── */}
+          <StationTrendCard
+            points={trendDisplay.points}
+            range={trendRange}
+            onRangeChange={setTrendRange}
+            loading={trendLoading}
+            isDemo={trendIsDemo}
+            demoLabel={trendDisplay.label}
+            labels={{
+              title:    activeLang === 'en' ? 'AQI TREND'
+                      : activeLang === 'hi' ? '\u090F\u0915\u094D\u200D\u0932\u092A\u0942\u0930\u094D\u0935\u094D\u092F \u092A\u094D\u0930\u0935\u0943\u0924\u094D\u0924\u093F'
+                      : '\u090F\u0915\u094D\u200D\u0932\u092A\u0942\u0930\u094D\u0935\u094D\u092F \u0915\u0932',
+              loading:  gt.cityScreen.trendLoading,
+              demoChip: gt.cityScreen.demoDataChip,
+              demoNote: gt.cityScreen.trendDemoNote,
+            }}
+          />
+
           {/* ── ATTRIBUTED SOURCES ── */}
           <div>
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">{t.attributed_sources}</span>
-              {isInPlayback && currentHourIndex < 23 && (
-                <span style={{ marginLeft: 8, fontSize: 9, color: '#fbbf24', fontFamily: 'monospace', background: 'rgba(251,191,36,0.1)', padding: '1px 6px', borderRadius: 4, border: '1px solid rgba(251,191,36,0.2)' }}>
-                  REPLAY
-                </span>
-              )}
             </div>
             <div className="sources-list">
               {ranked_candidates?.map((src, idx) => {
@@ -1785,13 +1634,12 @@ export default function Screen4PollutionInvestigation() {
                 const pct      = (score * 100).toFixed(0);
                 const emoji    = sourceEmoji(src?.type);
                 const isActive = activeSource === src?.id;
-                const isTop    = idx === 0 && isInPlayback && currentHourIndex < 23;
                 const typeLabel = translateSourceType(src?.type, activeLang);
 
                 return (
                   <div
                     key={src?.id ?? idx}
-                    className={`source-card${isActive ? ' active' : ''}${isTop ? ' playback-highlight' : ''}`}
+                    className={`source-card${isActive ? ' active' : ''}`}
                     onClick={() => setActiveSource(isActive ? null : src?.id)}
                   >
                     <div className="source-icon-box">{emoji}</div>
@@ -1799,9 +1647,6 @@ export default function Screen4PollutionInvestigation() {
                       <div className="source-top">
                         <span className="rank-badge">{t.rank_prefix}{src?.rank}</span>
                         <span className="source-type-tag">{typeLabel}</span>
-                        {isTop && (
-                          <span style={{ fontSize: 9, color: '#fbbf24', fontFamily: 'monospace', marginLeft: 2 }}>&#x25B2; DOMINANT</span>
-                        )}
                       </div>
                       <div className="source-name">{translateSourceName(src?.name, activeLang)}</div>
                       <div className="conf-bar-wrap">
@@ -1838,5 +1683,122 @@ export default function Screen4PollutionInvestigation() {
       </div>{/* /aq-body */}
 
     </div>
+  );
+}
+
+// ─── SIDEBAR AQI TREND CARD ──────────────────────────────────────────────────────
+function StationTrendCard({ points, range, onRangeChange, loading, isDemo, demoLabel, labels }) {
+  const option = useMemo(() => {
+    const timestamps = points.map((p) => p.timestamp);
+    const values     = points.map((p) => p.value);
+    return {
+      backgroundColor: 'transparent',
+      animationDuration: 700,
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(12,12,16,0.95)',
+        borderColor: 'rgba(255,255,255,0.1)',
+        textStyle: { color: '#f4f4f5', fontSize: 12 },
+        formatter: (params) => {
+          const item = params?.[0];
+          if (!item) return '';
+          return `<div style="font-family:monospace">
+            <div style="font-size:10px;color:#a1a1aa">${item.axisValue}</div>
+            <div style="font-weight:700;color:#2dd4bf">AQI ${item.data}</div>
+          </div>`;
+        },
+      },
+      grid: { left: 6, right: 14, top: 14, bottom: 4, containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: timestamps,
+        boundaryGap: false,
+        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.12)' } },
+        axisTick: { show: false },
+        axisLabel: { color: '#8b8f96', fontSize: 9, fontFamily: 'monospace' },
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { show: false },
+        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.07)', type: 'dashed' } },
+        axisLabel: { color: '#8b8f96', fontSize: 9, fontFamily: 'monospace' },
+      },
+      series: [{
+        name: 'AQI',
+        type: 'line',
+        smooth: 0.3,
+        data: values,
+        symbol: 'circle',
+        symbolSize: 4,
+        showSymbol: values.length <= 40,
+        lineStyle: { width: 2, color: '#2dd4bf' },
+        itemStyle: { color: '#2dd4bf' },
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(45,212,191,0.22)' },
+              { offset: 1, color: 'rgba(45,212,191,0)' },
+            ],
+          },
+        },
+        markLine: {
+          silent: true,
+          symbol: 'none',
+          data: [{ yAxis: 200, lineStyle: { color: 'rgba(249,115,22,0.55)', type: 'dashed', width: 1 } }],
+          label: {
+            formatter: 'Poor 200',
+            color: 'rgba(249,115,22,0.8)',
+            fontSize: 9,
+            fontFamily: 'monospace',
+            position: 'insideEndTop',
+          },
+        },
+      }],
+    };
+  }, [points]);
+
+  return (
+    <section className="trend-card" aria-label={labels.title}>
+      <div className="trend-head">
+        <span className="section-label">{labels.title}</span>
+        <div className="trend-range-group" role="group" aria-label={labels.title}>
+          {['24H', '7D', '30D'].map((r) => (
+            <button
+              key={r}
+              type="button"
+              aria-pressed={range === r}
+              className={`trend-range-btn${range === r ? ' active' : ''}`}
+              onClick={() => onRangeChange(r)}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isDemo && !loading && (
+        <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className="trend-demo-chip" title={labels.demoNote}>{labels.demoChip}</span>
+          <span style={{ fontSize: 9, color: '#71717a', fontFamily: 'monospace' }}>{demoLabel}</span>
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} role="status">
+          <span style={{ width: 16, height: 16, border: '2px solid rgba(45,212,191,0.4)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }}/>
+          <span style={{ fontSize: 10, color: '#71717a', fontFamily: 'monospace' }}>{labels.loading}</span>
+        </div>
+      ) : (
+        <EChartsWrapper option={option} style={{ width: '100%', height: 150 }} />
+      )}
+
+      {isDemo && !loading && (
+        <p style={{ marginTop: 6, textAlign: 'center', fontSize: 9, color: '#71717a', fontFamily: 'monospace', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          {labels.demoNote}
+          {points.length > 0 ? ` \u00B7 ${points.length} pts` : ''}
+        </p>
+      )}
+    </section>
   );
 }
