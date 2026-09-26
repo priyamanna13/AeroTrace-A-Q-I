@@ -272,6 +272,60 @@ function injectGlobalStyles() {
 }
 injectGlobalStyles();
 
+// ─── OFFLINE SIMULATED SOURCE CANDIDATES ─────────────────────────────────────
+// With the backend offline there is no attribution pipeline output. To keep the
+// forensic UI demonstrable for every city, deterministic SIMULATED candidates
+// are generated per station and clearly labeled in the UI ("SIMULATED" chip).
+// They are never mixed with live data — the offline banner is always visible.
+const OFFLINE_SOURCE_ARCHETYPES = [
+  { type: 'traffic',      en: 'Major Traffic Corridor' },
+  { type: 'construction', en: 'Construction Cluster' },
+  { type: 'industrial',   en: 'Industrial Emission Zone' },
+  { type: 'waste',        en: 'Open Waste Burning Site' },
+];
+
+function hashName(name) {
+  let h = 0;
+  const str = String(name || '');
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function buildOfflineCandidates(station) {
+  if (!station?.name) return [];
+  const seed = hashName(station.name);
+  const [lat, lng] = Array.isArray(station.coordinates) && station.coordinates.length >= 2
+    ? [Number(station.coordinates[1]), Number(station.coordinates[0])]
+    : [18.5204, 73.8567];
+  const dirs = ['NE', 'NW', 'SE', 'SW', 'N', 'E', 'S', 'W'];
+  const confidences = [0.87, 0.74, 0.63];
+  // Deterministically pick 3 distinct archetypes for this station
+  const picked = [
+    OFFLINE_SOURCE_ARCHETYPES[seed % OFFLINE_SOURCE_ARCHETYPES.length],
+    OFFLINE_SOURCE_ARCHETYPES[(seed >> 3) % OFFLINE_SOURCE_ARCHETYPES.length],
+    OFFLINE_SOURCE_ARCHETYPES[(seed >> 6) % OFFLINE_SOURCE_ARCHETYPES.length],
+  ];
+  const seen = new Set();
+  const out = [];
+  picked.forEach((arch, i) => {
+    if (seen.has(arch.type)) return;
+    seen.add(arch.type);
+    const dist = (0.8 + ((seed >> (i * 2)) % 30) / 10).toFixed(1); // 0.8–3.7 km
+    const dir  = dirs[(seed >> (i + 2)) % dirs.length];
+    const jitter = 0.004 + i * 0.006;
+    out.push({
+      rank: out.length + 1,
+      id: `sim-${station.name}-${arch.type}`.replace(/\s+/g, '_'),
+      name: `${arch.en} · ${dist} km ${dir}`,
+      type: arch.type,
+      simulated: true,
+      geometry: { type: 'Point', coordinates: [lng + jitter, lat - jitter * 0.6] },
+      score_breakdown: { confidence_score: confidences[out.length] ?? 0.6 },
+    });
+  });
+  return out;
+}
+
 // ─── LOCALISATION DICTIONARY ──────────────────────────────────────────────────────
 // All non-ASCII strings stored as explicit Unicode escapes so the file's encoding
 // is irrelevant — the JS engine always produces the correct codepoints.
@@ -834,11 +888,13 @@ export default function Screen4PollutionInvestigation() {
           dominant_pollutant: st.dominant_pollutant ?? '',
         },
       },
-      // MET feed reuses the static sample (labeled demo by the offline banner)
+      // MET feed reuses the static sample (labeled demo by the offline banner);
+      // sources are deterministic SIMULATED candidates, labeled in the UI.
       weather_snapshot: dataContract?.weather_snapshot,
-      ranked_candidates: [],
+      ranked_candidates: buildOfflineCandidates(st),
       actionable_intelligence: null,
       pre_alerts: null,
+      is_simulated: true,
     };
   }, [resolvedStation, cityContext]);
 
@@ -1127,6 +1183,38 @@ export default function Screen4PollutionInvestigation() {
   }, [stationsData]);
 
   // ── SPIKE / SIMULATION ACTIONS ────────────────────────────────────────────────
+  // Offline demo: a labeled synthetic spike for the CURRENT station so the FAC
+  // can be demonstrated without the backend. Uses the station's real AQI + a
+  // fixed jump so the value is plausible; flagged is_simulated end to end.
+  const triggerOfflineSpike = useCallback(() => {
+    const baseAqi = Math.max(1, Math.round(Number(offlineStationView?.trigger_station?.reading?.total_aqi) || 0));
+    const spiked   = Math.min(500, baseAqi + 245);
+    const category = spiked > 400 ? 'Severe' : spiked > 300 ? 'Very Poor' : spiked > 200 ? 'Poor' : 'Moderate';
+    setDashboardData({
+      ...offlineStationView,
+      trigger_station: {
+        ...offlineStationView?.trigger_station,
+        reading: {
+          ...offlineStationView?.trigger_station?.reading,
+          total_aqi: spiked,
+          aqi_category: category,
+          timestamp: new Date().toISOString(),
+        },
+      },
+      ranked_candidates: buildOfflineCandidates(offlineStationView?.trigger_station),
+      actionable_intelligence: {
+        enforcement_priority: 0.9,
+        squad_id: 'SIM-AQ-SQUAD-01',
+        estimated_response_time_min: 25,
+      },
+      is_spike: true,
+      is_simulated: true,
+    });
+    spikeActiveRef.current = true;
+    setSpikeActive(true);
+    spikeLockedUntilRef.current = Date.now() + 2 * 60 * 1000;
+  }, [offlineStationView]);
+
   const triggerSpike = useCallback(async () => {
     setSpikeLoading(true);
     try {
@@ -1155,12 +1243,12 @@ export default function Screen4PollutionInvestigation() {
         console.warn('[Spike] Trigger returned non-OK status:', res.status);
       }
     } catch (err) {
-      console.warn('[Spike] Trigger failed — backend unreachable:', err);
-      // Do NOT set spikeActive: we cannot fake data silently
+      console.warn('[Spike] Trigger failed — backend unreachable, using labeled offline simulation:', err);
+      triggerOfflineSpike();
     } finally {
       setSpikeLoading(false);
     }
-  }, [currentStation]);
+  }, [currentStation, triggerOfflineSpike]);
 
   const revertFromSpike = useCallback(async () => {
     setSpikeLoading(true);
@@ -1776,6 +1864,11 @@ export default function Screen4PollutionInvestigation() {
                       <div className="source-top">
                         <span className="rank-badge">{t.rank_prefix}{src?.rank}</span>
                         <span className="source-type-tag">{typeLabel}</span>
+                        {src?.simulated && (
+                          <span title="Simulated candidate — backend offline" style={{ fontSize: 8, fontWeight: 800, letterSpacing: '0.08em', color: '#a855f7', background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 4, padding: '1px 5px', textTransform: 'uppercase' }}>
+                            {activeLang === 'en' ? 'SIM' : 'सिम'}
+                          </span>
+                        )}
                       </div>
                       <div className="source-name">{translateSourceName(src?.name, activeLang)}</div>
                       <div className="conf-bar-wrap">

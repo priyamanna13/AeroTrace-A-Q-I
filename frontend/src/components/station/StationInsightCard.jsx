@@ -209,11 +209,20 @@ export function StationInsightCard({ data, activeLang, onLangChange }) {
     >
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "1.5px", background: "linear-gradient(to right, rgba(239,68,68,0.4), transparent)" }} />
 
-      {/* Header row: section label + language switcher (kept) */}
+      {/* Header row: section label + Listen BESIDE the title + language switcher */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <span className="section-label" style={{ letterSpacing: "0.15em" }}>
-          {S.insightLabel}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <span className="section-label" style={{ letterSpacing: "0.15em" }}>
+            {S.insightLabel}
+          </span>
+          <ListenControl
+            text={insight.summary}
+            lang={activeLang}
+            disabled={!insight.summary || insight.summary === insight.labels.noData}
+            className="listen-control"
+            style={{ marginTop: 0 }}
+          />
+        </div>
         {onLangChange && (
           <div className="lang-switcher">
             {["en", "hi", "mr"].map((lang) => (
@@ -240,17 +249,9 @@ export function StationInsightCard({ data, activeLang, onLangChange }) {
         {insight.windCard && <Fact tag={S.windTag} value={insight.windSpeed != null ? `${insight.windCard} · ${insight.windSpeed} km/h` : insight.windCard} />}
       </div>
 
-      {/* Concise localized insight — Listen sits INLINE at the end of the text
-          (beside the description, not on its own row below it). */}
+      {/* Concise localized insight (displayed = spoken) */}
       <p className="advisory-text" style={{ fontSize: 13, lineHeight: 1.65 }}>
-        {insight.summary}{" "}
-        <ListenControl
-          text={insight.summary}
-          lang={activeLang}
-          disabled={!insight.summary || insight.summary === insight.labels.noData}
-          className="listen-control"
-          style={{ verticalAlign: "middle", marginLeft: 6, marginTop: 0 }}
-        />
+        {insight.summary}
       </p>
 
       {/* Ask AI (current station context) */}
