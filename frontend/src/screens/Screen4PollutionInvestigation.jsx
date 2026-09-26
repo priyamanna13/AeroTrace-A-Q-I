@@ -6,6 +6,10 @@ import { API } from '../api_client';
 import { MapRenderer } from '../map_layers';
 import { WebSocketClient } from '../ws_client';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { BrandMark } from '../components/site-header';
+import { NavigationPanel } from '../components/navigation-panel';
+import { StationInsightCard } from '../components/station/StationInsightCard';
+import { useI18n } from '../i18n';
 
 // ─── LEAFLET DEFAULT ICON FIX (Vite asset pipeline) ────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl;
@@ -774,7 +778,11 @@ export default function Screen4PollutionInvestigation() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   // ── UI state
-  const [activeLang,   setActiveLang]   = useState('en');
+  // activeLang starts from the GLOBAL language selector (Screen 1/2 settings) so the
+  // station insight + voice follow the app-wide language. The in-panel EN/हि/म switch
+  // still works and writes back to the global preference.
+  const { lang: globalLang, setLang: setGlobalLang } = useI18n();
+  const [activeLang,   setActiveLang]   = useState(globalLang || 'en');
   const [activeSource, setActiveSource] = useState(null);
   // Station context arrives from City Intelligence via the route param (and ?city=);
   // there is no station-selection toggle inside this screen anymore.
@@ -790,6 +798,12 @@ export default function Screen4PollutionInvestigation() {
       setCityContext(routeCity);
     }
   }, [stationId, routeCity]);
+
+  // Keep panel language in sync with the GLOBAL language selector (and vice versa).
+  useEffect(() => {
+    if (globalLang && globalLang !== activeLang) setActiveLang(globalLang);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [globalLang]);
 
   // ── Data state
   const [dashboardData, setDashboardData] = useState(null);
@@ -1183,6 +1197,41 @@ export default function Screen4PollutionInvestigation() {
         </div>
       )}
 
+      {/* ── GLOBAL NAVBAR (same as Screen 1 & 2: BrandMark + navigation panel) ──
+          Single global navbar; forensic map begins directly below it. */}
+      <header
+        className="pointer-events-none"
+        style={{
+          position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1200,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 24px',
+        }}
+      >
+        <div className="pointer-events-auto" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <BrandMark />
+          <button
+            onClick={() => navigate(`/city/${encodeURIComponent(cityContext)}`)}
+            title="Back to City Intelligence"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              background: 'rgba(8,8,10,0.85)', padding: '7px 14px', borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)',
+              cursor: 'pointer', color: '#d4d4d8', fontSize: 11, fontWeight: 700,
+              letterSpacing: '0.04em', fontFamily: "'Inter','Noto Sans Devanagari',sans-serif",
+              textTransform: 'uppercase', transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,146,60,0.4)'; e.currentTarget.style.color = '#fb923c'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#d4d4d8'; }}
+          >
+            <span aria-hidden="true" style={{ fontSize: 13, lineHeight: 1 }}>←</span>
+            Back to {cityContext}
+          </button>
+        </div>
+        <div className="pointer-events-auto">
+          <NavigationPanel onSelectCity={(id) => navigate(`/city/${id}`)} onNotice={() => {}} />
+        </div>
+      </header>
+
       {/* ── MAP PANEL ── */}
       <div className="map-panel">
         <MapContainer
@@ -1316,27 +1365,6 @@ export default function Screen4PollutionInvestigation() {
             </span>
           )}
         </div>
-
-        {/* ── BACK TO CITY INTELLIGENCE (station selection now lives on Screen 2) ── */}
-        <button
-          onClick={() => navigate(`/city/${encodeURIComponent(cityContext)}`)}
-          title="Back to City Intelligence"
-          style={{
-            position: 'absolute', top: '20px', left: '160px', zIndex: 1000,
-            display: 'flex', alignItems: 'center', gap: 7,
-            background: 'rgba(8,8,10,0.85)',
-            padding: '7px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(20px)', cursor: 'pointer',
-            color: '#d4d4d8', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
-            fontFamily: "'Inter','Noto Sans Devanagari',sans-serif",
-            transition: 'all 0.2s ease', textTransform: 'uppercase',
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,146,60,0.4)'; e.currentTarget.style.color = '#fb923c'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#d4d4d8'; }}
-        >
-          <span aria-hidden="true" style={{ fontSize: 13, lineHeight: 1 }}>←</span>
-          Back to {cityContext}
-        </button>
 
         {/* ── MET STRIP ── */}
         <div className="met-badge">
@@ -1513,7 +1541,7 @@ export default function Screen4PollutionInvestigation() {
                       Loading&hellip;
                     </>
                   ) : (
-                    <>⚡ Trigger Spike (310 AQI)</>
+                    <>⚡ Trigger Spike</>
                   )}
                 </button>
               )}
@@ -1542,39 +1570,18 @@ export default function Screen4PollutionInvestigation() {
             />
           )}
 
-          {/* ── ACTION ADVISORY ── */}
-          <div>
-            <div className="advisory-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className="section-label" style={{ letterSpacing: '0.15em' }}>
-                  {activeLang === 'en' ? t.action_advisory.toUpperCase() : t.action_advisory}
-                </span>
-              </div>
-              <div className="lang-switcher">
-                {['en', 'hi', 'mr'].map((lang) => (
-                  <button
-                    key={lang}
-                    onClick={() => setActiveLang(lang)}
-                    className={`lang-btn${activeLang === lang ? ' active' : ''}`}
-                  >
-                    {LANG_LABELS[lang]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="advisory-card" style={currentStationObj.is_spike || spikeActive ? { borderColor: 'rgba(239,68,68,0.28)', background: 'rgba(69,10,10,0.10)' } : {}}>
-              <p className="advisory-text">
-                {(() => {
-                  const advisoryObj = activeData?.actionable_intelligence?.localized_advisory;
-                  const summaryText = activeData?.actionable_intelligence?.summary;
-                  const text = advisoryObj
-                    ? (activeLang === 'hi' ? advisoryObj.hi : activeLang === 'mr' ? advisoryObj.mr : advisoryObj.en)
-                    : summaryText || '';
-                  return text || (loading ? 'Loading advisory\u2026' : 'No advisory available.');
-                })()}
-              </p>
-            </div>
+          {/* ── STATION INTELLIGENCE (compact, data-driven, localized + voice + Ask AI) ──
+              Replaces the old full advisory paragraph. Reads the CURRENT station's
+              attribution data; language follows the global selector (activeLang is
+              synced from the global language context below). */}
+          <StationInsightCard
+            data={activeData}
+            activeLang={activeLang}
+            onLangChange={(lang) => {
+              setActiveLang(lang);
+              setGlobalLang(lang); // keep the app-wide selector consistent
+            }}
+          />
 
             {/* Ambiguity alert */}
             {activeData?.pre_alerts?.source?.includes('AMBIGUITY') && (
@@ -1804,8 +1811,6 @@ export default function Screen4PollutionInvestigation() {
               )}
             </div>
           </div>
-
-        </div>
 
         {/* Footer */}
         <div className="sidebar-footer">

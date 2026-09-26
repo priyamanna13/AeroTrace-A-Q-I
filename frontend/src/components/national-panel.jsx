@@ -120,8 +120,8 @@ export function NationalPanel({
  * Reuses the existing voiceService (Web Speech API, en-IN/hi-IN/mr-IN).
  * Fails gracefully (disabled + tooltip) when TTS is unavailable.
  */
-export function ListenControl({ text, disabled = false }) {
-  const { t, language } = useLanguage()
+export function ListenControl({ text, disabled = false, lang }) {
+  const { t, language: contextLanguage } = useLanguage()
   const { enabled } = useVoicePreference()
   const [voiceState, setVoiceState] = useState("idle")
   const supported = typeof window !== "undefined" && Boolean(window.speechSynthesis)
@@ -133,6 +133,9 @@ export function ListenControl({ text, disabled = false }) {
     }
   }, [])
 
+  // The voice language follows the CURRENTLY DISPLAYED insight (explicit lang prop
+  // wins; otherwise the global language context). Display and speech never diverge.
+  const language = lang || contextLanguage
   const playing = voiceState === "playing" || voiceState === "loading"
   const active = playing && enabled
   const cannotSpeak = disabled || !text

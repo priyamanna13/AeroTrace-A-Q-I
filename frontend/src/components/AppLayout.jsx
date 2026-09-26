@@ -11,10 +11,11 @@ export default function AppLayout() {
   const isCity = location.pathname.startsWith('/city');
   const isInvestigation = location.pathname.startsWith('/investigate');
 
-  // Screen 0 (Landing), Screen 1 (National Overview) and Screen 2 (City Intelligence)
-  // are dedicated full-viewport single-screen experiences with their own approved
-  // headers & navigation panels — render bare, no horizontal navbar/footer
-  if (isLanding || isNational || isCity) {
+  // Screen 0 (Landing), Screen 1 (National Overview), Screen 2 (City Intelligence)
+  // and the Forensic Investigation screen are dedicated full-viewport single-screen
+  // experiences sharing the SAME global overlay header (BrandMark + navigation
+  // panel) — render bare, no horizontal navbar/footer.
+  if (isLanding || isNational || isCity || isInvestigation) {
     return <Outlet />;
   }
 
@@ -24,20 +25,18 @@ export default function AppLayout() {
       <main className="flex-1 w-full flex flex-col overflow-hidden">
         <Outlet />
       </main>
-      {!isInvestigation && (
-        <footer className="w-full bg-[#08080a] border-t border-zinc-900 py-4 px-4 sm:px-8 text-center text-xs text-zinc-400 font-mono flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span>AeroTrace A-Q-I · Forensic Attribution Engine</span>
-          </div>
-          <div className="text-[11px] text-zinc-400">
-            Source Transparency: CPCB CAAQMS Verified Stations + Open-Meteo Fallback Cascade
-          </div>
-          <div className="text-[11px] text-zinc-400">
-            PJMT NGEC 2026
-          </div>
-        </footer>
-      )}
+      <footer className="w-full bg-[#08080a] border-t border-zinc-900 py-4 px-4 sm:px-8 text-center text-xs text-zinc-400 font-mono flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span>AeroTrace A-Q-I · Forensic Attribution Engine</span>
+        </div>
+        <div className="text-[11px] text-zinc-400">
+          Source Transparency: CPCB CAAQMS Verified Stations + Open-Meteo Fallback Cascade
+        </div>
+        <div className="text-[11px] text-zinc-400">
+          PJMT NGEC 2026
+        </div>
+      </footer>
     </div>
   );
 }
