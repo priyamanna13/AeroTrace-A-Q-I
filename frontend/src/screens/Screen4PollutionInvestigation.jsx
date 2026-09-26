@@ -153,11 +153,14 @@ const GLOBAL_STYLES = `
   .met-value { font-size:13px;font-weight:600;color:#f4f4f5;font-family:monospace; }
   .met-dot   { width:3px;height:3px;background:rgba(255,255,255,0.18);border-radius:50%; }
 
-  /* ── Sidebar ── */
+  /* ── Sidebar (station intelligence panel sits on the LEFT of the map) ──
+     order:-1 places it before the map panel in the flex row; the divider
+     moves to its right edge since it now hugs the screen's left side. */
   .sidebar {
     width:28%; height:100%; flex-shrink:0;
+    order:-1;
     background:rgba(9,9,12,0.92);
-    border-left:1px solid rgba(255,255,255,0.045);
+    border-right:1px solid rgba(255,255,255,0.045);
     backdrop-filter:blur(40px);
     display:flex; flex-direction:column;
     position:relative; z-index:10;
@@ -1207,14 +1210,13 @@ export default function Screen4PollutionInvestigation() {
       )}
 
       {/* ── GLOBAL NAVBAR (same as Screen 1 & 2: BrandMark + navigation panel) ──
-          Single global navbar; forensic map begins directly below it. */}
+          Same position, spacing, and proportions as the Screen 1/2 header
+          (20px vertical / 40px horizontal, matching their computed px-6 py-5
+          lg:px-10). Inline padding because .aq-root's scoped reset zeroes
+          Tailwind utility padding inside this screen. */}
       <header
-        className="pointer-events-none"
-        style={{
-          position: 'relative', width: '100%', flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '12px 24px', zIndex: 1200,
-        }}
+        className="pointer-events-none flex w-full shrink-0 items-center justify-between"
+        style={{ padding: '20px 40px', zIndex: 1200 }}
       >
         <div className="pointer-events-auto" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <BrandMark />
