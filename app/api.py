@@ -28,6 +28,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
 from .config import get_settings, load_city_config
 from .demo_scenarios import get_scenario, list_scenario_names
@@ -627,6 +628,89 @@ def get_weather(city_name: str):
         "data_timestamp": raw.observed_at.isoformat(),
         "data_currency": "Real-time Open-Meteo meteorological feed",
     }
+
+
+# --------------------------------------------------------------------------- #
+# Prediction Endpoint (Screen 5 Forward Air Quality Forecast)
+# --------------------------------------------------------------------------- #
+@app.get("/api/v1/prediction/{station_name}/{pollutant}")
+def get_prediction(
+    station_name: str,
+    pollutant: str,
+    hours: int = Query(default=6, ge=1, le=24, description="Forecast horizon in hours (1-24)"),
+):
+    """Screen 5 Contract: Forward air quality forecasting anchored to observed conditions.
+    
+    Returns:
+    - 1H, 3H, 6H predicted AQI and pollutant concentrations.
+    - Pasquill-Gifford dispersion decay trajectory.
+    - Expanding confidence uncertainty intervals.
+    - Downwind advected plume footprint GeoJSON polygon.
+    - Non-negotiable label: 'Estimated forecast - see methodology'.
+    """
+    from .prediction import calculate_forward_prediction
+    try:
+        from .db import get_session
+        with get_session() as s:
+            return calculate_forward_prediction(
+                station_name=station_name,
+                pollutant=pollutant,
+                hours=hours,
+                session=s,
+            )
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as exc:
+        try:
+            return calculate_forward_prediction(
+                station_name=station_name,
+                pollutant=pollutant,
+                hours=hours,
+                session=None,
+            )
+        except ValueError as ve2:
+            raise HTTPException(status_code=404, detail=str(ve2))
+        except Exception as exc2:
+            raise HTTPException(status_code=500, detail=f"Prediction failed: {exc2}")
+
+
+# --------------------------------------------------------------------------- #
+# Intervention Simulator Request Model & Endpoint (Screen 6 Impact & Intervention)
+# --------------------------------------------------------------------------- #
+class InterventionSimulateRequest(BaseModel):
+    station_name: str
+    intervention_type: str
+    city: Optional[str] = None
+    intensity_pct: float = Field(default=50.0, ge=0.0, le=100.0)
+    target_pollutant: Optional[str] = None
+
+
+@app.post("/api/v1/intervention/simulate")
+def simulate_civic_intervention(req: InterventionSimulateRequest):
+    """Screen 6 Contract: Civic intervention simulator with documented ERF methodology.
+    
+    Supported intervention types:
+    - 'control_construction_dust': Anti-smog water cannons, mist curtains (max ERF: 0.25)
+    - 'reduce_traffic': Heavy diesel freight diversion, odd-even zones (max ERF: 0.35)
+    - 'reduce_industrial_emissions': Boiler load shedding, scrubber compliance (max ERF: 0.30)
+    
+    Guarantees:
+    - No hard-coded fictional results: derived from empirical ERF model and NAQS sensitivity weights.
+    - Non-fabrication: returns 'sensitive location data not available for this city' if unverified.
+    """
+    from .intervention import simulate_intervention
+    try:
+        return simulate_intervention(
+            city=req.city or "",
+            station_name=req.station_name,
+            intervention_type=req.intervention_type,
+            intensity_pct=req.intensity_pct,
+            target_pollutant=req.target_pollutant,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Intervention simulation failed: {exc}")
 
 
 # --------------------------------------------------------------------------- #

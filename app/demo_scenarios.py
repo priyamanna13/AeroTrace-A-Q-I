@@ -1112,10 +1112,10 @@ def _populate_all_scenarios() -> None:
 _populate_all_scenarios()
 
 
-def get_scenario(station_name: str) -> DemoScenario:
+def get_scenario(station_name: str, fallback: bool = True) -> DemoScenario | None:
     """Look up a demo scenario by station name (case-insensitive).
 
-    Supports all 28 physical stations across 7 cities. Falls back to Shivajinagar if unknown.
+    Supports all 28 physical stations across 7 cities. Falls back to Shivajinagar if unknown and fallback=True.
     """
     key = station_name.strip().lower()
     if key in _SCENARIOS:
@@ -1131,7 +1131,7 @@ def get_scenario(station_name: str) -> DemoScenario:
                 _SCENARIOS[key] = scenario
                 return scenario
 
-    return _SHIVAJINAGAR
+    return _SHIVAJINAGAR if fallback else None
 
 
 def list_scenario_names() -> list[str]:

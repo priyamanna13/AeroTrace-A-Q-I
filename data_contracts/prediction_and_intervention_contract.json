@@ -1,0 +1,194 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AeroTrace Prediction and Intervention Data Contract",
+  "description": "API contract for Screen 5 (Pollution Prediction) and Screen 6 (Impact & Intervention) forecasting and simulation services.",
+  "endpoints": {
+    "prediction": {
+      "path": "/api/v1/prediction/{station_name}/{pollutant}",
+      "method": "GET",
+      "description": "Forward air quality forecasting anchored to observed telemetry, parameterized by Pasquill-Gifford stability and wind advection.",
+      "parameters": {
+        "station_name": {
+          "type": "string",
+          "description": "Verified physical monitoring station name",
+          "required": true
+        },
+        "pollutant": {
+          "type": "string",
+          "enum": ["pm25", "pm10", "no2", "so2", "co", "o3"],
+          "description": "Target pollutant to forecast",
+          "required": true
+        },
+        "hours": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 24,
+          "default": 6,
+          "description": "Forecast horizon in hours"
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "station_name",
+          "city",
+          "target_pollutant",
+          "current_aqi",
+          "current_concentration",
+          "concentration_unit",
+          "weather_context",
+          "horizons",
+          "label",
+          "methodology"
+        ],
+        "properties": {
+          "station_name": { "type": "string" },
+          "city": { "type": "string" },
+          "target_pollutant": { "type": "string" },
+          "current_aqi": { "type": "integer" },
+          "current_concentration": { "type": "number" },
+          "concentration_unit": { "type": "string" },
+          "weather_context": {
+            "type": "object",
+            "required": ["wind_speed_kmh", "wind_direction_deg", "wind_cardinal", "pasquill_class", "stability_label", "decay_rate_k"],
+            "properties": {
+              "wind_speed_kmh": { "type": "number" },
+              "wind_direction_deg": { "type": "integer" },
+              "wind_cardinal": { "type": "string" },
+              "pasquill_class": { "type": "string", "enum": ["A", "B", "C", "D", "E", "F"] },
+              "stability_label": { "type": "string" },
+              "decay_rate_k": { "type": "number" }
+            }
+          },
+          "horizons": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "horizon_hours",
+                "timestamp",
+                "predicted_aqi",
+                "confidence_bounds",
+                "predicted_concentration",
+                "confidence",
+                "affected_zone_geojson"
+              ],
+              "properties": {
+                "horizon_hours": { "type": "integer" },
+                "timestamp": { "type": "string", "format": "date-time" },
+                "predicted_aqi": { "type": "integer" },
+                "confidence_bounds": {
+                  "type": "object",
+                  "required": ["lower_aqi", "upper_aqi", "margin_pct"],
+                  "properties": {
+                    "lower_aqi": { "type": "integer" },
+                    "upper_aqi": { "type": "integer" },
+                    "margin_pct": { "type": "number" }
+                  }
+                },
+                "predicted_concentration": { "type": "number" },
+                "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+                "affected_zone_geojson": {
+                  "type": "object",
+                  "required": ["type", "geometry", "properties"],
+                  "properties": {
+                    "type": { "type": "string", "enum": ["Feature"] },
+                    "geometry": { "type": "object" },
+                    "properties": { "type": "object" }
+                  }
+                }
+              }
+            }
+          },
+          "label": { "type": "string", "enum": ["Estimated forecast - see methodology"] },
+          "methodology": { "type": "string" }
+        }
+      }
+    },
+    "intervention": {
+      "path": "/api/v1/intervention/simulate",
+      "method": "POST",
+      "description": "Civic intervention simulation predicting air quality impact across statutory intervention policies using empirical Emission Reduction Factors (ERF).",
+      "request_body": {
+        "type": "object",
+        "required": ["station_name", "intervention_type"],
+        "properties": {
+          "city": { "type": "string" },
+          "station_name": { "type": "string" },
+          "intervention_type": {
+            "type": "string",
+            "enum": ["control_construction_dust", "reduce_traffic", "reduce_industrial_emissions"]
+          },
+          "intensity_pct": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 100.0,
+            "default": 50.0
+          },
+          "target_pollutant": { "type": "string" }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "city",
+          "station_name",
+          "intervention_type",
+          "intervention_label",
+          "intensity_pct",
+          "target_pollutant",
+          "current_aqi",
+          "projected_aqi",
+          "aqi_delta",
+          "percentage_reduction",
+          "confidence",
+          "affected_zone_summary",
+          "sensitive_locations",
+          "methodology_notes",
+          "disclaimer"
+        ],
+        "properties": {
+          "city": { "type": "string" },
+          "station_name": { "type": "string" },
+          "intervention_type": { "type": "string" },
+          "intervention_label": { "type": "string" },
+          "intensity_pct": { "type": "number" },
+          "target_pollutant": { "type": "string" },
+          "current_aqi": { "type": "integer" },
+          "projected_aqi": { "type": "integer" },
+          "aqi_delta": { "type": "integer" },
+          "percentage_reduction": { "type": "number" },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+          "affected_zone_summary": {
+            "type": "object",
+            "required": ["exposure_period", "plume_reach_km"],
+            "properties": {
+              "exposure_period": { "type": "string" },
+              "plume_reach_km": { "type": "number" },
+              "description": { "type": "string" }
+            }
+          },
+          "sensitive_locations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "type", "distance_m", "status"],
+              "properties": {
+                "name": { "type": "string" },
+                "type": { "type": "string", "enum": ["school", "hospital", "residential"] },
+                "distance_m": { "type": "number" },
+                "status": { "type": "string" }
+              }
+            }
+          },
+          "sensitive_locations_note": {
+            "type": ["string", "null"],
+            "description": "Explicit message 'sensitive location data not available for this city' when unverified"
+          },
+          "methodology_notes": { "type": "string" },
+          "disclaimer": { "type": "string" }
+        }
+      }
+    }
+  }
+}
