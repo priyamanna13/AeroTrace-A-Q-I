@@ -88,8 +88,15 @@ const GLOBAL_STYLES = `
     50%       { opacity: 0.6; transform: scale(0.9); }
   }
 
-  /* ── Scoped Reset for Screen 4 ── */
-  .aq-root, .aq-root *, .aq-root *::before, .aq-root *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  /* ── Scoped Reset for Screen 4 ──
+     Wrapped in @layer base so Tailwind utilities (px-6 py-3.5 …) ALWAYS win:
+     unlayered author styles beat layered ones in the cascade, which is exactly
+     why the old unlayered reset zeroed Tailwind padding inside this screen —
+     including the navigation drawer — making the navbar cramped vs Screen 1/2.
+     :where() additionally keeps specificity at zero within the layer. */
+  @layer base {
+    :where(.aq-root), :where(.aq-root *), :where(.aq-root *::before), :where(.aq-root *::after) { box-sizing: border-box; margin: 0; padding: 0; }
+  }
 
   .aq-root {
     width: 100%; height: 100vh; display: flex; flex-direction: column;
@@ -577,24 +584,31 @@ const sourceEmoji = (typeStr) => {
 const fmt = (d) => d ? new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
 
 // ─── MAP CAMERA CONTROLLER ────────────────────────────────────────────────────────
+// Two responsibilities:
+//   1. City/Station recenter — MapContainer only reads `center` on init, so
+//      navigating Pune → Mumbai (or any station change) must fly imperatively.
+//   2. Source focus — fly to the selected ranked source's centroid (live mode).
 function MapCameraController({ activeSource, ranked_candidates, mapCenter }) {
   const map     = useMap();
   const prevRef = useRef(null);
 
+  // Recenter when the target station/city changes (covers offline navigation,
+  // where no live data ever arrives to trigger a move).
   useEffect(() => {
-    if (activeSource === null) {
-      if (prevRef.current !== null) {
-        map.flyTo(mapCenter, 13, { animate: true, duration: 1.2 });
-      }
-      prevRef.current = null;
-      return;
-    }
+    if (!map || !mapCenter) return;
+    const key = `${mapCenter[0]?.toFixed(4)},${mapCenter[1]?.toFixed(4)}`;
+    if (prevRef.current === key) return;
+    prevRef.current = key;
+    map.flyTo(mapCenter, 13, { animate: true, duration: 1.2 });
+  }, [map, mapCenter]);
+
+  useEffect(() => {
+    if (activeSource === null) return;
     const src      = ranked_candidates?.find((s) => s?.id === activeSource);
     const centroid = getCentroid(src?.geometry);
     if (!centroid) return;
     map.flyTo(centroid, 14, { animate: true, duration: 1.5 });
-    prevRef.current = activeSource;
-  }, [activeSource, ranked_candidates, map, mapCenter]);
+  }, [activeSource, ranked_candidates, map]);
 
   return null;
 }
@@ -795,6 +809,39 @@ export default function Screen4PollutionInvestigation() {
     return requested || { name: 'Shivajinagar', coordinates: [73.8567, 18.5308] };
   }, [stationId, cityContext]);
 
+  // Synthesize an attribution-shaped view from the resolved station's offline
+  // fallback reading. This keeps the panel/map honest: BTM Layout shows BTM
+  // Layout's own AQI/pollutant (labeled offline by the connection banner), not
+  // Shivajinagar's Pune spike narrative with fabricated cross-city sources.
+  const offlineStationView = useMemo(() => {
+    if (!resolvedStation) return null;
+    const key = (cityContext || 'pune').toLowerCase().trim();
+    const list = FALLBACK_CITY_STATIONS[key] || [];
+    const st = list.find((s) => s?.name === resolvedStation.name) || resolvedStation;
+    const aqi = Math.round(Number(st.current_aqi) || 0);
+    return {
+      trigger_station: {
+        id: st.station_id ?? 'offline-resolved',
+        name: st.name,
+        network: st.network ?? 'CPCB_CAAQMS',
+        city: st.city ?? cityContext,
+        state: st.state ?? '',
+        coordinates: st.coordinates,
+        reading: {
+          timestamp: st.data_timestamp ?? new Date().toISOString(),
+          total_aqi: aqi,
+          aqi_category: st.aqi_category ?? '',
+          dominant_pollutant: st.dominant_pollutant ?? '',
+        },
+      },
+      // MET feed reuses the static sample (labeled demo by the offline banner)
+      weather_snapshot: dataContract?.weather_snapshot,
+      ranked_candidates: [],
+      actionable_intelligence: null,
+      pre_alerts: null,
+    };
+  }, [resolvedStation, cityContext]);
+
   // Keep panel language in sync with the GLOBAL language selector (and vice versa).
   useEffect(() => {
     if (globalLang && globalLang !== activeLang) setActiveLang(globalLang);
@@ -831,11 +878,14 @@ export default function Screen4PollutionInvestigation() {
 
   // ── Derived: what data to actually show ──────────────────────────────────────
   // activeData is the single source of truth for all rendering downstream.
-  // Priority: dashboardData (live) → dataContract (true offline fallback)
+  // Priority: dashboardData (live) → offline resolved-station view → dataContract
+  // (last resort — static Pune sample). The offline view is built from the same
+  // per-city fallback the API client uses, so BTM Layout renders BTM Layout's
+  // readings instead of the sample's Shivajinagar narrative.
   const usingCachedFallback = !dashboardData && !loading;
   const activeData = (() => {
     if (dashboardData) return dashboardData;
-    if (!loading) return dataContract;   // hard offline — static JSON, labelled in UI
+    if (!loading && offlineStationView) return offlineStationView;
     return null;
   })();
 
@@ -847,17 +897,14 @@ export default function Screen4PollutionInvestigation() {
   } = activeData || {};
 
   // Offline view model: when live data is absent, synthesize the trigger-station
-  // context from the route-resolved station so the panel, header, map center and
-  // markers all reflect the station the user actually navigated to (not the
-  // static Pune sample).  When live data IS present, trigger_station wins.
+  // The offline view already carries the route-resolved station, so the raw
+  // destructure IS the effective station whenever we are offline. Only when
+  // live data names a different station than the route (backend contract
+  // mismatch) do we override with the resolved station.
   const liveStationName = trigger_station?.name;
-  // Stale when the data names a DIFFERENT station than the one requested via the
-  // route (the static offline fallback always names Shivajinagar, and the offline
-  // poll handler assigns it to dashboardData — so dashboardData alone cannot be
-  // trusted to detect this). If the backend is live, it echoes the requested
-  // station name back and this never triggers.
   const stationIsStale = Boolean(
-    resolvedStation
+    dashboardData
+    && resolvedStation
     && stationId
     && liveStationName
     && liveStationName.toLowerCase() !== String(stationId).toLowerCase()
@@ -867,7 +914,7 @@ export default function Screen4PollutionInvestigation() {
     ? {
         ...trigger_station,
         name: resolvedStation.name,
-        city: trigger_station?.city && !stationIsStale ? trigger_station.city : cityContext,
+        city: resolvedStation.city ?? cityContext,
         coordinates: Array.isArray(resolvedStation.coordinates) && resolvedStation.coordinates.length >= 2
           ? resolvedStation.coordinates
           : trigger_station?.coordinates,
@@ -949,8 +996,9 @@ export default function Screen4PollutionInvestigation() {
         if (pollFailureCount.current >= SPIKE_FAILURE_THRESHOLD) setConnectionStatus('stale');
         if (!hasDataRef.current) {
           setConnectionStatus('offline');
-          // Show static contract data so UI is never completely blank
-          setDashboardData(dataContract);
+          // Do NOT pin the static Pune sample into dashboardData — the offline
+          // view (offlineStationView) already renders the route-resolved
+          // station's own fallback reading, labeled by the offline banner.
         }
       }
     };
@@ -1200,8 +1248,8 @@ export default function Screen4PollutionInvestigation() {
           lg:px-10). Inline padding because .aq-root's scoped reset zeroes
           Tailwind utility padding inside this screen. */}
       <header
-        className="pointer-events-none flex w-full shrink-0 items-center justify-between"
-        style={{ padding: '20px 40px', zIndex: 1200 }}
+        className="pointer-events-none flex w-full shrink-0 items-center justify-between px-6 py-5 lg:px-10"
+        style={{ zIndex: 1200 }}
       >
         <div className="pointer-events-auto" style={{ display: 'flex', alignItems: 'center', gap: 20, flexShrink: 0 }}>
           <BrandMark />
@@ -1397,7 +1445,7 @@ export default function Screen4PollutionInvestigation() {
             <div style={{ flex: 1 }}>
               <div className="header-meta">{effectiveTriggerStation?.network ?? 'CPCB_CAAQMS'}</div>
               <div className="header-title">{effectiveTriggerStation?.name ?? currentStation}</div>
-              <div className="header-sub">{effectiveTriggerStation?.city ?? cityContext}{effectiveTriggerStation?.city || cityContext === 'Mumbai' || cityContext === 'Pune' ? `, ${t.maharashtra}` : ''}</div>
+              <div className="header-sub">{effectiveTriggerStation?.city ?? cityContext}{effectiveTriggerStation?.state ? `, ${effectiveTriggerStation.state}` : ''}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
               {/* AQI pill (CPCB India Standard) */}
@@ -1553,7 +1601,9 @@ export default function Screen4PollutionInvestigation() {
                       margin: 0,
                     }}
                   >
-                    <span>🚨</span> Forensic Action Center
+                    <span>🚨</span> {activeLang === 'en' ? 'Forensic Action Center'
+                    : activeLang === 'hi' ? '\u092B\u094B\u0930\u0947\u0902\u0938\u093F\u0915 \u0915\u093E\u0930\u094D\u092F \u0915\u0947\u0902\u0926\u094D\u0930'
+                    : '\u092B\u094B\u0930\u0947\u0902\u0938\u093F\u0915 \u0915\u0943\u0924\u0940 \u0915\u0947\u0902\u0926\u094D\u0930'}
                   </h4>
                   <span
                     className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500 text-white animate-pulse"
@@ -1585,25 +1635,48 @@ export default function Screen4PollutionInvestigation() {
                   }}
                 >
                   <div>
-                    <span className="text-slate-500 block text-[10px] uppercase" style={{ color: '#64748b', display: 'block', fontSize: 9, textTransform: 'uppercase' }}>Enforcement Lead</span>
-                    <span className="font-semibold" style={{ fontWeight: 700, color: '#f1f5f9' }}>{activeData?.actionable_intelligence?.squad_lead || "Officer In-Charge"}</span>
+                    <span className="text-slate-500 block text-[10px] uppercase" style={{ color: '#64748b', display: 'block', fontSize: 9, textTransform: 'uppercase' }}>
+                      {activeLang === 'en' ? 'Enforcement Lead'
+                      : activeLang === 'hi' ? '\u092A\u094D\u0930\u0935\u0930\u094D\u0924\u0928 \u092A\u094D\u0930\u092D\u093E\u0930\u0940'
+                      : '\u0915\u093E\u0930\u094D\u092F\u0935\u093E\u0939\u0940 \u092A\u094D\u0930\u092E\u0941\u0916'}
+                    </span>
+                    <span className="font-semibold" style={{ fontWeight: 700, color: '#f1f5f9' }}>{activeData?.actionable_intelligence?.squad_lead || (activeLang === 'en' ? "Officer In-Charge" : activeLang === 'hi' ? '\u0925\u093E\u0928\u0927\u094D\u092F\u0915\u094D\u0937 \u0905\u0927\u093F\u0915\u093E\u0930\u0940' : '\u0911\u092B\u093F\u0938\u0930 \u0932\u093E \u091C\u092C\u093E\u092C\u0926\u093E\u0930')}</span>
                   </div>
                   <div className="text-right" style={{ textAlign: 'right' }}>
-                    <span className="text-slate-500 block text-[10px] uppercase" style={{ color: '#64748b', display: 'block', fontSize: 9, textTransform: 'uppercase' }}>Response ETA</span>
+                    <span className="text-slate-500 block text-[10px] uppercase" style={{ color: '#64748b', display: 'block', fontSize: 9, textTransform: 'uppercase' }}>
+                      {activeLang === 'en' ? 'Response ETA'
+                      : activeLang === 'hi' ? '\u092A\u094D\u0930\u0924\u093F\u0915\u094D\u0930\u093F\u092F\u093E \u0915\u093E \u0938\u092E\u092F'
+                      : '\u092A\u094D\u0930\u0924\u093F\u0915\u094D\u0930\u093F\u092F\u0947\u091A\u093E \u0915\u093e\u0933'}
+                    </span>
                     <span className="text-amber-400 font-bold" style={{ color: '#fbbf24', fontWeight: 800 }}>{activeData?.actionable_intelligence?.eta || "~20 mins"}</span>
                   </div>
                 </div>
 
                 <div className="space-y-1.5 pt-1" style={{ paddingTop: 6, borderTop: '1px dashed rgba(255,255,255,0.06)' }}>
                   <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wide" style={{ color: '#94a3b8', display: 'block', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
-                    Statutory Directives (Air Act 1981):
+                    {activeLang === 'en' ? 'Statutory Directives (Air Act 1981):'
+                    : activeLang === 'hi' ? '\u0935\u0948\u0927\u0941\u0915 \u0928\u093F\u0930\u094D\u0926\u0947\u0936 (\u0935\u093e\u092f\u0941 \u0905\u0927\u093f\u0928\u093f\u092f\u092e 1981):'
+                    : '\u0935\u0948\u0927\u093e\u0928\u0941\u0936\u0902\u0917\u093f\u0915 \u0928\u093f\u0930\u094d\u0926\u0947\u0936 (\u0939\u0935\u093e \u0915\u092f\u0926\u093e 1981):'}
                   </span>
-                  {(activeData?.actionable_intelligence?.checklist || [
-                    "Issue immediate stop-work notice under Sec 31A Air Act 1981",
-                    "Deploy anti-smog water cannons to upwind perimeter",
-                    "Verify stack scrubber & fuel compliance logs",
-                    "Dispatch PMC Ward Squad for on-site inspection"
-                  ])?.map((action, idx) => (
+                  {(activeData?.actionable_intelligence?.checklist || (
+                    activeLang === 'en' ? [
+                      "Issue immediate stop-work notice under Sec 31A Air Act 1981",
+                      "Deploy anti-smog water cannons to upwind perimeter",
+                      "Verify stack scrubber & fuel compliance logs",
+                      "Dispatch PMC Ward Squad for on-site inspection"
+                    ]
+                    : activeLang === 'hi' ? [
+                      '\u0927\u093e\u0930\u093e 31A \u0935\u093e\u092f\u0941 \u0905\u0927\u093f\u0928\u093f\u092f\u092e 1981 \u0915\u0947 \u0905\u0902\u0924\u0930\u094d\u0917\u0924 \u0924\u0924\u094d\u0915\u093e\u0932 \u0915\u093e\u0930\u094d\u092f \u0930\u094b\u0915\u0928\u0947 \u0915\u0940 \u0938\u0942\u091a\u0928\u093e \u091c\u093e\u0930\u0940 \u0915\u0930\u0947\u0902',
+                      '\u0935\u093f\u0930\u094b\u0927\u0940 \u0926\u093f\u0936\u093e \u0915\u0940 \u092a\u0930\u093f\u0927\u0940 \u092a\u0930 \u0915\u0923 \u0935\u093f\u0930\u094b\u0927\u0915 \u0924\u094b\u092a\u094b\u0902 \u0915\u0940 \u0924\u0948\u0928\u093e\u0924\u0940 \u0915\u0930\u0947\u0902',
+                      '\u0938\u094d\u091f\u0948\u0915 \u0938\u094d\u0915\u094d\u0930\u092c\u0930 \u0914\u0930 \u0908\u0902\u0927\u0928 \u0905\u0928\u0941\u092a\u093e\u0932\u0928 \u0932\u0949\u0917 \u0938\u0924\u094d\u092f\u093e\u092a\u093f\u0924 \u0915\u0930\u0947\u0902',
+                      '\u0938\u094d\u0925\u0932\u0940\u092f \u0928\u093f\u0930\u0940\u0915\u094d\u0937\u0923 \u0915\u0947 \u0932\u093f\u090f PMC \u0935\u093e\u0930\u094d\u0921 \u0926\u0932 \u092d\u0947\u091c\u0947\u0902'
+                    ] : [
+                      '\u0915\u0932\u092e\u093e\u0902\u0915 31A \u0939\u0935\u093e \u0915\u092f\u0926\u093e 1981 \u0928\u0941\u0938\u093e\u0930 \u0924\u093e\u0924\u094d\u0915\u093e\u0933\u093f\u0915 \u0915\u093e\u092e\u0917\u093e\u0908 \u0925\u093e\u0902\u092c\u0935\u0923\u094d\u092f\u093e\u091a\u0940 \u0938\u0942\u091a\u0928\u093e \u091c\u093e\u0930\u0940 \u0915\u0930\u093e',
+                      '\u0935\u093f\u0930\u094b\u0927\u0940 \u0926\u093f\u0936\u0947\u091a\u094d\u092f\u093e \u0938\u0940\u092e\u0947\u0935\u0930 \u0915\u094d\u0937\u093e\u0930\u092a\u094d\u0930\u0924\u093f\u092c\u0902\u0927\u0915 \u0924\u094b\u092b\u093e\u0928\u093e\u0902\u091a\u0940 \u0928\u093f\u092f\u0941\u0915\u094d\u0924\u0940 \u0915\u0930\u093e',
+                      '\u0938\u094d\u091f\u0945\u0915 \u0938\u094d\u0915\u094d\u0930\u092c\u0930 \u0906\u0923\u093f \u0907\u0902\u0927\u0928 \u092a\u093e\u0932\u0928 \u0928\u094b\u0902\u0926\u0940 \u0924\u092a\u093e\u0938\u093e',
+                      '\u0938\u094d\u0925\u0933\u093f\u0915 \u0924\u092a\u093e\u0938\u0923\u0940\u0938\u093e\u0920\u0940 PMC \u0935\u0949\u0930\u094d\u0921 \u092a\u0925\u0915 \u092a\u093e\u0920\u0935\u093e'
+                    ]
+                  ))?.map((action, idx) => (
                     <div key={idx} className="flex items-start gap-2 text-xs text-slate-200" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 11, color: '#e2e8f0', marginBottom: 5 }}>
                       <input type="checkbox" checked={false} readOnly className="mt-0.5 rounded border-slate-700 bg-slate-900 accent-red-500" style={{ marginTop: 2, cursor: 'pointer' }} />
                       <span style={{ lineHeight: 1.4 }}>{action}</span>

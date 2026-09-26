@@ -120,7 +120,7 @@ export function NationalPanel({
  * Reuses the existing voiceService (Web Speech API, en-IN/hi-IN/mr-IN).
  * Fails gracefully (disabled + tooltip) when TTS is unavailable.
  */
-export function ListenControl({ text, disabled = false, lang }) {
+export function ListenControl({ text, disabled = false, lang, className = "listen-control mt-3 self-start", style }) {
   const { t, language: contextLanguage } = useLanguage()
   const { enabled } = useVoicePreference()
   const [voiceState, setVoiceState] = useState("idle")
@@ -158,7 +158,8 @@ export function ListenControl({ text, disabled = false, lang }) {
       title={!supported ? cs.voiceUnavailable || "Read-aloud unavailable" : !enabled ? cs.voiceOffNote || "Voice read-aloud is off — enable it in Settings" : undefined}
       data-state={active ? "playing" : "idle"}
       aria-label={active ? cs.stop || "Stop" : cs.listen || "Listen"}
-      className="listen-control mt-3 self-start"
+      className={className}
+      style={style}
     >
       {active ? (
         <Square aria-hidden="true" className="size-3" />

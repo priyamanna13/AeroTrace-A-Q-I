@@ -240,19 +240,21 @@ export function StationInsightCard({ data, activeLang, onLangChange }) {
         {insight.windCard && <Fact tag={S.windTag} value={insight.windSpeed != null ? `${insight.windCard} · ${insight.windSpeed} km/h` : insight.windCard} />}
       </div>
 
-      {/* Concise localized insight (displayed = spoken) */}
+      {/* Concise localized insight — Listen sits INLINE at the end of the text
+          (beside the description, not on its own row below it). */}
       <p className="advisory-text" style={{ fontSize: 13, lineHeight: 1.65 }}>
-        {insight.summary}
-      </p>
-
-      {/* Actions: Listen (speaks the DISPLAYED localized insight in ITS language)
-          + Ask AI (current station context) */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+        {insight.summary}{" "}
         <ListenControl
           text={insight.summary}
           lang={activeLang}
           disabled={!insight.summary || insight.summary === insight.labels.noData}
+          className="listen-control"
+          style={{ verticalAlign: "middle", marginLeft: 6, marginTop: 0 }}
         />
+      </p>
+
+      {/* Ask AI (current station context) */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
         <button
           type="button"
           onClick={askAi}
