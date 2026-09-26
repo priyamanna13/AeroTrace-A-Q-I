@@ -376,5 +376,19 @@ export const API = {
       `/api/v1/ai/intervention-insight?scenario=${encodeURIComponent(scenario)}&city=${encodeURIComponent(cityName)}&lang=${encodeURIComponent(lang)}`
     );
   },
+
+  /** GET /api/v1/prediction/{station}/{pollutant}?hours=6 — Screen 5 physical forecast engine */
+  async getForwardPrediction(stationName, pollutant = 'pm25', hours = 6) {
+    return apiFetch(`/api/v1/prediction/${encodeURIComponent(stationName)}/${encodeURIComponent(pollutant)}?hours=${encodeURIComponent(hours)}`);
+  },
+
+  /** POST /api/v1/intervention/simulate — Screen 6 civic intervention simulator */
+  async simulateIntervention(params) {
+    return apiFetch('/api/v1/intervention/simulate', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  },
 };
+
 
