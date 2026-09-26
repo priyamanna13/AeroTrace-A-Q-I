@@ -110,7 +110,7 @@ const FALLBACK_CITIES = [
   },
 ];
 
-const FALLBACK_CITY_STATIONS = {
+export const FALLBACK_CITY_STATIONS = {
   pune: [
     { station_id: "site_5029", name: "Shivajinagar", network: "CPCB_CAAQMS", city: "Pune", state: "Maharashtra", coordinates: [73.8567, 18.5308], elevation_m: 560, current_aqi: 310, aqi_category: "Very Poor", dominant_pollutant: "PM10", pollutants: { pm25: 75.0, pm10: 260.0, no2: 45.0, so2: 12.0, co: 1.4, o3: 35.0 }, is_spike: true, data_source: "SIMULATED — development contract fallback", is_simulated: true, data_timestamp: new Date().toISOString() },
     { station_id: "site_5148", name: "Swargate", network: "CPCB_CAAQMS", city: "Pune", state: "Maharashtra", coordinates: [73.8553, 18.5018], elevation_m: 555, current_aqi: 185, aqi_category: "Moderate", dominant_pollutant: "NO2", pollutants: { pm25: 55.0, pm10: 120.0, no2: 82.0, so2: 14.0, co: 1.8, o3: 28.0 }, is_spike: false, data_source: "SIMULATED — development contract fallback", is_simulated: true, data_timestamp: new Date().toISOString() },
@@ -165,6 +165,9 @@ async function apiFetch(path, options = {}) {
   }
   return response.json();
 }
+
+// Exported for screens that must resolve route params to physical stations
+// while the backend is offline (e.g. /investigate/Bandra?city=Mumbai).
 
 export const API = {
   BASE_URL,

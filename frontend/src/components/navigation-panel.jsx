@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { BarChart3, ChevronDown, LayoutDashboard, Map, Menu, MessageSquare, Settings, X, Building2, Globe } from "lucide-react"
+import { ChevronDown, Map, Menu, MessageSquare, Settings, X, Building2, Globe, TrendingUp } from "lucide-react"
 import { GlideSelect } from "@/components/glide-select"
 import { useThemeTransition } from "@/hooks/use-theme-transition"
 import { CITIES, severityColor, severityFor } from "@/lib/aqi"
@@ -109,33 +109,7 @@ export function NavigationPanel({
 
             <nav aria-label={t.nav.navigation} className="flex-1 overflow-y-auto px-6 py-6">
               <ul className="flex flex-col gap-3">
-                {/* Landing page link */}
-                <li>
-                  <button
-                    type="button"
-                    className={linkClass}
-                    onClick={() => {
-                      setOpen(false)
-                      navigate("/")
-                    }}
-                  >
-                    <Globe className="size-5 text-muted-foreground" aria-hidden="true" />
-                    <span>Landing Page</span>
-                  </button>
-                </li>
-
-                <li>
-                  <button
-                    type="button"
-                    aria-current="page"
-                    className={cn(linkClass, "bg-accent text-accent-foreground")}
-                    onClick={() => setOpen(false)}
-                  >
-                    <LayoutDashboard className="size-5" aria-hidden="true" />
-                    <span>{t.nav.dashboard}</span>
-                  </button>
-                </li>
-
+                {/* Cities */}
                 <Expandable icon={<Building2 className="size-5" />} label={t.nav.cities} meta={t.nav.locations(CITIES.length)}>
                   <ul className="flex flex-col border-l-2 border-border/80 pl-4 py-2 gap-1.5">
                     {CITIES.map((city) => (
@@ -170,14 +144,20 @@ export function NavigationPanel({
                 </li>
 
                 <li>
-                  <button type="button" className={linkClass} onClick={() => placeholder(t.nav.analytics)}>
-                    <BarChart3 className="size-5 text-muted-foreground" aria-hidden="true" />
-                    <span>{t.nav.analytics}</span>
+                  <button type="button" className={linkClass} onClick={() => {
+                    setOpen(false)
+                    navigate("/prediction")
+                  }}>
+                    <TrendingUp className="size-5 text-muted-foreground" aria-hidden="true" />
+                    <span>{t.nav.prediction}</span>
                   </button>
                 </li>
 
                 <li>
-                  <button type="button" className={linkClass} onClick={() => placeholder(t.nav.aiChat)}>
+                  <button type="button" className={linkClass} onClick={() => {
+                    setOpen(false)
+                    navigate("/ai")
+                  }}>
                     <MessageSquare className="size-5 text-muted-foreground" aria-hidden="true" />
                     <span>{t.nav.aiChat}</span>
                   </button>

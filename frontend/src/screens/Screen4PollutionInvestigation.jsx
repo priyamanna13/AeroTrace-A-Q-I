@@ -10,6 +10,7 @@ import { BrandMark } from '../components/site-header';
 import { NavigationPanel } from '../components/navigation-panel';
 import { StationInsightCard } from '../components/station/StationInsightCard';
 import { useI18n } from '../i18n';
+import { FALLBACK_CITY_STATIONS } from '../api_client';
 import { useLanguage } from '../lib/i18n/language-provider';
 import EChartsWrapper from '../components/EChartsWrapper';
 import { getDemoTrend } from '../lib/demo-trend-data';
@@ -775,6 +776,25 @@ export default function Screen4PollutionInvestigation() {
     }
   }, [stationId, routeCity]);
 
+  // ── OFFLINE STATION RESOLUTION ────────────────────────────────────────────
+  // With the backend offline, the attribution endpoint cannot resolve the
+  // route param — its static fallback JSON always names Shivajinagar/Pune.
+  // That made the map jump back to Pune even for a Mumbai station like
+  // /investigate/Bandra?city=Mumbai. Resolve the station from the
+  // cities/stations contract instead (real per-city station lists), falling
+  // back to the legacy Pune grid.
+  const resolvedStation = useMemo(() => {
+    const key = (cityContext || 'pune').toLowerCase().trim();
+    const cityList = FALLBACK_CITY_STATIONS[key] || FALLBACK_CITY_STATIONS.pune || [];
+    const byName = (name) => cityList.find(
+      (st) => (st?.name || '').toLowerCase() === String(name || '').toLowerCase()
+    );
+    const requested = stationId
+      ? (byName(stationId) || (cityList.length ? cityList[0] : null))
+      : null;
+    return requested || { name: 'Shivajinagar', coordinates: [73.8567, 18.5308] };
+  }, [stationId, cityContext]);
+
   // Keep panel language in sync with the GLOBAL language selector (and vice versa).
   useEffect(() => {
     if (globalLang && globalLang !== activeLang) setActiveLang(globalLang);
@@ -826,22 +846,51 @@ export default function Screen4PollutionInvestigation() {
     actionable_intelligence,
   } = activeData || {};
 
-  const currentStationAqi = typeof trigger_station?.reading?.total_aqi === 'number'
-    ? Math.round(trigger_station.reading.total_aqi)
+  // Offline view model: when live data is absent, synthesize the trigger-station
+  // context from the route-resolved station so the panel, header, map center and
+  // markers all reflect the station the user actually navigated to (not the
+  // static Pune sample).  When live data IS present, trigger_station wins.
+  const liveStationName = trigger_station?.name;
+  // Stale when the data names a DIFFERENT station than the one requested via the
+  // route (the static offline fallback always names Shivajinagar, and the offline
+  // poll handler assigns it to dashboardData — so dashboardData alone cannot be
+  // trusted to detect this). If the backend is live, it echoes the requested
+  // station name back and this never triggers.
+  const stationIsStale = Boolean(
+    resolvedStation
+    && stationId
+    && liveStationName
+    && liveStationName.toLowerCase() !== String(stationId).toLowerCase()
+  );
+
+  const effectiveTriggerStation = stationIsStale
+    ? {
+        ...trigger_station,
+        name: resolvedStation.name,
+        city: trigger_station?.city && !stationIsStale ? trigger_station.city : cityContext,
+        coordinates: Array.isArray(resolvedStation.coordinates) && resolvedStation.coordinates.length >= 2
+          ? resolvedStation.coordinates
+          : trigger_station?.coordinates,
+        reading: trigger_station?.reading,
+      }
+    : trigger_station;
+
+  const currentStationAqi = typeof effectiveTriggerStation?.reading?.total_aqi === 'number'
+    ? Math.round(effectiveTriggerStation.reading.total_aqi)
     : (typeof activeData?.trigger_station?.reading?.total_aqi === 'number'
       ? Math.round(activeData.trigger_station.reading.total_aqi)
       : 0);
 
   const currentStationObj = {
-    name: trigger_station?.name ?? currentStation,
+    name: effectiveTriggerStation?.name ?? currentStation,
     aqi: currentStationAqi,
     is_spike: spikeActive || Boolean(activeData?.is_spike) || currentStationAqi > 150,
     actionable_intelligence: actionable_intelligence,
   };
 
 
-  const rawLat   = trigger_station?.coordinates?.[1];
-  const rawLng   = trigger_station?.coordinates?.[0];
+  const rawLat   = effectiveTriggerStation?.coordinates?.[1];
+  const rawLng   = effectiveTriggerStation?.coordinates?.[0];
   const mapCenter = [
     (typeof rawLat === 'number' && !isNaN(rawLat)) ? rawLat : 18.5204,
     (typeof rawLng === 'number' && !isNaN(rawLng)) ? rawLng : 73.8567,
@@ -994,19 +1043,25 @@ export default function Screen4PollutionInvestigation() {
   // CRITICAL: must NOT depend on mapRef — yellow dot <Marker> elements are
   // inside <MapContainer> and re-render when stationsData state changes.
   // Tying this to mapRef introduces a race where dots never appear.
+  // ── STATIONS: follow the resolved city so dots match the map's city ──────────
+  // Re-fetch when cityContext changes (e.g. Pune → Mumbai navigation). The API
+  // client resolves offline from the per-city contract fallbacks, so the yellow
+  // dots always belong to the city actually shown on the map.
   useEffect(() => {
-    console.log('[App] Fetching stations for yellow dots...');
-    API.getStations()
+    if (!cityContext) return;
+    console.log('[App] Fetching stations for', cityContext, 'yellow dots...');
+    API.getCityStations(cityContext)
       .then(res => {
         const arr = Array.isArray(res) ? res : (res.stations ?? []);
+        if (arr.length === 0) throw new Error('empty station list');
         console.log('[App] stationsData set:', arr.map(s => s.name));
         setStationsData(arr);
       })
       .catch(() => {
-        console.warn('[App] getStations failed — using PUNE_STATIONS fallback');
+        console.warn('[App] getCityStations failed — using legacy Pune fallback');
         setStationsData(PUNE_STATIONS.map(s => ({ name: s.name, coordinates: s.coordinates })));
       });
-  }, []); // run once on mount
+  }, [cityContext]);
 
   // ── MAP BOOTSTRAP: imperative Leaflet layers (mapRef required) ───────────────
   useEffect(() => {
@@ -1014,13 +1069,14 @@ export default function Screen4PollutionInvestigation() {
     console.log('[App] mapRef ready');
   }, [mapRef]);
 
-  // ── WIND CONES: fetch for ALL 4 stations in parallel (task 3) ────────────────
+  // ── WIND CONES: fetch for the resolved city's stations in parallel ───────────
   useEffect(() => {
-    const ALL_STATIONS = ['Shivajinagar', 'Swargate', 'Hadapsar', 'Kothrud'];
-    API.getAllWindCones(ALL_STATIONS)
+    const names = stationsData.map(s => s.name).filter(Boolean);
+    if (names.length === 0) return;
+    API.getAllWindCones(names)
       .then(cones => setStationCones(cones))
       .catch(err => console.warn('[Cones] Failed to fetch all cones:', err));
-  }, []); // fetch once on mount; cones are per-station, not per-minute
+  }, [stationsData]);
 
   // ── SPIKE / SIMULATION ACTIONS ────────────────────────────────────────────────
   const triggerSpike = useCallback(async () => {
@@ -1226,14 +1282,14 @@ export default function Screen4PollutionInvestigation() {
           <Marker position={mapCenter} icon={createTriggerIcon(windDeg)}>
             {/* Permanent station-name label so every marker is readable at a glance */}
             <Tooltip permanent direction="top" offset={[0, -36]} className="station-name-label trigger-label" opacity={1}>
-              {trigger_station?.name ?? currentStation}
+              {effectiveTriggerStation?.name ?? currentStation}
             </Tooltip>
             <Popup>
               <div className="popup-inner">
-                <div className="popup-station-name">{trigger_station?.name ?? 'Trigger Station'}</div>
+                <div className="popup-station-name">{effectiveTriggerStation?.name ?? 'Trigger Station'}</div>
                 <div className="popup-aqi-badge">
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }}/>
-                  CRITICAL &middot; {trigger_station?.reading?.total_aqi ?? '\u2014'} AQI
+                  CRITICAL &middot; {effectiveTriggerStation?.reading?.total_aqi ?? '\u2014'} AQI
                 </div>
                 {spikeActive && (
                   <div style={{ fontSize: 10, color: '#f87171', marginTop: 5, fontWeight: 700 }}>
@@ -1246,7 +1302,7 @@ export default function Screen4PollutionInvestigation() {
 
           {/* ── YELLOW DOTS: non-trigger CPCB monitoring stations (task 2) ── */}
           {stationsData
-            .filter(st => st.name !== (trigger_station?.name ?? currentStation))
+            .filter(st => st.name !== (effectiveTriggerStation?.name ?? currentStation))
             .map(st => {
               if (!st.coordinates || st.coordinates.length < 2) return null;
               return (
@@ -1339,9 +1395,9 @@ export default function Screen4PollutionInvestigation() {
           {/* Header */}
           <div className="header-row">
             <div style={{ flex: 1 }}>
-              <div className="header-meta">{trigger_station?.network ?? 'CPCB_CAAQMS'}</div>
-              <div className="header-title">{trigger_station?.name ?? currentStation}</div>
-              <div className="header-sub">{trigger_station?.city ?? cityContext}{trigger_station?.city || cityContext === 'Mumbai' || cityContext === 'Pune' ? `, ${t.maharashtra}` : ''}</div>
+              <div className="header-meta">{effectiveTriggerStation?.network ?? 'CPCB_CAAQMS'}</div>
+              <div className="header-title">{effectiveTriggerStation?.name ?? currentStation}</div>
+              <div className="header-sub">{effectiveTriggerStation?.city ?? cityContext}{effectiveTriggerStation?.city || cityContext === 'Mumbai' || cityContext === 'Pune' ? `, ${t.maharashtra}` : ''}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
               {/* AQI pill (CPCB India Standard) */}
@@ -1613,9 +1669,9 @@ export default function Screen4PollutionInvestigation() {
             isDemo={trendIsDemo}
             demoLabel={trendDisplay.label}
             labels={{
-              title:    activeLang === 'en' ? 'AQI TREND'
-                      : activeLang === 'hi' ? '\u090F\u0915\u094D\u200D\u0932\u092A\u0942\u0930\u094D\u0935\u094D\u092F \u092A\u094D\u0930\u0935\u0943\u0924\u094D\u0924\u093F'
-                      : '\u090F\u0915\u094D\u200D\u0932\u092A\u0942\u0930\u094D\u0935\u094D\u092F \u0915\u0932',
+              title:    activeLang === 'en' ? 'AQI TREND 24H/7D'
+                      : activeLang === 'hi' ? 'AQI \u092A\u094D\u0930\u0935\u0943\u0924\u094D\u0924\u093F 24H/7D'
+                      : 'AQI \u0915\u0932 24H/7D',
               loading:  gt.cityScreen.trendLoading,
               demoChip: gt.cityScreen.demoDataChip,
               demoNote: gt.cityScreen.trendDemoNote,
