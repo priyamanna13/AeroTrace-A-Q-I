@@ -10,12 +10,14 @@ export default function AppLayout() {
   const isNational = location.pathname === '/national' || location.pathname === '/india';
   const isCity = location.pathname.startsWith('/city');
   const isInvestigation = location.pathname.startsWith('/investigate');
+  const isPrediction = location.pathname.startsWith('/prediction');
 
   // Screen 0 (Landing), Screen 1 (National Overview), Screen 2 (City Intelligence)
-  // and the Forensic Investigation screen are dedicated full-viewport single-screen
-  // experiences sharing the SAME global overlay header (BrandMark + navigation
-  // panel) — render bare, no horizontal navbar/footer.
-  if (isLanding || isNational || isCity || isInvestigation) {
+  // Screen 0 (Landing), Screen 1 (National Overview), Screen 2 (City Intelligence)
+  // and Screen 5 (Prediction) are dedicated full-viewport single-screen experiences
+  // with their own approved headers & navigation panels — render bare, no
+  // horizontal navbar/footer.
+  if (isLanding || isNational || isCity || isPrediction || isInvestigation) {
     return <Outlet />;
   }
 

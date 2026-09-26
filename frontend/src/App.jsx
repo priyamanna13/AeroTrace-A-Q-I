@@ -42,8 +42,10 @@ export default function App() {
             <Route path="/investigate" element={<Navigate to="/investigate/Shivajinagar" replace />} />
             <Route path="/investigate/:stationId" element={<Screen4PollutionInvestigation />} />
 
-            {/* Screen 5: Prediction & Atmospheric Dispersion */}
+            {/* Screen 5: Prediction & Atmospheric Dispersion — city/station via params */}
             <Route path="/prediction" element={<Screen5Prediction />} />
+            <Route path="/prediction/:cityName" element={<Screen5Prediction />} />
+            <Route path="/prediction/:cityName/:stationName" element={<Screen5Prediction />} />
 
             {/* Screen 6: Impact & Policy Intervention */}
             <Route path="/intervention" element={<Screen6Intervention />} />

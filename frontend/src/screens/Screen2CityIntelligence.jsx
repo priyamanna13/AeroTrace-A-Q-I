@@ -62,12 +62,12 @@ function Screen2Content() {
   }, [cityId, cityNameLabel])
 
   const header = (
-    <header className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center justify-between px-6 py-5 lg:px-10">
+    <header className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center justify-between px-6 py-4 lg:px-10">
       <div className="pointer-events-auto">
         <BrandMark />
       </div>
       <div className="pointer-events-auto">
-        <NavigationPanel onSelectCity={(id) => navigate(`/city/${id}`)} onNotice={() => {}} />
+        <NavigationPanel onSelectCity={(id) => navigate(`/city/${id}`)} />
       </div>
     </header>
   )
@@ -76,13 +76,13 @@ function Screen2Content() {
     <div className="relative min-h-dvh bg-background text-foreground">
       {header}
 
-      <div className="mx-auto w-full max-w-[1440px] px-5 pb-16 sm:px-8 lg:px-10">
+      <div className="mx-auto w-full max-w-[1440px] px-5 pb-12 sm:px-8 lg:px-10">
         {/* Page header: kicker + City Intelligence + city selector + back link */}
         <div
           className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"
-          style={{ paddingTop: "max(5.5rem, 10vh)" }}
+          style={{ paddingTop: "clamp(3.75rem, 6vh, 5.25rem)" }}
         >
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {/* Small city-context label — distinct role from the big page heading (Part 3). */}
             <p className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-teal">
               {typeof t.cityScreen.kicker === "function" ? t.cityScreen.kicker(cityNameLabel) : t.cityScreen.kicker}
@@ -108,7 +108,7 @@ function Screen2Content() {
         </div>
 
         {/* Top editorial split: information (left) / map (right, dominant) */}
-        <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(320px,2fr)_3fr] lg:gap-10">
+        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(320px,2fr)_3fr] lg:gap-10">
           <div className="flex flex-col gap-6">
             <CityAqiCard overview={overview} loading={loading} />
             <CityInsight
@@ -125,12 +125,12 @@ function Screen2Content() {
         </div>
 
         {/* Air quality trend — full width below the split */}
-        <div className="mt-12">
+        <div className="mt-10">
           <CityTrend cityId={cityId} cityName={cityNameLabel} />
         </div>
 
         {/* Monitored stations — exactly the city's verified stations */}
-        <div className="mt-12">
+        <div className="mt-10">
           <StationCards cityId={cityId} stations={stations} loading={loading} />
         </div>
       </div>

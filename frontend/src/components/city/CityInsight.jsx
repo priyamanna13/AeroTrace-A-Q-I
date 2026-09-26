@@ -130,6 +130,13 @@ export function CityInsight({ cityId, cityName, overview, stationCount }) {
         <span aria-hidden="true" className="size-1.5 rounded-full bg-teal" />
       </div>
 
+      {/* Listen reads EXACTLY the displayed insight text — same string, selected
+          language. Disabled while loading or when there is nothing to read.
+          Placed directly under the heading (top of card) per composition feedback. */}
+      <div className="mt-3">
+        <ListenControl text={displayedInsight || ""} disabled={loading || !displayedInsight} />
+      </div>
+
       <div className="mt-4 flex-1">
         {loading ? (
           <div className="space-y-2.5" role="status" aria-label={t.cityScreen.aiLoading}>
@@ -149,10 +156,8 @@ export function CityInsight({ cityId, cityName, overview, stationCount }) {
         )}
       </div>
 
-      {/* Listen reads EXACTLY the displayed insight text — same string, selected
-          language. Disabled while loading or when there is nothing to read. */}
+      {/* ASK AI — primary action, bottom-left of the card. */}
       <div className="mt-5 flex items-center gap-3">
-        <ListenControl text={displayedInsight || ""} disabled={loading || !displayedInsight} />
         <button
           type="button"
           onClick={handleAskAi}

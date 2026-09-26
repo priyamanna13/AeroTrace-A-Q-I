@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { ChevronDown, Map, Menu, MessageSquare, Settings, X, Building2, Globe, TrendingUp } from "lucide-react"
+import { Bell, ChevronDown, Map, Menu, MessageSquare, Settings, X, Building2, TrendingUp } from "lucide-react"
 import { GlideSelect } from "@/components/glide-select"
 import { useThemeTransition } from "@/hooks/use-theme-transition"
 import { CITIES, severityColor, severityFor } from "@/lib/aqi"
@@ -45,7 +45,6 @@ function Expandable({
 
 export function NavigationPanel({
   onSelectCity,
-  onNotice,
 }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
@@ -60,11 +59,6 @@ export function NavigationPanel({
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [open])
-
-  const placeholder = (label) => {
-    setOpen(false)
-    onNotice(t.nav.comingSoon(label))
-  }
 
   const linkClass =
     "flex w-full items-center gap-4 rounded-xl px-4 py-3.5 text-left text-[15px] font-semibold transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
@@ -109,7 +103,7 @@ export function NavigationPanel({
 
             <nav aria-label={t.nav.navigation} className="flex-1 overflow-y-auto px-6 py-6">
               <ul className="flex flex-col gap-3">
-                {/* Cities */}
+                {/* City Intelligence — primary global destination (Screen 2) */}
                 <Expandable icon={<Building2 className="size-5" />} label={t.nav.cities} meta={t.nav.locations(CITIES.length)}>
                   <ul className="flex flex-col border-l-2 border-border/80 pl-4 py-2 gap-1.5">
                     {CITIES.map((city) => (
@@ -143,6 +137,18 @@ export function NavigationPanel({
                   </button>
                 </li>
 
+                {/* Alerts — primary global destination (Screen 8) */}
+                <li>
+                  <button type="button" className={linkClass} onClick={() => {
+                    setOpen(false)
+                    navigate("/alerts")
+                  }}>
+                    <Bell className="size-5 text-muted-foreground" aria-hidden="true" />
+                    <span>{t.nav.alerts}</span>
+                  </button>
+                </li>
+
+                {/* Prediction — primary global destination (Screen 5) */}
                 <li>
                   <button type="button" className={linkClass} onClick={() => {
                     setOpen(false)
@@ -153,6 +159,7 @@ export function NavigationPanel({
                   </button>
                 </li>
 
+                {/* AI — primary global destination (Screen 9) */}
                 <li>
                   <button type="button" className={linkClass} onClick={() => {
                     setOpen(false)

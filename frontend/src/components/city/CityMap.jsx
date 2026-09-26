@@ -5,7 +5,7 @@ import L from "leaflet"
 import { CITIES, SEVERITY_BANDS, severityColor, severityFor } from "@/lib/aqi"
 import { useLanguage } from "@/lib/i18n/language-provider"
 
-const TILES = {
+export const TILES = {
   // Keyless OpenStreetMap tiles (fixes "API KEY REQUIRED" from keyed CARTO basemaps).
   // Dark theme applies a CSS filter to the tile layer for the atmospheric dark look;
   // light theme uses OSM standard rendering directly. OSM attribution preserved.
@@ -24,7 +24,7 @@ const TILES = {
 }
 
 /** Track the current light/dark theme so the basemap follows it (NFR-083). */
-function useThemeMode() {
+export function useThemeMode() {
   const [mode, setMode] = useState(() =>
     typeof document !== "undefined" && document.documentElement.classList.contains("light") ? "light" : "dark",
   )
@@ -95,7 +95,9 @@ export function CityMap({ cityId, stations, loading }) {
         <span className="font-display text-2xl font-bold tracking-tight text-foreground/90">{cityLabel}</span>
       </div>
 
-      <div className="map-atmosphere h-[440px] w-full md:h-[520px] lg:h-[560px]">
+      {/* Height scales with viewport (capped) so the dashboard fits a laptop's
+          first screen together with header, AQI card and the AI Insight top. */}
+      <div className="map-atmosphere h-[420px] w-full md:h-[clamp(380px,52vh,500px)] lg:h-[clamp(400px,56vh,540px)]">
         {loading ? (
           <div className="grid size-full place-items-center bg-card/50" role="status">
             <div className="flex flex-col items-center gap-3">
