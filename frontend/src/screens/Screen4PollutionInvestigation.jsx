@@ -92,11 +92,17 @@ const GLOBAL_STYLES = `
   .aq-root, .aq-root *, .aq-root *::before, .aq-root *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   .aq-root {
-    width: 100%; height: calc(100vh - 64px); display: flex;
+    width: 100%; height: 100vh; display: flex; flex-direction: column;
+    position: relative;
     background: #08080a;
     font-family: 'Inter', 'Noto Sans Devanagari', 'Noto Sans', 'Segoe UI Emoji',
                  'Apple Color Emoji', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
     color: #f4f4f5; overflow: hidden;
+  }
+
+  /* Body row below the global navbar: map + sidebar fill the remaining height */
+  .aq-body {
+    flex: 1; display: flex; width: 100%; min-height: 0;
   }
 
   /* ── Map panel ── */
@@ -157,10 +163,13 @@ const GLOBAL_STYLES = `
     position:relative; z-index:10;
   }
   .sidebar-scroll {
-    flex:1; overflow-y:auto; padding:20px 22px 12px;
+    flex:1; min-height:0; overflow-y:auto; padding:20px 22px 12px;
     display:flex; flex-direction:column; gap:16px;
     scrollbar-width:none;
   }
+  /* Children keep their natural height — the container scrolls instead of
+     squeezing panels (flex-shrink would crush the insight card to nothing). */
+  .sidebar-scroll > * { flex-shrink: 0; }
   .sidebar-scroll::-webkit-scrollbar { display:none; }
 
   .header-row   { display:flex;align-items:flex-start;justify-content:space-between;gap:12px; }
@@ -1202,9 +1211,9 @@ export default function Screen4PollutionInvestigation() {
       <header
         className="pointer-events-none"
         style={{
-          position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1200,
+          position: 'relative', width: '100%', flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 24px',
+          padding: '12px 24px', zIndex: 1200,
         }}
       >
         <div className="pointer-events-auto" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1232,6 +1241,8 @@ export default function Screen4PollutionInvestigation() {
         </div>
       </header>
 
+      {/* ── BODY ROW: map + sidebar begin directly below the global navbar ── */}
+      <div className="aq-body">
       {/* ── MAP PANEL ── */}
       <div className="map-panel">
         <MapContainer
@@ -1707,8 +1718,6 @@ export default function Screen4PollutionInvestigation() {
                 </div>
               </div>
             )}
-          </div>
-
 
           {/* ── PRE-EMPTIVE FORECAST ── */}
           {activeData?.pre_alerts && (
@@ -1812,6 +1821,8 @@ export default function Screen4PollutionInvestigation() {
             </div>
           </div>
 
+        </div>{/* /sidebar-scroll */}
+
         {/* Footer */}
         <div className="sidebar-footer">
           <span className="footer-engine">{t.footer_engine}</span>
@@ -1822,6 +1833,7 @@ export default function Screen4PollutionInvestigation() {
           </span>
         </div>
       </div>
+      </div>{/* /aq-body */}
 
     </div>
   );
