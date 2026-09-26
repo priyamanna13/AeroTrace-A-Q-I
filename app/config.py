@@ -51,6 +51,26 @@ class Settings(BaseSettings):
         description="Path to city_config.yml (geographic-agnostic keystone).",
     )
 
+    # --- CORS -------------------------------------------------------------
+    cors_origins: str = Field(
+        default="http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173",
+        description=(
+            "Comma-separated list of allowed CORS origins. "
+            "Override in production via CORS_ORIGINS env var, e.g. "
+            "'CORS_ORIGINS=https://aerotrace.example.gov'. Use '*' ONLY for "
+            "local development."
+        ),
+    )
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """Parse cors_origins into a list; treat '*' as the wildcard."""
+        raw = (self.cors_origins or "").strip()
+        if raw == "*":
+            return ["*"]
+        origins = [o.strip() for o in raw.split(",") if o.strip()]
+        return origins or ["http://localhost:5173"]
+
     @property
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")

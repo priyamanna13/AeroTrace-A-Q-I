@@ -37,6 +37,15 @@ export default function AiInsightCard({ context, onAskAeroTrace }) {
     };
   }, []);
 
+  // LANGUAGE-SWITCH HYGIENE: when the user switches language mid-playback,
+  // immediately stop any in-flight voice and reset the local state to idle so
+  // audio in the previous language never continues under the new UI language.
+  useEffect(() => {
+    voiceService.stop();
+    setVoiceState('idle');
+    setVoiceError(null);
+  }, [context?.language]);
+
   // Fetch contextual insight on context change
   useEffect(() => {
     if (!context) return;
@@ -70,6 +79,10 @@ export default function AiInsightCard({ context, onAskAeroTrace }) {
     } else if (insight?.response_text) {
       voiceService.speak(insight.response_text, {
         lang: context?.language || 'en',
+        // English voice_script authored by the backend. Used automatically when
+        // the host has no hi-IN/mr-IN TTS voice and the Devanagari text would
+        // otherwise be garbled or silent through an English voice.
+        fallbackText: insight?.context_summary?.voice_script || undefined,
       });
     }
   };

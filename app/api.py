@@ -26,7 +26,7 @@ from zoneinfo import ZoneInfo
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Path, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -34,6 +34,45 @@ from .config import get_settings, load_city_config
 from .demo_scenarios import get_scenario, list_scenario_names
 
 log = logging.getLogger(__name__)
+
+# ─── INPUT VALIDATION HELPERS (security hardening) ──────────────────────────
+# Path/Query parameters are bound by regex at the FastAPI level; these helpers
+# provide defense-in-depth against path traversal, control characters, and
+# overlong identifiers before values reach the service layer.
+import re as _re
+
+_NAME_RE = _re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .()&/,'_-]{0,79}$")
+
+
+def _sanitize_path_param(value: str, param_name: str = "name") -> str:
+    """Reject path traversal, control chars, and oversized identifiers.
+
+    Raises HTTPException(422) rather than silently passing malformed input
+    into downstream lookups (city YAML files, station registry, etc.).
+    """
+    cleaned = (value or "").strip()
+    if not cleaned or not _NAME_RE.match(cleaned):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Invalid {param_name}: must be 1-80 characters of letters, digits, "
+                "spaces, or .()/,'_- and must not start with a separator."
+            ),
+        )
+    return cleaned
+
+
+def _sanitize_pollutant(value: Optional[str]) -> Optional[str]:
+    """Restrict pollutant keys to the CPCB NAQI canonical set."""
+    if value is None:
+        return None
+    key = value.strip().lower()
+    if key not in {"pm25", "pm10", "no2", "so2", "co", "o3"}:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid pollutant {value!r}. Allowed: pm25, pm10, no2, so2, co, o3",
+        )
+    return key
 
 # ─── WEBSOCKET CONNECTION MANAGER ───────────────────────────────────────────
 class ConnectionManager:
@@ -392,12 +431,16 @@ app = FastAPI(
     lifespan=_lifespan,
 )
 
-# CORS — allow all origins for hackathon demo.
+# CORS — env-configurable (CORS_ORIGINS env var, comma-separated).
+# Defaults to local Vite dev servers; set `CORS_ORIGINS=*` only for throwaway
+# local demos. In production always pin explicit origins, e.g.
+#   CORS_ORIGINS=https://aerotrace.example.gov,https://www.aerotrace.example.gov
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=get_settings().cors_origin_list,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=False,
 )
 
 from .ai_router import router as ai_router
@@ -469,7 +512,9 @@ def get_cities():
 
 
 @app.get("/api/v1/cities/{city_name}/overview", tags=["Cities"])
-def get_city_overview_endpoint(city_name: str):
+def get_city_overview_endpoint(
+    city_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$"),
+):
     """Screen 2 (City Intelligence) Contract: Overview metrics and aggregate AQI for a city."""
     from .cities import get_city_overview
     overview = None
@@ -489,7 +534,9 @@ def get_city_overview_endpoint(city_name: str):
 
 
 @app.get("/api/v1/cities/{city_name}/stations", tags=["Cities"])
-def get_city_stations_endpoint(city_name: str):
+def get_city_stations_endpoint(
+    city_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$"),
+):
     """Screen 2 (City Intelligence) Contract: VERIFIED PHYSICAL MONITORING STATIONS ONLY.
     
     Guarantees:
@@ -529,7 +576,9 @@ def get_all_alerts():
 
 
 @app.get("/api/v1/alerts/{city_name}", tags=["Alerts"])
-def get_city_alerts_endpoint(city_name: str):
+def get_city_alerts_endpoint(
+    city_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$"),
+):
     """Retrieve active contextual alerts for a specific city and its physical CAAQMS stations."""
     from .alerts import evaluate_city_alerts
     from .cities import get_city_config
@@ -550,7 +599,14 @@ def get_city_alerts_endpoint(city_name: str):
 # Analytics & Historical Trends Endpoints (Screen 7 Analytics)
 # --------------------------------------------------------------------------- #
 @app.get("/api/v1/analytics/{city_name}", tags=["Analytics"])
-def get_city_analytics_endpoint(city_name: str, range: str = "24H"):
+def get_city_analytics_endpoint(
+    city_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$"),
+    range: str = Query(
+        default="24H",
+        description="Analytics window: 24H, 7D, or 30D",
+        pattern=r"^(24h|7d|30d|24H|7D|30D)$",
+    ),
+):
     """Retrieve historical trends, diurnal pattern analysis, and AI interpretation for Screen 7."""
     from .analytics_intelligence import generate_city_analytics
     from .cities import get_city_config
@@ -571,10 +627,30 @@ def get_city_analytics_endpoint(city_name: str, range: str = "24H"):
 # --------------------------------------------------------------------------- #
 @app.get("/api/v1/analytics", tags=["Analytics"])
 def get_analytics(
-    city: str = Query(default="Pune", description="Target city name"),
-    station: Optional[str] = Query(default=None, description="Specific station name, or omit for city-wide"),
-    pollutant: Optional[str] = Query(default="pm25", description="Target pollutant key (pm25, pm10, no2, so2, co, o3)"),
-    range: str = Query(default="24h", description="Time horizon: 24h, 7d, 30d, 1y"),
+    city: str = Query(
+        default="Pune",
+        min_length=1,
+        max_length=80,
+        pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$",
+        description="Target city name",
+    ),
+    station: Optional[str] = Query(
+        default=None,
+        min_length=1,
+        max_length=80,
+        pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$",
+        description="Specific station name, or omit for city-wide",
+    ),
+    pollutant: Optional[str] = Query(
+        default="pm25",
+        pattern=r"^(pm25|pm10|no2|so2|co|o3)$",
+        description="Target pollutant key (pm25, pm10, no2, so2, co, o3)",
+    ),
+    range: str = Query(
+        default="24h",
+        pattern=r"^(24h|7d|30d|1y)$",
+        description="Time horizon: 24h, 7d, 30d, 1y",
+    ),
 ):
     """Screen 3 & Screen 7 Contract: Historical timeline, trend statistics, anomalies, and availability notes.
     
@@ -615,7 +691,9 @@ def get_analytics(
 # Live Meteorological Snapshot Endpoint (Screen 4 & Atmospheric Intel)
 # --------------------------------------------------------------------------- #
 @app.get("/api/v1/weather/{city_name}")
-def get_weather(city_name: str):
+def get_weather(
+    city_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$"),
+):
     """Screen 4 Contract: Real-time atmospheric snapshot across all 7 cities.
     
     Returns authentic surface weather measurements, boundary layer mixing height,
@@ -691,8 +769,16 @@ def get_weather(city_name: str):
 # --------------------------------------------------------------------------- #
 @app.get("/api/v1/prediction/{station_name}/{pollutant}")
 def get_prediction(
-    station_name: str,
-    pollutant: str,
+    station_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$"),
+    pollutant: str = Path(
+        ...,
+        min_length=1,
+        max_length=32,
+        # Charset-bound (no separators/dots → no traversal or injection), but NOT
+        # restricted to the canonical set: unknown pollutants must fall through to
+        # the service layer, which maps them to a 404 per the API contract.
+        pattern=r"^[A-Za-z0-9]+$",
+    ),
     hours: int = Query(default=6, ge=1, le=24, description="Forecast horizon in hours (1-24)"),
 ):
     """Screen 5 Contract: Forward air quality forecasting anchored to observed conditions.
@@ -705,22 +791,27 @@ def get_prediction(
     - Non-negotiable label: 'Estimated forecast - see methodology'.
     """
     from .prediction import calculate_forward_prediction
+    # Defense-in-depth: normalize case; charset is already bounded at Path level.
+    pol_key = (pollutant or "").strip().lower()
+    # Boundary: service layer still maps bad inputs to 404 after the 422 guard.
     try:
         from .db import get_session
         with get_session() as s:
             return calculate_forward_prediction(
                 station_name=station_name,
-                pollutant=pollutant,
+                pollutant=pol_key,
                 hours=hours,
                 session=s,
             )
+    except HTTPException:
+        raise
     except ValueError as ve:
         raise HTTPException(status_code=404, detail=str(ve))
     except Exception as exc:
         try:
             return calculate_forward_prediction(
                 station_name=station_name,
-                pollutant=pollutant,
+                pollutant=pol_key,
                 hours=hours,
                 session=None,
             )
@@ -734,11 +825,32 @@ def get_prediction(
 # Intervention Simulator Request Model & Endpoint (Screen 6 Impact & Intervention)
 # --------------------------------------------------------------------------- #
 class InterventionSimulateRequest(BaseModel):
-    station_name: str
-    intervention_type: str
-    city: Optional[str] = None
+    station_name: str = Field(
+        ...,
+        min_length=1,
+        max_length=80,
+        pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$",
+        description="Target monitoring station name",
+    )
+    intervention_type: str = Field(
+        ...,
+        min_length=1,
+        max_length=80,
+        description="control_construction_dust | reduce_traffic | reduce_industrial_emissions",
+    )
+    city: Optional[str] = Field(
+        None,
+        min_length=1,
+        max_length=80,
+        pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$",
+        description="Optional city override",
+    )
     intensity_pct: float = Field(default=50.0, ge=0.0, le=100.0)
-    target_pollutant: Optional[str] = None
+    target_pollutant: Optional[str] = Field(
+        None,
+        pattern=r"^(pm25|pm10|no2|so2|co|o3)$",
+        description="Optional pollutant override (pm25, pm10, no2, so2, co, o3)",
+    )
 
 
 @app.post("/api/v1/intervention/simulate")
@@ -755,13 +867,15 @@ def simulate_civic_intervention(req: InterventionSimulateRequest):
     - Non-fabrication: returns 'sensitive location data not available for this city' if unverified.
     """
     from .intervention import simulate_intervention
+    # Defense-in-depth: normalize/trim even though the Pydantic model already bounds it.
+    safe_station = _sanitize_path_param(req.station_name, "station_name")
     try:
         return simulate_intervention(
             city=req.city or "",
-            station_name=req.station_name,
+            station_name=safe_station,
             intervention_type=req.intervention_type,
             intensity_pct=req.intensity_pct,
-            target_pollutant=req.target_pollutant,
+            target_pollutant=_sanitize_pollutant(req.target_pollutant),
         )
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
@@ -956,8 +1070,13 @@ def _build_attribution(scenario, target_time: datetime | None = None, live: bool
 # --------------------------------------------------------------------------- #
 @app.get("/api/v1/attribution/{station_name}")
 def get_attribution(
-    station_name: str,
-    active_category_tab: Optional[str] = None,
+    station_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$"),
+    active_category_tab: Optional[str] = Query(
+        default=None,
+        max_length=40,
+        pattern=r"^[A-Za-z0-9 _-]*$",
+        description="Optional UI category tab filter",
+    ),
     live: bool = False,
 ):
     """Full attribution pipeline for a station.
@@ -1108,7 +1227,10 @@ def list_stations():
 
 
 @app.get("/api/v1/stations/{station_name}/readings")
-def get_readings(station_name: str, limit: int = Query(default=96, ge=1, le=1000)):
+def get_readings(
+    station_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$"),
+    limit: int = Query(default=96, ge=1, le=1000),
+):
     """Recent AQI readings for a station (mock path)."""
     scenario = get_scenario(station_name)
     settings = get_settings()
@@ -1152,9 +1274,9 @@ def get_readings(station_name: str, limit: int = Query(default=96, ge=1, le=1000
 # --------------------------------------------------------------------------- #
 @app.get("/api/v1/cone/{station_name}", tags=["Spatial"])
 def wind_cone_endpoint(
-    station_name: str,
-    wind_dir: float = Query(default=None, description="Override wind direction (deg)"),
-    wind_speed: float = Query(default=None, description="Override wind speed (km/h)"),
+    station_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$"),
+    wind_dir: Optional[float] = Query(default=None, ge=0, le=360, description="Override wind direction (deg)"),
+    wind_speed: Optional[float] = Query(default=None, ge=0, le=250, description="Override wind speed (km/h)"),
 ):
     """Return the wind cone GeoJSON for a station."""
     from .cone_builder import build_wind_cone
@@ -1223,7 +1345,9 @@ def list_sources():
 # Timeline History Replay System (Phase 2 — Person 1)
 # --------------------------------------------------------------------------- #
 @app.get("/api/v1/timeline/{station_name}", tags=["Replay"])
-def get_timeline(station_name: str):
+def get_timeline(
+    station_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$"),
+):
     """Return an array of 24 hourly tick objects for the replay slider."""
     scenario = get_scenario(station_name)
     settings = get_settings()
@@ -1281,7 +1405,10 @@ def get_timeline(station_name: str):
 
 
 @app.get("/api/v1/replay/{station_name}", tags=["Replay"])
-def get_replay(station_name: str, timestamp: str = Query(..., description="ISO-8601 timestamp")):
+def get_replay(
+    station_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$"),
+    timestamp: str = Query(..., min_length=8, max_length=64, description="ISO-8601 timestamp"),
+):
     """Full attribution pipeline reconstructed for a historical hour."""
     try:
         dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
@@ -1426,10 +1553,23 @@ def _enrich_broadcast(payload: dict) -> dict:
 # --------------------------------------------------------------------------- #
 @app.post("/api/v1/simulation/trigger-spike", tags=["Simulation"])
 async def trigger_spike(
-    station_name: str = Query(default="Shivajinagar"),
+    station_name: str = Query(
+        default="Shivajinagar",
+        min_length=1,
+        max_length=80,
+        pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$",
+    ),
     spike_aqi: int = Query(default=310, ge=100, le=600),
-    dominant_pollutant: str = Query(default=None),
-    scenario_type: str = Query(default=None, description="construction|traffic|industrial|ambiguity"),
+    dominant_pollutant: Optional[str] = Query(
+        default=None,
+        pattern=r"^(pm25|pm10|no2|so2|co|o3)$",
+        description="Override dominant pollutant (pm25, pm10, no2, so2, co, o3)",
+    ),
+    scenario_type: Optional[str] = Query(
+        default=None,
+        pattern=r"^(construction|traffic|industrial|ambiguity)$",
+        description="construction|traffic|industrial|ambiguity",
+    ),
 ):
     """Manually trigger a simulated AQI spike for demo purposes.
 

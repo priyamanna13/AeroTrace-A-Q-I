@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from .ai_models import AIChatRequest, AIInsightRequest, AIResponse
 from .ai_service import get_ai_service
@@ -18,6 +18,18 @@ from .ai_service import get_ai_service
 log = logging.getLogger("ai_router")
 
 router = APIRouter(prefix="/api/v1/ai", tags=["Environmental Intelligence"])
+
+# Bounded query params: language locale and analytics time window.
+LANGQueryParam = Query(
+    default="en",
+    pattern=r"^(en|hi|mr)$",
+    description="Response language locale: en | hi | mr",
+)
+RANGEQueryParam = Query(
+    default="24H",
+    pattern=r"^(24h|7d|30d|24H|7D|30D)$",
+    description="Analytics time range: 24H, 7D, or 30D",
+)
 
 
 @router.get("/status")
@@ -63,7 +75,10 @@ def chat_endpoint(req: AIChatRequest) -> AIResponse:
 
 
 @router.get("/cities/{city_name}/insight", response_model=AIResponse)
-def get_city_insight_endpoint(city_name: str, lang: str = "en") -> AIResponse:
+def get_city_insight_endpoint(
+    city_name: str,
+    lang: str = LANGQueryParam,
+) -> AIResponse:
     """Generate an AI insight directly grounded in the live /api/v1/cities/{city}/overview payload."""
     from .cities import get_city_overview
     from .ai_models import AIContext
@@ -88,7 +103,11 @@ def get_city_insight_endpoint(city_name: str, lang: str = "en") -> AIResponse:
 
 
 @router.get("/cities/{city_name}/stations/{station_name}/insight", response_model=AIResponse)
-def get_station_insight_endpoint(city_name: str, station_name: str, lang: str = "en") -> AIResponse:
+def get_station_insight_endpoint(
+    city_name: str,
+    station_name: str,
+    lang: str = LANGQueryParam,
+) -> AIResponse:
     """Generate an AI insight grounded in verified physical CAAQMS station telemetry."""
     from .cities import get_city_verified_stations
     from .ai_models import AIContext
@@ -124,7 +143,11 @@ def get_station_insight_endpoint(city_name: str, station_name: str, lang: str = 
 
 
 @router.get("/analytics/{city_name}/insight", response_model=AIResponse)
-def get_analytics_insight_endpoint(city_name: str, range: str = "24H", lang: str = "en") -> AIResponse:
+def get_analytics_insight_endpoint(
+    city_name: str,
+    range: str = RANGEQueryParam,
+    lang: str = LANGQueryParam,
+) -> AIResponse:
     """Generate Screen 7 AI analytics insight explaining historical trends and diurnal patterns."""
     from .analytics_intelligence import generate_city_analytics
     from .ai_models import AIContext
@@ -164,7 +187,10 @@ def get_analytics_insight_endpoint(city_name: str, range: str = "24H", lang: str
 
 
 @router.get("/weather-briefing/{city_name}", response_model=AIResponse)
-def get_weather_briefing_endpoint(city_name: str, lang: str = "en") -> AIResponse:
+def get_weather_briefing_endpoint(
+    city_name: str,
+    lang: str = LANGQueryParam,
+) -> AIResponse:
     """Weather-grounded environmental intelligence briefing endpoint."""
     from .weather_context import get_weather_context
     from .ai_models import AIContext
@@ -184,7 +210,10 @@ def get_weather_briefing_endpoint(city_name: str, lang: str = "en") -> AIRespons
 
 
 @router.get("/prediction-insight/{city_name}", response_model=AIResponse)
-def get_prediction_insight_endpoint(city_name: str, lang: str = "en") -> AIResponse:
+def get_prediction_insight_endpoint(
+    city_name: str,
+    lang: str = LANGQueryParam,
+) -> AIResponse:
     """Forward-looking AI interpretation using atmospheric conditions."""
     from .prediction_intelligence import generate_prediction_insight
     from .ai_models import AIContext
@@ -207,9 +236,21 @@ def get_prediction_insight_endpoint(city_name: str, lang: str = "en") -> AIRespo
 
 @router.get("/intervention-insight", response_model=AIResponse)
 def get_intervention_insight_endpoint(
-    scenario: str = "traffic",
-    city: str = "Pune",
-    lang: str = "en",
+    scenario: str = Query(
+        default="traffic",
+        min_length=1,
+        max_length=80,
+        pattern=r"^[A-Za-z][A-Za-z0-9 _-]*$",
+        description="Intervention scenario key (traffic | industrial | dust | construction)",
+    ),
+    city: str = Query(
+        default="Pune",
+        min_length=1,
+        max_length=80,
+        pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$",
+        description="Target city name",
+    ),
+    lang: str = LANGQueryParam,
 ) -> AIResponse:
     """ERF-grounded AI interpretation for Screen 6 intervention scenarios."""
     from .intervention_intelligence import generate_intervention_insight

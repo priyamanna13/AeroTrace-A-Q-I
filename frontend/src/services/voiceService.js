@@ -14,34 +14,111 @@
 
 // ─── HELPER UTILITIES ─────────────────────────────────────────────────────────
 
+/**
+ * Devanagari-script languages. Hindi and Marathi both use the Devanagari
+ * abugida, so a hi-IN voice can phonetically pronounce Marathi text —
+ * but an English voice reading Devanagari codepoints produces silence or
+ * letter-by-letter garble on most OS/browser TTS stacks.
+ */
+const DEVANAGARI_LANGS = new Set(['hi', 'mr']);
+
+/**
+ * Detects whether text contains Devanagari codepoints (U+0900–U+097F).
+ * Used to auto-downgrade to the English voice_script when no Indic voice
+ * exists on the host OS/browser.
+ */
+export function isDevanagariText(text) {
+  if (!text || typeof text !== 'string') return false;
+  return /[\u0900-\u097F]/.test(text);
+}
+
 export function getVoiceLocale(lang) {
   if (lang === 'hi') return 'hi-IN';
   if (lang === 'mr') return 'mr-IN';
   return 'en-IN';
 }
 
+/**
+ * Resolves the best available SpeechSynthesis voice for a requested language.
+ *
+ * Fallback chain (CRITICAL for Indic UX):
+ *   mr → mr-IN exact → any mr-* → hi-IN/hi-* (Hindi voices pronounce
+ *        Devanagari phonetically) → en-IN/en-GB → any en-*
+ *   hi → hi-IN exact → any hi-* → mr-IN/mr-* → en-IN/en-GB → any en-*
+ *   en → en-IN exact → any en-* → null
+ *
+ * Returns the resolved voice AND its language tag so callers can detect
+ * when an Indic request was downgraded to an English voice.
+ */
 export function findBestVoice(lang) {
   if (typeof window === 'undefined' || !window.speechSynthesis) return null;
   const voices = window.speechSynthesis.getVoices();
-  const targetCode = getVoiceLocale(lang);
+  if (!voices || voices.length === 0) return null;
 
-  // 1. Exact match (e.g. "hi-IN", "en-IN")
+  const targetCode = getVoiceLocale(lang);
+  const prefix = targetCode.split('-')[0];
+
+  // 1. Exact locale match (e.g. "mr-IN", "hi-IN", "en-IN")
   let voice = voices.find(v => v.lang === targetCode);
   if (voice) return voice;
 
-  // 2. Prefix match
-  const prefix = targetCode.split('-')[0];
-  voice = voices.find(v => v.lang.startsWith(prefix));
+  // 2. Same primary-language prefix (e.g. "mr-*" or "hi-*")
+  voice = voices.find(v => v.lang && v.lang.startsWith(prefix + '-'));
   if (voice) return voice;
 
-  // 3. Indian English fallback for Indic languages
-  if (lang === 'hi' || lang === 'mr') {
-    voice = voices.find(v => v.lang.startsWith('en-IN') || v.lang.startsWith('en-GB'));
+  // 3. Cross-Indic fallback within Devanagari languages (mr↔hi).
+  //    Hindi TTS engines pronounce Marathi Devanagari acceptably; the reverse
+  //    also works. A base prefix match ('hi' === 'hi' with no region) is
+  //    included here for OSes reporting bare language tags.
+  if (DEVANAGARI_LANGS.has(lang)) {
+    const crossPrefix = lang === 'mr' ? 'hi' : 'mr';
+    voice = voices.find(v => v.lang === crossPrefix)
+      || voices.find(v => v.lang && v.lang.startsWith(crossPrefix + '-'));
     if (voice) return voice;
   }
 
-  // 4. Any English voice
-  return voices.find(v => v.lang.startsWith('en')) || null;
+  // 4. Indian/Indian-English voice for Indic requests (neutral accent for names)
+  if (DEVANAGARI_LANGS.has(lang)) {
+    voice = voices.find(v => v.lang && (v.lang.startsWith('en-IN') || v.lang.startsWith('en-GB')));
+    if (voice) return voice;
+  }
+
+  // 5. Any English voice (last resort)
+  return voices.find(v => v.lang && v.lang.startsWith('en')) || null;
+}
+
+/**
+ * Decides the effective spoken text + voice language for a request.
+ *
+ * THE CRITICAL FIX: when the UI language is Hindi/Marathi but the host has NO
+ * hi-IN/mr-IN voice, speaking Devanagari text through an English voice yields
+ * silence or garbled phonemes. In that case we downgrade to the pre-authored
+ * English `context_summary.voice_script` (backend always provides one) and
+ * speak it with an English voice so the user hears clean audio instead of a
+ * broken rendition.
+ *
+ * Returns { text, lang, voice } — text/lang adjusted when downgraded.
+ */
+export function resolveSpeakableText(text, lang = 'en') {
+  const requestedLang = lang || 'en';
+  if (typeof window === 'undefined' || !window.speechSynthesis) {
+    return { text, lang: requestedLang, voice: null };
+  }
+
+  const voice = findBestVoice(requestedLang);
+  const voiceLang = voice?.lang || '';
+  const voiceIsIndic = voiceLang.startsWith('hi') || voiceLang.startsWith('mr');
+
+  // Indic requested + no Indic voice available + text is Devanagari → downgrade
+  if (
+    DEVANAGARI_LANGS.has(requestedLang) &&
+    !voiceIsIndic &&
+    isDevanagariText(text)
+  ) {
+    return { text, lang: requestedLang, voice, devanagariUnsupported: true };
+  }
+
+  return { text, lang: requestedLang, voice, devanagariUnsupported: false };
 }
 
 /**
@@ -101,7 +178,7 @@ export class WebSpeechVoiceProvider {
     this.activeUtteranceIndex = 0;
   }
 
-  speak(text, { lang = 'en', onStart, onEnd, onError } = {}) {
+  speak(text, { lang = 'en', fallbackText = null, onStart, onEnd, onError } = {}) {
     return new Promise((resolve, reject) => {
       if (!this.isSupported()) {
         const err = new Error('SpeechSynthesis API is not supported in this browser environment.');
@@ -112,8 +189,33 @@ export class WebSpeechVoiceProvider {
       this.stop();
       this.isCanceled = false;
 
+      // Resolve voice + detect the Devanagari-downgrade case ONCE up front.
+      // If hi/mr was requested but only an English voice exists, speaking
+      // Devanagari text would produce silence/garble — swap in the English
+      // voice_script supplied by the caller (context_summary.voice_script).
+      const resolution = resolveSpeakableText(text, lang);
+      const effectiveText = resolution.devanagariUnsupported
+        ? (fallbackText || '')
+        : text;
+      const effectiveLang = resolution.devanagariUnsupported
+        ? getVoiceLocale('en')
+        : getVoiceLocale(lang);
+      const voice = resolution.devanagariUnsupported
+        ? findBestVoice('en')
+        : resolution.voice;
+
+      if (resolution.devanagariUnsupported && !effectiveText) {
+        // No English script fallback was provided — refuse to emit garble.
+        console.warn(
+          '[WebSpeechVoiceProvider] No Indic TTS voice available and no English fallback script supplied; skipping speech.'
+        );
+        const err = new Error('No Indic TTS voice installed and no English fallback text available.');
+        if (onError) onError(err);
+        return resolve();
+      }
+
       // Sentence chunking for natural pauses (supporting Indic punctuation '।' as well as '.!?')
-      const sentences = text
+      const sentences = effectiveText
         .split(/(?<=[.!?।\n])/)
         .map(s => s.trim())
         .filter(s => s.length > 0);
@@ -123,8 +225,6 @@ export class WebSpeechVoiceProvider {
         return resolve();
       }
 
-      const langCode = getVoiceLocale(lang);
-      const voice = findBestVoice(lang);
       let started = false;
 
       const speakSentence = (index) => {
@@ -139,7 +239,7 @@ export class WebSpeechVoiceProvider {
 
         this.activeUtteranceIndex = index;
         const utterance = new SpeechSynthesisUtterance(sentences[index]);
-        utterance.lang = langCode;
+        utterance.lang = effectiveLang;
         utterance.rate = 0.92;
         utterance.pitch = 1.0;
         if (voice) utterance.voice = voice;
@@ -331,6 +431,29 @@ export class VoiceService {
     this.lastOptions = options;
     const { lang = 'en', provider = 'auto' } = options;
 
+    // Pre-flight: detect the Devanagari-downgrade case before touching the
+    // state machine, so the caller can supply a fallback script cleanly.
+    let spokenText = text;
+    let spokenLang = lang;
+    if (provider !== 'pcm') {
+      const resolution = resolveSpeakableText(text, lang);
+      if (resolution.devanagariUnsupported) {
+        if (options.fallbackText && typeof options.fallbackText === 'string' && options.fallbackText.trim()) {
+          console.info('[VoiceService] No hi/mr TTS voice on host — using English voice_script fallback.');
+          spokenText = options.fallbackText;
+          spokenLang = 'en';
+          this.lastSpokenText = spokenText;
+        } else {
+          // Without a fallback script an English voice would garble Devanagari.
+          this._setState(
+            'failed',
+            new Error('No Hindi/Marathi TTS voice is installed on this device, and no English fallback script was provided.')
+          );
+          return;
+        }
+      }
+    }
+
     this.stop();
     this._setState('loading');
 
@@ -345,8 +468,9 @@ export class VoiceService {
     this.activeProvider = selected;
 
     try {
-      await selected.speak(text, {
-        lang,
+      await selected.speak(spokenText, {
+        lang: spokenLang,
+        fallbackText: options.fallbackText,
         onStart: () => {
           this._setState('playing');
         },
@@ -388,4 +512,11 @@ export class VoiceService {
 }
 
 // Global Singleton Instance
+/**
+ * Global Singleton Instance
+ *
+ * Language-switch hygiene: any UI that changes the active language should call
+ * `voiceService.stop()` (or simply trigger `speak()` again with the new
+ * language) so stale audio in the previous language never keeps playing.
+ */
 export const voiceService = new VoiceService();

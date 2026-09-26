@@ -53,7 +53,13 @@ class AIContext(BaseModel):
     city: Optional[str] = Field(None, json_schema_extra={"example": "Pune"})
     station: Optional[str] = Field(None, json_schema_extra={"example": "Shivajinagar"})
     pollutant: Optional[str] = Field(None, json_schema_extra={"example": "PM2.5"})
-    language: str = Field("en", description="User language: 'en', 'hi', or 'mr'", json_schema_extra={"example": "en"})
+    language: str = Field(
+        "en",
+        max_length=8,
+        pattern=r"^(en|hi|mr)$",
+        description="User language: 'en', 'hi', or 'mr'",
+        json_schema_extra={"example": "en"},
+    )
 
     # Environmental Telemetry & Freshness
     current_aqi: Optional[float] = Field(None, json_schema_extra={"example": 182.0})
@@ -176,7 +182,12 @@ class AIInsightRequest(BaseModel):
 
 class AIChatRequest(BaseModel):
     """Request payload for interactive Screen 9 conversation."""
-    message: str = Field(..., json_schema_extra={"example": "Why did AQI spike in Shivajinagar this morning?"})
+    message: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        json_schema_extra={"example": "Why did AQI spike in Shivajinagar this morning?"},
+    )
     context: AIContext
     conversation_history: list[dict[str, str]] = Field(
         default_factory=list,
