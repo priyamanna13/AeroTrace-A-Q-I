@@ -5,7 +5,7 @@ import dataContract from '../../../data_contract_sample.json';
 import { API } from '../api_client';
 import { MapRenderer } from '../map_layers';
 import { WebSocketClient } from '../ws_client';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 
 // ─── LEAFLET DEFAULT ICON FIX (Vite asset pipeline) ────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl;
@@ -287,34 +287,6 @@ const LANG_LABELS = {
   hi: '\u0939\u093F',   // हि
   mr: '\u092E',          // म
 };
-
-// Station selector — each entry carries translated name + scenario type subtitle
-const STATION_SCENARIOS = [
-  {
-    id: 'Shivajinagar',
-    en: 'Shivajinagar', sub_en: 'Construction',
-    hi: '\u0936\u093F\u0935\u093E\u091C\u0940\u0928\u0917\u0930', sub_hi: '\u0928\u093F\u0930\u094D\u092E\u093E\u0923',
-    mr: '\u0936\u093F\u0935\u093E\u091C\u0940\u0928\u0917\u0930', sub_mr: '\u092C\u093E\u0902\u0927\u0915\u093E\u092E',
-  },
-  {
-    id: 'Swargate',
-    en: 'Swargate', sub_en: 'Traffic',
-    hi: '\u0938\u094D\u0935\u093E\u0930\u0917\u0947\u091F', sub_hi: '\u092F\u093E\u0924\u093E\u092F\u093E\u0924',
-    mr: '\u0938\u094D\u0935\u093E\u0930\u0917\u0947\u091F', sub_mr: '\u0935\u093E\u0939\u0924\u0942\u0915',
-  },
-  {
-    id: 'Hadapsar',
-    en: 'Hadapsar', sub_en: 'Industrial',
-    hi: '\u0939\u0921\u092A\u0938\u0930', sub_hi: '\u0909\u0926\u094D\u092F\u094B\u0917\u093F\u0915',
-    mr: '\u0939\u0921\u092A\u0938\u0930', sub_mr: '\u0909\u0926\u094D\u092F\u094B\u0917\u093F\u0915',
-  },
-  {
-    id: 'Kothrud',
-    en: 'Kothrud', sub_en: 'Ambiguity',
-    hi: '\u0915\u094B\u0925\u0930\u0942\u0921', sub_hi: '\u0905\u0938\u094D\u092A\u0937\u094D\u091F',
-    mr: '\u0915\u094B\u0925\u0930\u0942\u0921', sub_mr: '\u0905\u0938\u094D\u092A\u0937\u094D\u091F',
-  },
-];
 
 // ─── SOURCE NAME LOCALISATION ─────────────────────────────────────────────────────
 const SOURCE_NAME_I18N = {
@@ -799,16 +771,25 @@ function PlaybackBanner({ timestamp, isLoading, isGap }) {
 
 export default function Screen4PollutionInvestigation() {
   const { stationId } = useParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   // ── UI state
   const [activeLang,   setActiveLang]   = useState('en');
   const [activeSource, setActiveSource] = useState(null);
+  // Station context arrives from City Intelligence via the route param (and ?city=);
+  // there is no station-selection toggle inside this screen anymore.
+  const routeCity = searchParams.get('city');
   const [currentStation, setCurrentStation] = useState(stationId || 'Shivajinagar');
+  const [cityContext, setCityContext] = useState(routeCity || 'Pune');
 
   useEffect(() => {
     if (stationId && stationId !== currentStation) {
       setCurrentStation(stationId);
     }
-  }, [stationId]);
+    if (routeCity && routeCity !== cityContext) {
+      setCityContext(routeCity);
+    }
+  }, [stationId, routeCity]);
 
   // ── Data state
   const [dashboardData, setDashboardData] = useState(null);
@@ -1336,45 +1317,26 @@ export default function Screen4PollutionInvestigation() {
           )}
         </div>
 
-        {/* ── STATION SELECTOR BAR ── */}
-        <div style={{
-          position: 'absolute', top: '20px', left: '160px', zIndex: 1000,
-          display: 'flex', gap: '6px', background: 'rgba(8,8,10,0.85)',
-          padding: '4px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)',
-          backdropFilter: 'blur(20px)',
-        }}>
-          {STATION_SCENARIOS.map((scen) => {
-            const label    = scen[activeLang] || scen.en;
-            const sublabel = scen[`sub_${activeLang}`] || scen.sub_en;
-            const isActive = currentStation === scen.id;
-            return (
-              <button
-                key={scen.id}
-                onClick={() => setCurrentStation(scen.id)}
-                style={{
-                  padding: '5px 12px', borderRadius: '7px', border: 'none', cursor: 'pointer',
-                  background: isActive ? 'rgba(251,146,60,0.15)' : 'transparent',
-                  border: isActive ? '1px solid rgba(251,146,60,0.3)' : '1px solid transparent',
-                  transition: 'all 0.2s ease', textAlign: 'center',
-                }}
-              >
-                <div style={{
-                  fontSize: '11px', fontWeight: 700, fontFamily: "'Inter','Noto Sans Devanagari',monospace",
-                  color: isActive ? '#fb923c' : '#a1a1aa',
-                  letterSpacing: '0.02em',
-                }}>
-                  {label}
-                </div>
-                <div style={{
-                  fontSize: '9px', fontWeight: 600, color: isActive ? 'rgba(251,146,60,0.6)' : '#52525b',
-                  textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '1px',
-                }}>
-                  {sublabel}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        {/* ── BACK TO CITY INTELLIGENCE (station selection now lives on Screen 2) ── */}
+        <button
+          onClick={() => navigate(`/city/${encodeURIComponent(cityContext)}`)}
+          title="Back to City Intelligence"
+          style={{
+            position: 'absolute', top: '20px', left: '160px', zIndex: 1000,
+            display: 'flex', alignItems: 'center', gap: 7,
+            background: 'rgba(8,8,10,0.85)',
+            padding: '7px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(20px)', cursor: 'pointer',
+            color: '#d4d4d8', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+            fontFamily: "'Inter','Noto Sans Devanagari',sans-serif",
+            transition: 'all 0.2s ease', textTransform: 'uppercase',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,146,60,0.4)'; e.currentTarget.style.color = '#fb923c'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#d4d4d8'; }}
+        >
+          <span aria-hidden="true" style={{ fontSize: 13, lineHeight: 1 }}>←</span>
+          Back to {cityContext}
+        </button>
 
         {/* ── MET STRIP ── */}
         <div className="met-badge">
@@ -1494,7 +1456,7 @@ export default function Screen4PollutionInvestigation() {
             <div style={{ flex: 1 }}>
               <div className="header-meta">{trigger_station?.network ?? 'CPCB_CAAQMS'}</div>
               <div className="header-title">{trigger_station?.name ?? currentStation}</div>
-              <div className="header-sub">{trigger_station?.city ?? 'Pune'}, {t.maharashtra}</div>
+              <div className="header-sub">{trigger_station?.city ?? cityContext}{trigger_station?.city || cityContext === 'Mumbai' || cityContext === 'Pune' ? `, ${t.maharashtra}` : ''}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
               {/* AQI pill (CPCB India Standard) */}

@@ -10,6 +10,28 @@ export const CITIES = [
 
 export const NATIONAL_AQI = 145
 
+/** Canonical route slugs for the seven monitored cities (Screen 2 selector). */
+export const CITY_IDS = CITIES.map((city) => city.id)
+
+/**
+ * Canonical English city names for API calls and cross-screen navigation context.
+ * Display names come from i18n (t.cities); API contracts and route params must
+ * stay language-invariant so backend keys and fallbacks resolve correctly.
+ */
+export const CITY_EN_NAMES = {
+  pune: "Pune",
+  mumbai: "Mumbai",
+  delhi: "Delhi",
+  bengaluru: "Bengaluru",
+  kolkata: "Kolkata",
+  hyderabad: "Hyderabad",
+  chennai: "Chennai",
+}
+
+export function cityEnName(id) {
+  return CITY_EN_NAMES[id] || "Mumbai"
+}
+
 export const SEVERITY_BANDS = [
   { key: "good", max: 50, range: "0–50" },
   { key: "satisfactory", max: 100, range: "51–100" },

@@ -46,6 +46,15 @@
   --font-sans: 'Archivo', var(--font-deva-sans), 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'Cascadia Code', 'SFMono-Regular', ui-monospace, Consolas, var(--font-deva-sans), sans-serif, monospace;
 
+  /*
+   * Typography correction (readability pass):
+   * Bodoni Moda is a high-contrast display serif — reserved for major headings
+   * (.font-display on h1/hero/heading elements) and NOT for UI text, numerals
+   * in data contexts, controls, labels, cards, or navigation. Normal UI text
+   * uses Archivo (600/700 for emphasis) for premium readability on dark.
+   */
+  --font-ui: 'Archivo', var(--font-deva-sans), 'Segoe UI', system-ui, sans-serif;
+
   --font-archivo: 'Archivo', 'Segoe UI', system-ui, sans-serif;
   --font-bodoni: 'Bodoni Moda', 'Bodoni 72', Didot, serif;
   --font-deva-sans: 'Noto Sans Devanagari', sans-serif;
@@ -150,6 +159,9 @@ body {
   overflow-x: hidden;
   background-color: var(--background);
   font-family: var(--font-sans);
+  /* Archivo variable font: 450 lifts readability on dark without changing composition.
+     Emphasis still comes from 600/700 utilities. */
+  font-weight: 450;
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -165,6 +177,54 @@ body {
 
 .font-mono {
   font-family: var(--font-mono);
+}
+
+/* Numerals rendered in data/summary contexts use the UI sans, not the display serif.
+   Display serif stays available explicitly via .font-display where a heading wants it. */
+.tabular-nums {
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Primary page headings (Screen 1 + Screen 2): premium bold sans — highly readable
+   on dark, consistent across screens. The high-contrast display serif is retained
+   only for the brand wordmark and decorative map city label. */
+.heading-primary {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Listen (read-aloud) control — compact editorial voice button */
+.listen-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--card), transparent 35%);
+  color: var(--muted-foreground);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.85rem;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+.listen-control:hover:not(:disabled) {
+  color: var(--foreground);
+  border-color: var(--teal);
+  background: color-mix(in oklab, var(--teal), transparent 88%);
+}
+.listen-control:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.listen-control[data-state="playing"] {
+  color: var(--teal);
+  border-color: var(--teal);
+  background: color-mix(in oklab, var(--teal), transparent 82%);
 }
 
 /* Explicit layout enforcement for National Overview to guarantee 36% / 64% split matching V0 */
@@ -261,4 +321,71 @@ body {
 
 .pin-pulse-ring {
   animation: pinPulse 2.4s ease-out infinite;
+}
+
+/* ── Screen 2 — City Intelligence ────────────────────────────────────────── */
+
+/* Atmospheric map treatment: soft teal bloom behind the Leaflet tiles, echoing
+   the national map's radial glow. Pointer-events pass through to the map. */
+.map-atmosphere {
+  position: relative;
+  isolation: isolate;
+}
+.map-atmosphere::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 60% 55% at 50% 45%, var(--map-glow), transparent 72%);
+}
+.map-atmosphere .leaflet-container {
+  position: relative;
+  z-index: 2;
+  background: var(--map-water);
+  font-family: var(--font-sans);
+}
+
+/* OSM standard tiles darkened via CSS filter for the dark theme (keyless, no API key) */
+.osm-tiles-dark {
+  filter: brightness(0.62) invert(1) contrast(2.6) hue-rotate(200deg) saturate(0.35) brightness(0.85);
+}
+.osm-tiles-light {
+  filter: none;
+}
+
+/* Contain Leaflet's high z-index panes within the map section so map overlays
+   (tooltips, labels) can never escape over the global navbar/drawer. */
+section.isolate .leaflet-pane,
+section.isolate .leaflet-control-container {
+  z-index: auto;
+}
+
+/* Station pin labels: permanent mono tooltips in the editorial label style */
+.station-pin-tooltip {
+  background: var(--label-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px var(--map-shadow);
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+}
+.station-pin-tooltip::before {
+  display: none; /* remove default Leaflet arrow — cleaner editorial treatment */
+}
+
+/* Leaflet attribution: quiet, small, brand-consistent */
+.leaflet-container .leaflet-control-attribution {
+  background: color-mix(in oklab, var(--background), transparent 35%);
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+.leaflet-container .leaflet-control-attribution a {
+  color: var(--muted-foreground);
 }

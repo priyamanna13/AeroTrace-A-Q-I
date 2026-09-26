@@ -8,11 +8,13 @@ export default function AppLayout() {
   const location = useLocation();
   const isLanding = location.pathname === '/' || location.pathname === '/landing';
   const isNational = location.pathname === '/national' || location.pathname === '/india';
+  const isCity = location.pathname.startsWith('/city');
   const isInvestigation = location.pathname.startsWith('/investigate');
 
-  // Screen 0 (Landing) & Screen 1 (National Overview) are dedicated full-viewport single-screen experiences
-  // with their own approved headers & navigation panels — render bare, no horizontal navbar/footer
-  if (isLanding || isNational) {
+  // Screen 0 (Landing), Screen 1 (National Overview) and Screen 2 (City Intelligence)
+  // are dedicated full-viewport single-screen experiences with their own approved
+  // headers & navigation panels — render bare, no horizontal navbar/footer
+  if (isLanding || isNational || isCity) {
     return <Outlet />;
   }
 

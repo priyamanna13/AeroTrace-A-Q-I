@@ -1026,9 +1026,12 @@ export default function Screen0Landing() {
         .od-live-map-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
         .od-live-map-target { color: var(--accent); font-size: 13px; }
 
-        /* India pin — prominent sizing matching design mockups & user reference */
+        /* India pin — prominent sizing matching design mockups & user reference.
+           Positioned ABSOLUTE inside .od-page (z-index: 2 stacking context) so the
+           menu panel (.od-menu-region, z-index: 10) always paints above it and the
+           label can never overlap the navbar/menu area. */
         #landing-india-pin {
-          position: fixed; z-index: 100;
+          position: absolute; z-index: 1;
           top: 43.4%; left: 70.5%;
           width: 46px; height: 64px;
           pointer-events: none;
@@ -1206,6 +1209,18 @@ export default function Screen0Landing() {
             </button>
           </div>
 
+          {/* ── India pin — inside .od-page so the menu panel stacks above it ── */}
+          <div
+            id="landing-india-pin"
+            ref={pinRef}
+            className={sceneReady ? 'od-pin-animate' : ''}
+            aria-label={tr.pinAlt}
+            role="img"
+          >
+            <span className="od-india-pin-mark" aria-hidden="true" />
+            <span className="od-india-pin-label">{tr.pin}</span>
+          </div>
+
           {/* ── Menu region (top-right) ── */}
           <div className="od-menu-region" ref={menuRef}>
             <button
@@ -1319,21 +1334,6 @@ export default function Screen0Landing() {
 
         {/* ── Screen-reader status ── */}
         <div className="od-sr-only" aria-live="polite">{statusMsg}</div>
-      </div>
-
-      {/* ── India pin — rendered OUTSIDE .od-page (no overflow:hidden) ──
-           className is driven by sceneReady React state — NOT manual classList.add (React
-           would strip manually-added classes on every re-render). When sceneReady flips true,
-           React commits className="od-pin-animate" → CSS animation fires exactly once. ── */}
-      <div
-        id="landing-india-pin"
-        ref={pinRef}
-        className={sceneReady ? 'od-pin-animate' : ''}
-        aria-label={tr.pinAlt}
-        role="img"
-      >
-        <span className="od-india-pin-mark" aria-hidden="true" />
-        <span className="od-india-pin-label">{tr.pin}</span>
       </div>
     </>
   );

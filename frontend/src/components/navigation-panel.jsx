@@ -6,6 +6,7 @@ import { useThemeTransition } from "@/hooks/use-theme-transition"
 import { CITIES, severityColor, severityFor } from "@/lib/aqi"
 import { dictionaries, LANGUAGES } from "@/lib/i18n/dictionaries"
 import { useLanguage } from "@/lib/i18n/language-provider"
+import { VoicePreferenceSelect } from "@/components/national-panel"
 import { cn } from "@/lib/utils"
 
 function Expandable({
@@ -209,6 +210,7 @@ export function NavigationPanel({
                         ]}
                       />
                     </div>
+                    <VoicePreferenceSelect />
                   </div>
                 </Expandable>
               </ul>

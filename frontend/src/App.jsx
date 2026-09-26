@@ -30,8 +30,8 @@ export default function App() {
             <Route path="/national" element={<Screen1NationalOverview />} />
             <Route path="/india" element={<Navigate to="/national" replace />} />
 
-            {/* Screen 2: City Intelligence */}
-            <Route path="/city" element={<Navigate to="/city/Pune" replace />} />
+            {/* Screen 2: City Intelligence — Mumbai is the default prototype city */}
+            <Route path="/city" element={<Navigate to="/city/Mumbai" replace />} />
             <Route path="/city/:cityName" element={<Screen2CityIntelligence />} />
 
             {/* Screen 3: Station Intelligence */}
