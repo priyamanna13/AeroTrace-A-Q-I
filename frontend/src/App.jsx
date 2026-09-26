@@ -53,8 +53,9 @@ export default function App() {
             {/* Screen 7: Analytics & Trends (Phase 3 Anish/Priya) */}
             <Route path="/analytics" element={<Screen7Analytics />} />
 
-            {/* Screen 8: Alerts Feed (Phase 3 Anish) */}
+            {/* Screen 8: Alerts Feed — city via params */}
             <Route path="/alerts" element={<Screen8Alerts />} />
+            <Route path="/alerts/:cityName" element={<Screen8Alerts />} />
 
             {/* Screen 9: AI Environmental Intelligence (Phase 5 Anish) */}
             <Route path="/ai" element={<Screen9AiAssistant />} />

@@ -11,13 +11,13 @@ export default function AppLayout() {
   const isCity = location.pathname.startsWith('/city');
   const isInvestigation = location.pathname.startsWith('/investigate');
   const isPrediction = location.pathname.startsWith('/prediction');
+  const isAlerts = location.pathname.startsWith('/alerts');
 
-  // Screen 0 (Landing), Screen 1 (National Overview), Screen 2 (City Intelligence)
-  // Screen 0 (Landing), Screen 1 (National Overview), Screen 2 (City Intelligence)
-  // and Screen 5 (Prediction) are dedicated full-viewport single-screen experiences
-  // with their own approved headers & navigation panels — render bare, no
-  // horizontal navbar/footer.
-  if (isLanding || isNational || isCity || isPrediction || isInvestigation) {
+  // Screen 0 (Landing), Screen 1 (National Overview), Screen 2 (City Intelligence),
+  // Screen 5 (Prediction) and Screen 8 (Alerts) are dedicated full-viewport
+  // single-screen experiences with their own approved headers & navigation
+  // panels — render bare, no horizontal navbar/footer.
+  if (isLanding || isNational || isCity || isPrediction || isAlerts || isInvestigation) {
     return <Outlet />;
   }
 
