@@ -28,6 +28,14 @@ function Screen2Content() {
   const [overview, setOverview] = useState(null)
   const [stations, setStations] = useState([])
   const [loading, setLoading] = useState(true)
+  // ONE shared selection for map markers AND station cards — selecting from
+  // either surface emphasizes the same station everywhere and flies the map in.
+  const [selectedStation, setSelectedStation] = useState(null)
+
+  // Changing city clears the selection (old station may not exist elsewhere).
+  useEffect(() => {
+    setSelectedStation(null)
+  }, [cityId])
 
   // Canonical English name for API calls, AI context, and navigation context —
   // display name stays i18n-driven; contracts stay language-invariant.
@@ -120,7 +128,13 @@ function Screen2Content() {
           </div>
 
           <div>
-            <CityMap cityId={cityId} stations={stations} loading={loading} />
+            <CityMap
+              cityId={cityId}
+              stations={stations}
+              loading={loading}
+              selectedStation={selectedStation}
+              onSelectStation={setSelectedStation}
+            />
           </div>
         </div>
 
@@ -131,7 +145,13 @@ function Screen2Content() {
 
         {/* Monitored stations — exactly the city's verified stations */}
         <div className="mt-10">
-          <StationCards cityId={cityId} stations={stations} loading={loading} />
+          <StationCards
+            cityId={cityId}
+            stations={stations}
+            loading={loading}
+            selectedStation={selectedStation}
+            onSelectStation={setSelectedStation}
+          />
         </div>
       </div>
     </div>

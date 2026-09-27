@@ -361,12 +361,37 @@ section.isolate .leaflet-control-container {
   z-index: auto;
 }
 
-/* Station pin labels: permanent mono tooltips in the editorial label style */
-.station-pin-tooltip {
+/* ── Station chips: label + pin in ONE divIcon marker ─────────────────────
+   The chip replaces permanent tooltips (tooltip pane hid them during zoom
+   animations). Anchored so the PIN DOT's center sits on the coordinate.
+   Glass treatment: translucent surface, backdrop blur, thin border. */
+.station-chip-icon {
+  /* Leaflet wraps divIcons in a positioned div — neutralize its default bg */
+  background: transparent;
+  border: 0;
+}
+.station-chip {
+  /* inline-flex + max-content: the Leaflet divIcon wrapper is 0x0, so a
+     block-level child would inherit zero width (invisible chips). Shrink-wrap
+     instead, then translate so the PIN DOT's center lands on the coordinate. */
+  display: inline-flex;
+  width: max-content;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transform: translate(-50%, -100%);
+  transition: opacity 300ms ease, filter 300ms ease;
+}
+.station-chip-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: var(--label-bg);
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 6px 18px var(--map-shadow);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--foreground);
   font-family: var(--font-mono);
   font-size: 10px;
@@ -374,9 +399,57 @@ section.isolate .leaflet-control-container {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 3px 8px;
+  white-space: nowrap;
+  transition: box-shadow 200ms ease, border-color 200ms ease;
 }
-.station-pin-tooltip::before {
-  display: none; /* remove default Leaflet arrow — cleaner editorial treatment */
+.station-chip-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex: none;
+}
+.station-chip-label b {
+  color: var(--muted-foreground);
+  font-weight: 700;
+  margin-left: 2px;
+}
+.station-chip-pin {
+  width: 14px;
+  height: 14px;
+  margin-top: -1px;
+  border-radius: 999px;
+  background: var(--chip-accent, var(--muted-foreground));
+  border: 2.5px solid var(--pin-ring);
+  box-shadow: 0 2px 8px var(--map-shadow);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+/* Selected: elevated glass + teal edge + larger pin, still restrained */
+.station-chip.is-selected {
+  z-index: 10;
+}
+.station-chip.is-selected .station-chip-label {
+  border-color: var(--teal);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--teal) 45%, transparent),
+    0 10px 26px var(--map-shadow);
+}
+.station-chip.is-selected .station-chip-pin {
+  transform: scale(1.35);
+  box-shadow:
+    0 0 0 4px color-mix(in oklab, var(--chip-accent, var(--teal)) 30%, transparent),
+    0 2px 10px var(--map-shadow);
+}
+
+/* Non-selected stations recede while one is focused (spatial hierarchy) */
+.station-chip.is-dimmed {
+  opacity: 0.5;
+  filter: saturate(0.7);
+}
+.station-chip.is-dimmed .station-chip-label {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* Leaflet attribution: quiet, small, brand-consistent */

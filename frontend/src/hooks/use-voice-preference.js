@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useSyncExternalStore } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import { createElement } from "react"
 import { voiceService } from "@/services/voiceService"
 
 const VOICE_PREF_KEY = "aerotrace-voice"
@@ -7,53 +8,21 @@ const VOICE_PREF_KEY = "aerotrace-voice"
 export function readVoicePreference() {
   try {
     return localStorage.getItem(VOICE_PREF_KEY) === "off" ? "off" : "on"
-  } catch (_) {
+  } catch {
     return "on"
   }
 }
 
-// ── ONE shared preference store ──────────────────────────────────────────────
-// Previously every useVoicePreference() call created its own useState copy, so
-// toggling Voice in Settings only updated that component's copy — Listen
-// controls elsewhere kept a stale snapshot until a full page reload. All hook
-// consumers now subscribe to this single store via useSyncExternalStore, so a
-// Settings change re-renders EVERY Listen control (and Settings) in one commit.
-let currentPref = typeof window !== "undefined" ? readVoicePreference() : "on"
-const listeners = new Set()
-
-function notifyListeners() {
-  listeners.forEach((listener) => listener())
-}
-
-function setSharedPref(next) {
-  if (next !== "on" && next !== "off") return
-  if (next === currentPref) return
-  currentPref = next
-  try {
-    localStorage.setItem(VOICE_PREF_KEY, next)
-  } catch (_) {}
-  notifyListeners()
-}
-
-function subscribe(listener) {
-  listeners.add(listener)
-  return () => {
-    listeners.delete(listener)
-  }
-}
-
-function getSnapshot() {
-  return currentPref
-}
-
-/**
- * useVoicePreference — persisted Voice Preference (read-aloud on/off).
- * Reuses the existing voiceService + localStorage pattern (aerotrace-theme /
- * aerotrace-lang). 'off' stops any active speech and blocks new speak() calls
- * from Listen controls. No backend involved.
+/*
+ * Voice preference is a CONTEXT, not per-component state. Previously every
+ * ListenControl and the Settings toggle each held their own useState copy, so
+ * toggling Settings never reached already-mounted Listen buttons (they only
+ * picked it up after a remount/refresh). One provider = one shared value.
  */
-export function useVoicePreference() {
-  const pref = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+const VoicePreferenceContext = createContext(null)
+
+export function VoicePreferenceProvider({ children }) {
+  const [pref, setPrefState] = useState(readVoicePreference)
 
   useEffect(() => {
     if (pref === "off") {
@@ -62,8 +31,41 @@ export function useVoicePreference() {
   }, [pref])
 
   const setPref = useCallback((next) => {
-    setSharedPref(next)
+    setPrefState(next)
+    try {
+      localStorage.setItem(VOICE_PREF_KEY, next)
+    } catch {
+      /* storage unavailable — preference stays session-only */
+    }
   }, [])
 
-  return { pref, setPref, enabled: pref === "on" }
+  const value = useMemo(() => ({ pref, setPref, enabled: pref === "on" }), [pref, setPref])
+
+  return createElement(VoicePreferenceContext.Provider, { value }, children)
+}
+
+export function useVoicePreference() {
+  // Fall back to a local instance when no provider is mounted (e.g. isolated
+  // tests / legacy pages) so the hook keeps working everywhere.
+  const ctx = useContext(VoicePreferenceContext)
+  const [localPref, setLocalPrefState] = useState(readVoicePreference)
+
+  useEffect(() => {
+    if (ctx) return
+    if (localPref === "off") {
+      voiceService.stop()
+    }
+  }, [ctx, localPref])
+
+  const setLocalPref = useCallback((next) => {
+    setLocalPrefState(next)
+    try {
+      localStorage.setItem(VOICE_PREF_KEY, next)
+    } catch {
+      /* storage unavailable — preference stays session-only */
+    }
+  }, [])
+
+  if (ctx) return ctx
+  return { pref: localPref, setPref: setLocalPref, enabled: localPref === "on" }
 }

@@ -1,4 +1,3 @@
-import React from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowUpRight } from "lucide-react"
 import { severityColor, severityFor } from "@/lib/aqi"
@@ -7,15 +6,26 @@ import { useLanguage } from "@/lib/i18n/language-provider"
 /**
  * StationCards — MONITORED STATIONS for Screen 2.
  * Exactly the city's verified stations, one card each, restrained content:
- * name, current AQI, category, updated/source line. Click → Screen 3.
+ * name, current AQI, category, updated/source line.
+ *
+ * Selection is SHARED with the map (one selectedStation state owned by
+ * Screen 2): selecting a card selects the same station on the map and vice
+ * versa. The selected accent ALWAYS uses the station's own AQI severity
+ * color — selection and severity are separate concepts; green is never
+ * implied by selection alone.
  */
-export function StationCards({ cityId, stations, loading }) {
+export function StationCards({ cityId, stations, loading, selectedStation, onSelectStation }) {
   const { t } = useLanguage()
   const navigate = useNavigate()
   const cityLabel = t.cities[cityId] || cityId
 
-  // Direct navigation: station click opens the existing Forensic/Wind Plume UI
-  // with the station already active. Back returns to City Intelligence.
+  // Card click = select (same shared state as the map markers).
+  const selectStation = (station) => {
+    onSelectStation?.(selectedStation === station.name ? null : station.name)
+  }
+
+  // Explicit navigation: opens the existing Forensic/Wind Plume UI with the
+  // station already active. Back returns to City Intelligence.
   const openStation = (station) => {
     navigate(`/investigate/${encodeURIComponent(station.name)}?city=${encodeURIComponent(cityLabel)}`)
   }
@@ -55,6 +65,7 @@ export function StationCards({ cityId, stations, loading }) {
             const hasReading = aqi != null && Number.isFinite(Number(aqi))
             const severity = hasReading ? severityFor(Number(aqi)) : null
             const color = severity ? severityColor(severity) : "var(--muted-foreground)"
+            const isSelected = selectedStation != null && selectedStation === station.name
             const updated = station.data_timestamp
               ? new Date(station.data_timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
               : null
@@ -64,13 +75,15 @@ export function StationCards({ cityId, stations, loading }) {
               <button
                 key={station.station_id || station.name}
                 type="button"
-                onClick={() => openStation(station)}
+                onClick={() => selectStation(station)}
+                aria-pressed={isSelected}
                 aria-label={t.cityScreen.stationAria(
                   station.name,
                   hasReading ? Math.round(Number(aqi)) : "—",
                   severity ? t.severity[severity] : t.cityScreen.notAvailable,
                 )}
-                className="group relative flex flex-col rounded-xl border border-border bg-card/60 p-5 text-left transition-colors hover:border-teal/50 hover:bg-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                style={isSelected ? { borderColor: color } : undefined}
+                className="group relative flex flex-col rounded-xl border bg-card/60 p-5 text-left transition-colors hover:border-teal/50 hover:bg-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-sm font-semibold text-foreground">{station.name}</span>
@@ -95,7 +108,23 @@ export function StationCards({ cityId, stations, loading }) {
                     {updated ? `U ${updated}` : ""}
                     {simulated ? " · SIM" : ""}
                   </span>
-                  <span className="flex items-center gap-1 text-teal opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${t.cityScreen.viewStation}: ${station.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openStation(station)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        openStation(station)
+                      }
+                    }}
+                    className="flex cursor-pointer items-center gap-1 text-teal opacity-0 transition-opacity duration-200 focus-visible:opacity-100 group-hover:opacity-100"
+                  >
                     {t.cityScreen.viewStation}
                     <ArrowUpRight aria-hidden="true" className="size-3" />
                   </span>

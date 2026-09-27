@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { I18nProvider } from './i18n';
 import AppLayout from './components/AppLayout';
+import { VoicePreferenceProvider } from './hooks/use-voice-preference';
 
 // Screen Components
 import Screen0Landing from './screens/Screen0Landing';
@@ -19,6 +20,7 @@ import NotFoundScreen from './screens/NotFoundScreen';
 export default function App() {
   return (
     <I18nProvider>
+      <VoicePreferenceProvider>
       <BrowserRouter>
         <Routes>
           <Route element={<AppLayout />}>
@@ -66,6 +68,7 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+      </VoicePreferenceProvider>
     </I18nProvider>
   );
 }
