@@ -55,6 +55,21 @@ class Settings(BaseSettings):
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")
 
+    @property
+    def sanitized_database_url(self) -> str:
+        """Return database URL with sensitive credentials masked."""
+        from urllib.parse import urlparse, urlunparse
+        try:
+            parsed = urlparse(self.database_url)
+            if parsed.password:
+                netloc = f"{parsed.username or ''}:***@{parsed.hostname or ''}"
+                if parsed.port:
+                    netloc += f":{parsed.port}"
+                return urlunparse(parsed._replace(netloc=netloc))
+            return self.database_url
+        except Exception:
+            return "sanitized_database_url"
+
 
 @lru_cache
 def get_settings() -> Settings:
