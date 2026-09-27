@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { Bell, ChevronDown, Map, Menu, MessageSquare, Settings, X, Building2, TrendingUp } from "lucide-react"
+import { Bell, ChevronDown, Map, Menu, MessageSquare, Settings, X, Building2, TrendingUp, ShieldCheck, BarChart3 } from "lucide-react"
 import { GlideSelect } from "@/components/glide-select"
 import { useThemeTransition } from "@/hooks/use-theme-transition"
 import { CITIES, severityColor, severityFor } from "@/lib/aqi"
@@ -156,6 +156,28 @@ export function NavigationPanel({
                   }}>
                     <TrendingUp className="size-5 text-muted-foreground" aria-hidden="true" />
                     <span>{t.nav.prediction}</span>
+                  </button>
+                </li>
+
+                {/* Intervention — Screen 6 */}
+                <li>
+                  <button type="button" className={linkClass} onClick={() => {
+                    setOpen(false)
+                    navigate("/intervention")
+                  }}>
+                    <ShieldCheck className="size-5 text-muted-foreground" aria-hidden="true" />
+                    <span>{t.nav.intervention || "Interventions"}</span>
+                  </button>
+                </li>
+
+                {/* Analytics — Screen 7 */}
+                <li>
+                  <button type="button" className={linkClass} onClick={() => {
+                    setOpen(false)
+                    navigate("/analytics")
+                  }}>
+                    <BarChart3 className="size-5 text-muted-foreground" aria-hidden="true" />
+                    <span>{t.nav.analytics || "Analytics"}</span>
                   </button>
                 </li>
 
