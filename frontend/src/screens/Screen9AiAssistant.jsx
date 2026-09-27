@@ -137,19 +137,60 @@ function AiContent() {
     if (el) el.scrollTop = el.scrollHeight
   }, [messages, thinking])
 
-  const ask = (question) => {
+  const ask = async (question) => {
     const q = String(question || "").trim()
     if (!q || thinking) return
     setInput("")
     setMessages((prev) => [...prev, { role: "user", content: q, lang: language }])
     setThinking(true)
-    // Small delay so the loading state is perceivable; the answer itself is
-    // computed from the already-loaded station context (no invented data).
-    setTimeout(() => {
-      const answer = askAssistant({ question: q, cityName: cityNameLabel, station, stations, t })
-      setMessages((prev) => [...prev, { role: "assistant", ...answer, lang: language }])
-      setThinking(false)
-    }, 650)
+
+    // Attempt live AI backend first
+    try {
+      const aiCtx = {
+        screen_id: "screen_9_chat",
+        city: cityNameLabel,
+        station: station?.name,
+        current_aqi: station?.current_aqi != null ? Number(station.current_aqi) : null,
+        dominant_pollutant: station?.dominant_pollutant || "PM2.5",
+        language: language,
+        data_source: station?.data_source || "CPCB CAAQMS",
+      }
+      const history = messages.slice(-4).map((m) => ({
+        role: m.role,
+        content: m.content || m.text || "",
+      }))
+      const res = await API.sendAIChat(q, aiCtx, history)
+      if (res && res.response_text) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: res.response_text,
+            provenance: res.provenance || "derived",
+            intent: "live_ai",
+            lang: res.language || language,
+          },
+        ])
+        setThinking(false)
+        return
+      }
+    } catch (err) {
+      console.warn("Live AI chat endpoint unreachable, falling back to local grounded assistant:", err)
+    }
+
+    // Graceful offline fallback to deterministic grounded assistant
+    const answer = askAssistant({ question: q, cityName: cityNameLabel, station, stations, t })
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: answer.text,
+        provenance: answer.provenance,
+        intent: answer.intent,
+        lang: language,
+      },
+    ])
+    setThinking(false)
   }
 
   const handleSubmit = (e) => {
