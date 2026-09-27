@@ -1,14 +1,22 @@
-export const CITIES = [
-  { id: "pune", aqi: 116, labelSide: "right" },
-  { id: "mumbai", aqi: 74, labelSide: "left" },
-  { id: "delhi", aqi: 212, labelSide: "right" },
-  { id: "bengaluru", aqi: 96, labelSide: "left" },
-  { id: "kolkata", aqi: 168, labelSide: "right" },
-  { id: "hyderabad", aqi: 139, labelSide: "right" },
-  { id: "chennai", aqi: 188, labelSide: "right" },
-]
+/**
+ * Shared AQI domain utilities for the seven monitored cities.
+ *
+ * Live AQI values are NOT stored here anymore — screens consume the
+ * useNationalAqi() hook (backed by GET /api/v1/cities) for real numbers.
+ * This module keeps only city identity, map layout metadata, and the
+ * severity classification/color helpers shared across screens.
+ */
 
-export const NATIONAL_AQI = 145
+/** Monitored cities in canonical display order with map pin metadata. */
+export const CITIES = [
+  { id: "pune", labelSide: "right" },
+  { id: "mumbai", labelSide: "left" },
+  { id: "delhi", labelSide: "right" },
+  { id: "bengaluru", labelSide: "left" },
+  { id: "kolkata", labelSide: "right" },
+  { id: "hyderabad", labelSide: "right" },
+  { id: "chennai", labelSide: "right" },
+]
 
 /** Canonical route slugs for the seven monitored cities (Screen 2 selector). */
 export const CITY_IDS = CITIES.map((city) => city.id)

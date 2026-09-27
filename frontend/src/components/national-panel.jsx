@@ -1,19 +1,50 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { Volume2, Square } from "lucide-react"
-import { CITIES, NATIONAL_AQI, severityColor, severityFor } from "@/lib/aqi"
+import { CITIES, severityColor, severityFor } from "@/lib/aqi"
 import { useLanguage } from "@/lib/i18n/language-provider"
 import { voiceService } from "@/services/voiceService"
 import { useVoicePreference } from "@/hooks/use-voice-preference"
 import { cn } from "@/lib/utils"
 
+/**
+ * Live data arrives via props from the single useNationalAqi() instance in
+ * NationalOverview, so the panel and the map share one fetch.
+ */
 export function NationalPanel({
   activeCity,
   hoveredCity,
   onHover,
   onSelect,
+  overallAqi,
+  cities,
+  status,
+  lastUpdated,
+  onRetry,
 }) {
   const { t } = useLanguage()
-  const nationalSeverity = severityFor(NATIONAL_AQI)
+  const nationalSeverity = severityFor(overallAqi)
+  const overallIsSimulated = status === "ready" && cities.some((city) => city.isSimulated)
+
+  // Fixed Gregorian clock formatting (en-IN digits/calendar) — the display
+  // language changes the labels, never the calendar system.
+  const timeText = useMemo(() => {
+    if (!lastUpdated) return "—"
+    try {
+      return new Intl.DateTimeFormat("en-IN", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZone: "Asia/Kolkata",
+        numberingSystem: "latn",
+      }).format(lastUpdated)
+    } catch {
+      return lastUpdated.toLocaleTimeString()
+    }
+  }, [lastUpdated])
+
+  const aqiById = new Map(cities.map((city) => [city.id, city]))
+  const loading = status === "loading"
+  const errored = status === "error"
 
   return (
     <section
@@ -46,14 +77,27 @@ export function NationalPanel({
           <span className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             {t.overallAqi}
           </span>
-          <span className="rounded-full border border-copper/50 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-copper">
-            {t.demoData}
-          </span>
+          {errored ? (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="rounded-full border border-destructive/50 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {t.liveError} · {t.retry}
+            </button>
+          ) : (
+            <span
+              className="flex items-center gap-1.5 rounded-full border border-teal/50 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-teal"
+            >
+              <span aria-hidden="true" className={cn("size-1.5 rounded-full bg-teal", loading && "animate-pulse")} />
+              {t.liveChip}
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
           {/* UI sans for data numerals (readability pass) — display serif stays on headings */}
           <span className="text-6xl font-bold leading-none tabular-nums md:text-7xl lg:text-[clamp(2.5rem,7.5vh,4.5rem)]">
-            {NATIONAL_AQI}
+            {errored ? "—" : loading && overallAqi == null ? "··" : overallAqi ?? "—"}
           </span>
           <span className="flex items-center gap-2.5 text-lg font-semibold" style={{ color: severityColor(nationalSeverity) }}>
             <span aria-hidden="true" className="size-3 rounded-full" style={{ background: severityColor(nationalSeverity) }} />
@@ -63,7 +107,7 @@ export function NationalPanel({
         <dl className="flex flex-wrap gap-x-8 gap-y-2 font-mono text-xs uppercase tracking-[0.14em] text-muted-foreground pt-1">
           <div className="flex gap-2.5">
             <dt>{t.updated}</dt>
-            <dd className="text-foreground font-semibold">{t.updatedValue}</dd>
+            <dd className="text-foreground font-semibold">{t.updatedValue({ time: timeText, isSimulated: overallIsSimulated })}</dd>
           </div>
           <div className="flex gap-2.5">
             <dt>{t.source}</dt>
@@ -75,18 +119,30 @@ export function NationalPanel({
       <div className="flex flex-col lg:min-h-0 lg:flex-1">
         <div className="flex items-end justify-between gap-3 border-b border-border pb-3 lg:pb-[1vh]">
           <h2 className="font-mono text-xs font-bold uppercase tracking-[0.2em]">{t.citiesMonitored(CITIES.length)}</h2>
-          <span className="text-right font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{t.demoSignals}</span>
+          {errored ? (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="rounded-full border border-border px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {t.retry}
+            </button>
+          ) : (
+            <span className="text-right font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{t.liveSignals}</span>
+          )}
         </div>
         <ol className="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
           {CITIES.map((city, index) => {
-            const severity = severityFor(city.aqi)
+            const live = aqiById.get(city.id)
+            const aqi = live?.aqi ?? null
+            const severity = severityFor(aqi)
             const highlighted = hoveredCity === city.id || activeCity === city.id
             return (
               <li key={city.id} className="border-b border-border lg:flex lg:min-h-0 lg:flex-1 lg:basis-0">
                 <button
                   type="button"
                   aria-pressed={activeCity === city.id}
-                  aria-label={t.map.cityAria(t.cities[city.id], city.aqi, t.severity[severity])}
+                  aria-label={t.map.cityAria(t.cities[city.id], aqi ?? "—", t.severity[severity])}
                   onMouseEnter={() => onHover(city.id)}
                   onMouseLeave={() => onHover(null)}
                   onFocus={() => onHover(city.id)}
@@ -100,16 +156,13 @@ export function NationalPanel({
                   <span className="w-6 font-mono text-xs tabular-nums text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
                   <span className="flex-1 font-semibold">{t.cities[city.id]}</span>
                   <span className="hidden text-xs text-muted-foreground sm:inline">{t.severity[severity]}</span>
-                  <span className="w-10 text-right text-sm font-semibold tabular-nums">{city.aqi}</span>
+                  <span className="w-10 text-right text-sm font-semibold tabular-nums">{aqi ?? "—"}</span>
                   <span aria-hidden="true" className="size-2.5 rounded-full" style={{ background: severityColor(severity) }} />
                 </button>
               </li>
             )
           })}
         </ol>
-        <p className="pt-3 text-xs leading-relaxed text-muted-foreground lg:shrink-0 lg:pt-[1vh] lg:text-[11px] lg:leading-snug">
-          {t.dataNote}
-        </p>
       </div>
     </section>
   )

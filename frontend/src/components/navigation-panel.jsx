@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { Bell, ChevronDown, Map, Menu, MessageSquare, Settings, X, Building2, TrendingUp, ShieldCheck, BarChart3 } from "lucide-react"
+import { Bell, ChevronDown, Map as MapIcon, Menu, MessageSquare, Settings, X, Building2, TrendingUp } from "lucide-react"
 import { GlideSelect } from "@/components/glide-select"
 import { useThemeTransition } from "@/hooks/use-theme-transition"
 import { CITIES, severityColor, severityFor } from "@/lib/aqi"
 import { dictionaries, LANGUAGES } from "@/lib/i18n/dictionaries"
 import { useLanguage } from "@/lib/i18n/language-provider"
 import { VoicePreferenceSelect } from "@/components/national-panel"
+import { useNationalAqi } from "@/hooks/use-national-aqi"
 import { cn } from "@/lib/utils"
 
 function Expandable({
@@ -50,6 +51,9 @@ export function NavigationPanel({
   const navigate = useNavigate()
   const { t, language, setLanguage } = useLanguage()
   const { theme, changeTheme } = useThemeTransition()
+  // Live AQI for the drawer's city list — shares the module-wide request cache.
+  const { cities: liveCities } = useNationalAqi()
+  const aqiById = new Map(liveCities.map((city) => [city.id, city]))
 
   // Handle escape key
   useEffect(() => {
@@ -106,24 +110,27 @@ export function NavigationPanel({
                 {/* City Intelligence — primary global destination (Screen 2) */}
                 <Expandable icon={<Building2 className="size-5" />} label={t.nav.cities} meta={t.nav.locations(CITIES.length)}>
                   <ul className="flex flex-col border-l-2 border-border/80 pl-4 py-2 gap-1.5">
-                    {CITIES.map((city) => (
-                      <li key={city.id}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOpen(false)
-                            onSelectCity(city.id)
-                          }}
-                          className="flex w-full items-center justify-between rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
-                        >
-                          <span>{t.cities[city.id]}</span>
-                          <span className="flex items-center gap-2 font-mono text-xs tabular-nums text-muted-foreground">
-                            {city.aqi}
-                            <span aria-hidden="true" className="size-2 rounded-full" style={{ background: severityColor(severityFor(city.aqi)) }} />
-                          </span>
-                        </button>
-                      </li>
-                    ))}
+                    {CITIES.map((city) => {
+                      const aqi = aqiById.get(city.id)?.aqi ?? null
+                      return (
+                        <li key={city.id}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpen(false)
+                              onSelectCity(city.id)
+                            }}
+                            className="flex w-full items-center justify-between rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
+                          >
+                            <span>{t.cities[city.id]}</span>
+                            <span className="flex items-center gap-2 font-mono text-xs tabular-nums text-muted-foreground">
+                              {aqi ?? "—"}
+                              <span aria-hidden="true" className="size-2 rounded-full" style={{ background: severityColor(severityFor(aqi)) }} />
+                            </span>
+                          </button>
+                        </li>
+                      )
+                    })}
                   </ul>
                 </Expandable>
 
@@ -132,7 +139,7 @@ export function NavigationPanel({
                     setOpen(false)
                     navigate("/national")
                   }}>
-                    <Map className="size-5 text-muted-foreground" aria-hidden="true" />
+                    <MapIcon className="size-5 text-muted-foreground" aria-hidden="true" />
                     <span>{t.nav.liveMap}</span>
                   </button>
                 </li>
@@ -156,28 +163,6 @@ export function NavigationPanel({
                   }}>
                     <TrendingUp className="size-5 text-muted-foreground" aria-hidden="true" />
                     <span>{t.nav.prediction}</span>
-                  </button>
-                </li>
-
-                {/* Intervention — Screen 6 */}
-                <li>
-                  <button type="button" className={linkClass} onClick={() => {
-                    setOpen(false)
-                    navigate("/intervention")
-                  }}>
-                    <ShieldCheck className="size-5 text-muted-foreground" aria-hidden="true" />
-                    <span>{t.nav.intervention || "Interventions"}</span>
-                  </button>
-                </li>
-
-                {/* Analytics — Screen 7 */}
-                <li>
-                  <button type="button" className={linkClass} onClick={() => {
-                    setOpen(false)
-                    navigate("/analytics")
-                  }}>
-                    <BarChart3 className="size-5 text-muted-foreground" aria-hidden="true" />
-                    <span>{t.nav.analytics || "Analytics"}</span>
                   </button>
                 </li>
 

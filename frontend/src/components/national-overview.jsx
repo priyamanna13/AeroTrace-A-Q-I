@@ -5,6 +5,7 @@ import { NationalPanel } from "@/components/national-panel"
 import { NavigationPanel } from "@/components/navigation-panel"
 import { BrandMark } from "@/components/site-header"
 import { useLanguage } from "@/lib/i18n/language-provider"
+import { useNationalAqi } from "@/hooks/use-national-aqi"
 
 export function NationalOverview({ geography, geometry }) {
   const { t } = useLanguage()
@@ -14,6 +15,10 @@ export function NationalOverview({ geography, geometry }) {
   const [notice, setNotice] = useState(null)
   const noticeTimer = useRef(null)
   const mapRef = useRef(null)
+
+  // Single live-AQI fetch shared by the panel, the map pins, and the nav drawer.
+  const nationalAqi = useNationalAqi()
+  const { cities, status, retry } = nationalAqi
 
   const showNotice = useCallback((message) => {
     if (noticeTimer.current) clearTimeout(noticeTimer.current)
@@ -51,7 +56,17 @@ export function NationalOverview({ geography, geometry }) {
           className="border-border px-6 pb-10 national-panel-layout lg:flex lg:min-h-0 lg:flex-col lg:overflow-hidden lg:border-r lg:px-10"
           style={{ paddingTop: 'max(5.5rem, 12vh)', paddingBottom: '2.5vh' }}
         >
-          <NationalPanel activeCity={selectedCity} hoveredCity={hoveredCity} onHover={setHoveredCity} onSelect={selectCity} />
+          <NationalPanel
+            activeCity={selectedCity}
+            hoveredCity={hoveredCity}
+            onHover={setHoveredCity}
+            onSelect={selectCity}
+            overallAqi={nationalAqi.overallAqi}
+            cities={cities}
+            status={status}
+            lastUpdated={nationalAqi.lastUpdated}
+            onRetry={retry}
+          />
         </div>
 
         <div ref={mapRef} className="h-[85svh] min-h-[560px] scroll-mt-0 lg:h-full lg:min-h-0">
@@ -60,6 +75,9 @@ export function NationalOverview({ geography, geometry }) {
             geometry={geometry}
             selectedCity={selectedCity}
             hoveredCity={hoveredCity}
+            cityAqis={cities}
+            dataStatus={status}
+            onRetry={retry}
             onHover={setHoveredCity}
             onSelect={selectCity}
             onReset={() => setSelectedCity(null)}
