@@ -11,6 +11,7 @@ import { API } from "@/api_client"
 import { CITY_IDS, cityEnName, severityColor, severityFor } from "@/lib/aqi"
 import { getDemoAlerts } from "@/lib/demo-alerts-data"
 import { LanguageProvider, useLanguage } from "@/lib/i18n/language-provider"
+import { ListenControl } from "@/components/national-panel"
 import { cn } from "@/lib/utils"
 
 const REFRESH_MS = 30000 // 30-second application refresh cycle (NFR-070)
@@ -89,7 +90,7 @@ const LEVEL_COLOR = {
 function AlertsContent() {
   const params = useParams()
   const navigate = useNavigate()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   const rawCity = String(params.cityName || "pune").toLowerCase()
   const cityId = CITY_IDS.includes(rawCity) ? rawCity : "pune"
@@ -140,6 +141,14 @@ function AlertsContent() {
 
   const fmtTs = (d) =>
     d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+
+  // Spoken summary for the primary alert's Listen control (localized template).
+  const primaryAlertSpoken = a.criticalAlertSpoken(
+    active[0]?.station ?? "",
+    active[0]?.aqi ?? "",
+    active[0]?.category ?? "",
+    active[0]?.detail ?? "",
+  )
 
   const header = (
     <header className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center justify-between px-6 py-4 lg:px-10">
@@ -206,6 +215,11 @@ function AlertsContent() {
                   >
                     {a.criticalAlert}
                   </span>
+                  <ListenControl
+                    text={active.length > 0 ? primaryAlertSpoken : ""}
+                    lang={language}
+                    className="listen-control ml-1 self-center"
+                  />
                 </div>
                 <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <span className="font-display text-5xl font-bold leading-none tabular-nums" style={{ color: severityColor(severityFor(active[0].aqi)) }}>
