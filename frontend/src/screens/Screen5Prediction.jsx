@@ -222,7 +222,9 @@ function VulnerableZonesMap({ center, zones, t }) {
       zoom={12}
       zoomControl={false}
       zoomSnap={0.5}
-      scrollWheelZoom={false}
+      // Native wheel/pinch zoom (matches the forensic + city maps; design
+      // intentionally hides zoom buttons, so scroll is the zoom affordance).
+      scrollWheelZoom
       className="size-full"
       attributionControl
     >
