@@ -486,7 +486,9 @@ export default function Screen0Landing() {
     const light    = [0.48, 0.56, 0.82];
     const indiaLat = 22.5 * Math.PI / 180;
     const indiaLon = 78.5 * Math.PI / 180;
-    let projection = perspective(42 * Math.PI / 180, 1, 0.1, 100);
+    let canvasWidth = typeof window !== 'undefined' ? window.innerWidth : 1440;
+    let canvasHeight = typeof window !== 'undefined' ? window.innerHeight : 900;
+    let projection = perspective(42 * Math.PI / 180, canvasWidth / Math.max(canvasHeight, 1), 0.1, 100);
     const baseTilt = 0.28;
     let targetRotation  = -0.68;
     let currentRotation = targetRotation;
@@ -494,8 +496,6 @@ export default function Screen0Landing() {
     let currentTilt = targetTilt;
     let dragging = false;
     let lastPX = 0, lastPY = 0;
-    let canvasWidth = typeof window !== 'undefined' ? window.innerWidth : 1440;
-    let canvasHeight = typeof window !== 'undefined' ? window.innerHeight : 900;
     let layout = { x: 0.98, y: -0.04, scale: 1.47 };
     let frameCount = 0, lastFpsTime = performance.now();
     let themeLocal = 'dark'; // local mutable copy
@@ -540,10 +540,12 @@ export default function Screen0Landing() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = Math.floor((canvas.clientWidth || canvasWidth) * dpr);
       const h = Math.floor((canvas.clientHeight || canvasHeight) * dpr);
-      if (w === canvas.width && h === canvas.height) return;
-      canvas.width = w; canvas.height = h;
-      gl.viewport(0, 0, w, h);
-      projection = perspective(42 * Math.PI / 180, w / h, 0.1, 100);
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+        gl.viewport(0, 0, w, h);
+      }
+      projection = perspective(42 * Math.PI / 180, w / Math.max(h, 1), 0.1, 100);
     }
 
     /* ── pin ref helper (used by render loop — avoids getElementById overhead) ── */
