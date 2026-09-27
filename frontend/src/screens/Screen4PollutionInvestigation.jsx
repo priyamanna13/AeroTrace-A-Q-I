@@ -12,6 +12,7 @@ import { StationInsightCard } from '../components/station/StationInsightCard';
 import { useI18n } from '../i18n';
 import { FALLBACK_CITY_STATIONS } from '../api_client';
 import { useLanguage } from '../lib/i18n/language-provider';
+import { TILES, useThemeMode } from '../components/city/CityMap';
 import EChartsWrapper from '../components/EChartsWrapper';
 import { getDemoTrend } from '../lib/demo-trend-data';
 
@@ -101,10 +102,13 @@ const GLOBAL_STYLES = `
   .aq-root {
     width: 100%; height: 100vh; display: flex; flex-direction: column;
     position: relative;
-    background: #08080a;
+    /* Theme-aware: reads the GLOBAL AeroTrace tokens (html.light / html.dark).
+       No dark-only literals here — every surface follows the same theme state
+       as the navbar, Settings and the other screens. */
+    background: var(--background);
     font-family: 'Inter', 'Noto Sans Devanagari', 'Noto Sans', 'Segoe UI Emoji',
                  'Apple Color Emoji', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-    color: #f4f4f5; overflow: hidden;
+    color: var(--foreground); overflow: hidden;
   }
 
   /* Body row below the global navbar: map + sidebar fill the remaining height */
@@ -113,14 +117,13 @@ const GLOBAL_STYLES = `
   }
 
   /* ── Map panel ── */
-  .map-panel { width: 72%; height: 100%; position: relative; background: #0c0c10; flex-shrink: 0; }
-  .map-panel .leaflet-container { width: 100%; height: 100%; background: #0c0c10; }
-  .leaflet-tile-pane { filter: none; }
+  .map-panel { width: 72%; height: 100%; position: relative; background: var(--map-water); flex-shrink: 0; }
+  .map-panel .leaflet-container { width: 100%; height: 100%; background: var(--map-water); }
 
   /* ── Leaflet popup overrides ── */
   .leaflet-popup-content-wrapper {
-    background: rgba(10,10,14,0.96) !important;
-    border: 1px solid rgba(255,255,255,0.07) !important;
+    background: var(--popover) !important;
+    border: 1px solid var(--border) !important;
     border-radius: 13px !important;
     backdrop-filter: blur(24px);
     padding: 0 !important;
@@ -129,16 +132,16 @@ const GLOBAL_STYLES = `
   .leaflet-popup-tip-container { display: none !important; }
   .leaflet-popup-content { margin: 0 !important; }
   .popup-inner        { padding: 13px 17px; }
-  .popup-station-name { font-size: 12px; font-weight: 700; color: #f4f4f5; }
+  .popup-station-name { font-size: 12px; font-weight: 700; color: var(--foreground); }
   .popup-aqi-badge    { display:inline-flex;align-items:center;gap:5px;margin-top:6px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.22);border-radius:6px;padding:2px 9px;font-size:11px;font-weight:700;color:#f87171; }
-  .popup-source-name  { font-size: 12px; font-weight: 500; color: #e4e4e7; margin-top: 5px; }
+  .popup-source-name  { font-size: 12px; font-weight: 500; color: var(--foreground); margin-top: 5px; }
   .popup-rank-label   { font-size: 10px; font-weight: 700; color: #fbbf24; letter-spacing: 0.12em; text-transform: uppercase; }
-  .popup-yellow-aqi   { font-size: 11px; color: #a1a1aa; margin-top: 4px; }
+  .popup-yellow-aqi   { font-size: 11px; color: var(--muted-foreground); margin-top: 4px; }
 
   /* ── Map overlay badges ── */
   .live-badge {
     position:absolute; top:20px; left:20px; z-index:1000;
-    background:rgba(8,8,10,0.80); border:1px solid rgba(255,255,255,0.08);
+    background:var(--label-bg); border:1px solid var(--border);
     backdrop-filter:blur(22px); border-radius:9px; padding:7px 13px;
     display:flex; align-items:center; gap:7px;
   }
@@ -147,18 +150,18 @@ const GLOBAL_STYLES = `
   .live-dot.status-refresh{ background:#fbbf24;color:#fbbf24; }
   .live-dot.status-stale  { background:#f59e0b;color:#f59e0b; }
   .live-dot.status-offline{ background:#ef4444;color:#ef4444; }
-  .live-text { font-size:10px;font-weight:700;letter-spacing:0.16em;color:#d4d4d8;text-transform:uppercase; }
+  .live-text { font-size:10px;font-weight:700;letter-spacing:0.16em;color:var(--foreground);text-transform:uppercase; }
 
   .met-badge {
     position:absolute; bottom:24px; left:24px; z-index:1000;
-    background:rgba(8,8,10,0.80); border:1px solid rgba(255,255,255,0.08);
+    background:var(--label-bg); border:1px solid var(--border);
     backdrop-filter:blur(24px); border-radius:13px; padding:11px 18px;
     display:flex; align-items:center; gap:10px;
   }
   .met-icon  { font-size:14px;opacity:0.7; }
-  .met-label { font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#d4d4d8; }
-  .met-value { font-size:13px;font-weight:600;color:#f4f4f5;font-family:monospace; }
-  .met-dot   { width:3px;height:3px;background:rgba(255,255,255,0.18);border-radius:50%; }
+  .met-label { font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted-foreground); }
+  .met-value { font-size:13px;font-weight:600;color:var(--foreground);font-family:monospace; }
+  .met-dot   { width:3px;height:3px;background:var(--border);border-radius:50%; }
 
   /* ── Sidebar (station intelligence panel sits on the LEFT of the map) ──
      order:-1 places it before the map panel in the flex row; the divider
@@ -166,8 +169,8 @@ const GLOBAL_STYLES = `
   .sidebar {
     width:28%; height:100%; flex-shrink:0;
     order:-1;
-    background:rgba(9,9,12,0.92);
-    border-right:1px solid rgba(255,255,255,0.045);
+    background:color-mix(in oklab, var(--card), transparent 8%);
+    border-right:1px solid var(--border);
     backdrop-filter:blur(40px);
     display:flex; flex-direction:column;
     position:relative; z-index:10;
@@ -183,49 +186,49 @@ const GLOBAL_STYLES = `
   .sidebar-scroll::-webkit-scrollbar { display:none; }
 
   .header-row   { display:flex;align-items:flex-start;justify-content:space-between;gap:12px; }
-  .header-meta  { font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#d4d4d8;margin-bottom:6px; }
-  .header-title { font-size:21px;font-weight:800;color:#fafafa;line-height:1.1; }
-  .header-sub   { font-size:13px;font-weight:500;color:#a1a1aa;margin-top:5px; }
+  .header-meta  { font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted-foreground);margin-bottom:6px; }
+  .header-title { font-size:21px;font-weight:800;color:var(--foreground);line-height:1.1; }
+  .header-sub   { font-size:13px;font-weight:500;color:var(--muted-foreground);margin-top:5px; }
 
   .aqi-pill      { display:inline-flex;align-items:center;gap:7px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.22);border-radius:999px;padding:7px 13px 7px 9px;flex-shrink:0; }
   .aqi-pulse-dot { width:8px;height:8px;background:#ef4444;border-radius:50%;box-shadow:0 0 7px #ef4444;animation:livePulse 1.5s ease-in-out infinite; }
   .aqi-number    { font-size:14px;font-weight:700;color:#f87171;font-family:monospace; }
-  .aqi-label     { font-size:9px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:0.06em; }
+  .aqi-label     { font-size:9px;font-weight:700;color:inherit;opacity:0.75;text-transform:uppercase;letter-spacing:0.06em; }
 
-  .rule { height:1px;background:linear-gradient(to right, rgba(255,255,255,0.06), transparent); }
+  .rule { height:1px;background:linear-gradient(to right, var(--border), transparent); }
 
-  .section-label { font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#d4d4d8; }
+  .section-label { font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted-foreground); }
 
   .advisory-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; }
-  .lang-switcher   { display:flex;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:9px;padding:3px;gap:2px; }
-  .lang-btn        { padding:5px 11px;border-radius:7px;border:none;cursor:pointer;font-size:11px;font-weight:700;background:transparent;color:#a1a1aa;transition:background 0.15s,color 0.15s;font-family:'Inter','Noto Sans Devanagari','Noto Sans',sans-serif; }
-  .lang-btn.active { background:rgba(255,255,255,0.09);color:#fafafa; }
+  .lang-switcher   { display:flex;background:var(--muted);border:1px solid var(--border);border-radius:9px;padding:3px;gap:2px; }
+  .lang-btn        { padding:5px 11px;border-radius:7px;border:none;cursor:pointer;font-size:11px;font-weight:700;background:transparent;color:var(--muted-foreground);transition:background 0.15s,color 0.15s;font-family:'Inter','Noto Sans Devanagari','Noto Sans',sans-serif; }
+  .lang-btn.active { background:var(--secondary);color:var(--foreground); }
 
-  .advisory-card         { background:rgba(255,255,255,0.018);border:1px solid rgba(255,255,255,0.055);border-radius:15px;padding:16px;position:relative;overflow:hidden; }
+  .advisory-card         { background:color-mix(in oklab, var(--card), transparent 55%);border:1px solid var(--border);border-radius:15px;padding:16px;position:relative;overflow:hidden; }
   .advisory-card::before { content:'';position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(to right, rgba(239,68,68,0.4), transparent); }
-  .advisory-text         { font-size:13px;font-weight:400;line-height:1.9;color:#d4d4d8; }
+  .advisory-text         { font-size:13px;font-weight:400;line-height:1.9;color:var(--foreground); }
 
   .sources-list { display:flex;flex-direction:column;gap:8px; }
-  .source-card  { background:rgba(255,255,255,0.016);border:1px solid rgba(255,255,255,0.045);border-radius:14px;padding:13px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:background 0.15s,border-color 0.15s,box-shadow 0.15s; }
-  .source-card:hover  { background:rgba(255,255,255,0.032); }
+  .source-card  { background:color-mix(in oklab, var(--card), transparent 55%);border:1px solid var(--border);border-radius:14px;padding:13px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:background 0.15s,border-color 0.15s,box-shadow 0.15s; }
+  .source-card:hover  { background:var(--muted); }
   .source-card.active { background:rgba(251,191,36,0.05);border-color:rgba(251,191,36,0.20);box-shadow:0 0 0 1px rgba(251,191,36,0.08) inset; }
 
-  .source-icon-box { width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.055);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0; }
+  .source-icon-box { width:36px;height:36px;border-radius:10px;background:var(--muted);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0; }
   .source-info     { flex:1;min-width:0; }
   .source-top      { display:flex;align-items:center;gap:6px;margin-bottom:5px; }
-  .rank-badge      { font-size:10px;font-weight:800;color:#d4d4d8;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.07);border-radius:5px;padding:1px 7px;letter-spacing:0.04em; }
-  .source-type-tag { font-size:10px;color:#d4d4d8;font-family:monospace;text-transform:uppercase;letter-spacing:0.08em;font-weight:600; }
-  .source-name     { font-size:13px;font-weight:700;color:#e4e4e7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .rank-badge      { font-size:10px;font-weight:800;color:var(--muted-foreground);background:var(--muted);border:1px solid var(--border);border-radius:5px;padding:1px 7px;letter-spacing:0.04em; }
+  .source-type-tag { font-size:10px;color:var(--muted-foreground);font-family:monospace;text-transform:uppercase;letter-spacing:0.08em;font-weight:600; }
+  .source-name     { font-size:13px;font-weight:700;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 
   .confidence-block  { text-align:right;flex-shrink:0; }
   .confidence-number { font-size:14px;font-weight:700;font-family:monospace; }
-  .confidence-sub    { font-size:10px;color:#d4d4d8;font-weight:600;letter-spacing:0.06em;margin-top:2px; }
-  .conf-bar-wrap     { height:2px;background:rgba(255,255,255,0.06);border-radius:1px;margin-top:8px;overflow:hidden; }
+  .confidence-sub    { font-size:10px;color:var(--muted-foreground);font-weight:600;letter-spacing:0.06em;margin-top:2px; }
+  .conf-bar-wrap     { height:2px;background:var(--border);border-radius:1px;margin-top:8px;overflow:hidden; }
   .conf-bar-fill     { height:100%;border-radius:1px;transition:width 0.5s ease; }
 
-  .sidebar-footer { padding:12px 22px;border-top:1px solid rgba(255,255,255,0.035);display:flex;align-items:center;justify-content:space-between; }
-  .footer-engine  { font-size:9px;font-weight:700;color:#52525b;font-family:monospace;letter-spacing:0.12em; }
-  .footer-version { font-size:9px;color:#52525b;font-family:monospace; }
+  .sidebar-footer { padding:12px 22px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between; }
+  .footer-engine  { font-size:9px;font-weight:700;color:var(--muted-foreground);font-family:monospace;letter-spacing:0.12em; }
+  .footer-version { font-size:9px;color:var(--muted-foreground);font-family:monospace; }
 
   /* Leaflet marker wrapper resets */
   .custom-leaflet-marker-trigger,
@@ -234,11 +237,11 @@ const GLOBAL_STYLES = `
 
   /* Permanent station-name labels pinned to every station marker */
   .station-name-label.leaflet-tooltip {
-    background: rgba(8,8,10,0.88);
-    border: 1px solid rgba(255,255,255,0.14);
+    background: var(--label-bg);
+    border: 1px solid var(--border);
     border-radius: 6px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.55);
-    color: #f4f4f5;
+    box-shadow: 0 4px 14px var(--map-shadow);
+    color: var(--foreground);
     font-family: 'Inter','Noto Sans Devanagari','Noto Sans',sans-serif;
     font-size: 10px; font-weight: 700;
     letter-spacing: 0.07em; text-transform: uppercase;
@@ -248,17 +251,52 @@ const GLOBAL_STYLES = `
   .station-name-label::before { display: none; } /* hide default Leaflet arrow */
   .station-name-label.trigger-label {
     border-color: rgba(239,68,68,0.45);
-    color: #fca5a5;
   }
+  html.light .station-name-label.trigger-label { color: #b91c1c; }
 
   /* ── AQI trend card (sidebar) ── */
-  .trend-card         { background:rgba(255,255,255,0.018);border:1px solid rgba(255,255,255,0.055);border-radius:15px;padding:14px;position:relative;overflow:hidden; }
+  .trend-card         { background:color-mix(in oklab, var(--card), transparent 55%);border:1px solid var(--border);border-radius:15px;padding:14px;position:relative;overflow:hidden; }
   .trend-card::before { content:'';position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(to right, rgba(45,212,191,0.4), transparent); }
   .trend-head         { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px; }
-  .trend-range-group  { display:flex;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:9px;padding:3px;gap:2px;flex-shrink:0; }
-  .trend-range-btn    { padding:3px 9px;border-radius:7px;border:none;cursor:pointer;font-size:10px;font-weight:700;background:transparent;color:#a1a1aa;transition:background 0.15s,color 0.15s;font-family:'Inter','Noto Sans Devanagari','Noto Sans',sans-serif; }
-  .trend-range-btn.active { background:rgba(255,255,255,0.09);color:#fafafa; }
+  .trend-range-group  { display:flex;background:var(--muted);border:1px solid var(--border);border-radius:9px;padding:3px;gap:2px;flex-shrink:0; }
+  .trend-range-btn    { padding:3px 9px;border-radius:7px;border:none;cursor:pointer;font-size:10px;font-weight:700;background:transparent;color:var(--muted-foreground);transition:background 0.15s,color 0.15s;font-family:'Inter','Noto Sans Devanagari','Noto Sans',sans-serif; }
+  .trend-range-btn.active { background:var(--secondary);color:var(--foreground); }
   .trend-demo-chip    { font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#fb923c;background:rgba(251,146,60,0.10);border:1px solid rgba(251,146,60,0.28);border-radius:50px;padding:2px 8px;white-space:nowrap; }
+
+  /* Back-to-city button — theme-aware (was hardcoded dark glass) */
+  .station-back-btn {
+    display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0;
+    background: color-mix(in oklab, var(--card), transparent 15%);
+    padding: 7px 14px; border-radius: 10px;
+    border: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    cursor: pointer; color: var(--foreground);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    font-family: 'Inter','Noto Sans Devanagari',sans-serif;
+    text-transform: uppercase; transition: all 0.2s ease;
+  }
+  .station-back-btn:hover { border-color: rgba(251,146,60,0.4); color: #fb923c; }
+
+  /* Wind compass overlay — theme-aware */
+  .compass-panel {
+    position: absolute; bottom: 140px; left: 24px; z-index: 1000;
+    background: var(--label-bg); border: 1px solid var(--border);
+    backdrop-filter: blur(28px); border-radius: 20px;
+    padding: 16px 18px; display: flex; flex-direction: column;
+    align-items: center; gap: 10px; min-width: 96px;
+  }
+  .compass-ring  { fill: none; stroke: var(--border); stroke-width: 1.5; }
+  .compass-ring2 { fill: none; stroke: var(--border); stroke-width: 1; opacity: 0.66; }
+  .compass-tick       { stroke: var(--foreground); opacity: 0.22; stroke-width: 1.5; }
+  .compass-tick.minor { opacity: 0.08; stroke-width: 0.8; }
+  .compass-letter  { font-size: 7px; font-weight: 700; font-family: Inter, sans-serif; fill: var(--muted-foreground); letter-spacing: 0.06em; }
+  .compass-letter.n { fill: #ef4444; }
+  .compass-tail     { fill: var(--foreground); opacity: 0.18; }
+  .compass-hub      { fill: var(--foreground); opacity: 0.7; }
+  .compass-hub-core { fill: var(--background); }
+  .compass-label    { font-size: 10px; font-weight: 700; color: var(--muted-foreground); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 3px; }
+  .compass-cardinal { font-size: 14px; font-weight: 700; color: var(--foreground); font-family: monospace; letter-spacing: 0.04em; }
+  .compass-deg      { font-size: 11px; font-weight: 500; color: var(--muted-foreground); font-family: monospace; margin-top: 2px; }
 `;
 
 let stylesInjected = false;
@@ -299,19 +337,24 @@ function buildOfflineCandidates(station) {
     : [18.5204, 73.8567];
   const dirs = ['NE', 'NW', 'SE', 'SW', 'N', 'E', 'S', 'W'];
   const confidences = [0.87, 0.74, 0.63];
-  // Deterministically pick 3 distinct archetypes for this station
+  // Deterministically pick 3 distinct archetypes for this station.
+  // IMPORTANT: use >>> (unsigned shift) — seed is a uint32 and `>>` on values
+  // ≥ 2^31 yields a NEGATIVE int32, producing negative array indices (undefined
+  // archetypes → crash). Affects e.g. "Victoria Memorial", "Jadavpur",
+  // "Shivajinagar"; exposed when clicking those markers navigated to them.
+  const n = OFFLINE_SOURCE_ARCHETYPES.length;
   const picked = [
-    OFFLINE_SOURCE_ARCHETYPES[seed % OFFLINE_SOURCE_ARCHETYPES.length],
-    OFFLINE_SOURCE_ARCHETYPES[(seed >> 3) % OFFLINE_SOURCE_ARCHETYPES.length],
-    OFFLINE_SOURCE_ARCHETYPES[(seed >> 6) % OFFLINE_SOURCE_ARCHETYPES.length],
+    OFFLINE_SOURCE_ARCHETYPES[seed % n],
+    OFFLINE_SOURCE_ARCHETYPES[((seed >> 3) >>> 0) % n],
+    OFFLINE_SOURCE_ARCHETYPES[((seed >> 6) >>> 0) % n],
   ];
   const seen = new Set();
   const out = [];
   picked.forEach((arch, i) => {
-    if (seen.has(arch.type)) return;
+    if (!arch || seen.has(arch.type)) return;
     seen.add(arch.type);
-    const dist = (0.8 + ((seed >> (i * 2)) % 30) / 10).toFixed(1); // 0.8–3.7 km
-    const dir  = dirs[(seed >> (i + 2)) % dirs.length];
+    const dist = (0.8 + (((seed >> (i * 2)) >>> 0) % 30) / 10).toFixed(1); // 0.8–3.7 km
+    const dir  = dirs[((seed >> (i + 2)) >>> 0) % dirs.length];
     const jitter = 0.004 + i * 0.006;
     out.push({
       rank: out.length + 1,
@@ -677,31 +720,32 @@ function MapInstanceTracker({ setMapRef }) {
 }
 
 // ─── WIND COMPASS ─────────────────────────────────────────────────────────────────
+// Theme-aware: panel chrome + svg strokes read the GLOBAL theme tokens via the
+// .compass-* classes (see GLOBAL_STYLES). The needle keeps its severity red in
+// both themes. useThemeMode() tracks html.light/dark via MutationObserver so the
+// svg attribute swaps immediately on theme change.
 function WindCompass({ windDeg, cardinal, label }) {
-  const rot  = windDeg ?? 0;
-  const ticks = [0, 45, 90, 135, 180, 225, 270, 315];
+  const rot    = windDeg ?? 0;
+  const theme  = useThemeMode();
+  const ticks  = [0, 45, 90, 135, 180, 225, 270, 315];
+  const dark   = theme !== 'light';
+  const needleTail   = dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.16)';
+  const needleShadow = dark ? 'rgba(239,68,68,0.7)'  : 'rgba(220,38,38,0.45)';
 
   return (
-    <div style={{
-      position: 'absolute', bottom: 140, left: 24, zIndex: 1000,
-      background: 'rgba(8,8,10,0.82)', border: '1px solid rgba(255,255,255,0.09)',
-      backdropFilter: 'blur(28px)', borderRadius: 20,
-      padding: '16px 18px', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', gap: 10, minWidth: 96,
-    }}>
+    <div className="compass-panel">
       <svg width="72" height="72" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="36" cy="36" r="34" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1.5"/>
-        <circle cx="36" cy="36" r="25" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+        <circle className="compass-ring"  cx="36" cy="36" r="34" />
+        <circle className="compass-ring2" cx="36" cy="36" r="25" />
         {ticks.map((deg) => {
           const rad    = (deg * Math.PI) / 180;
           const isCard = deg % 90 === 0;
           const r1     = isCard ? 27 : 30;
           return (
             <line key={deg}
-              x1={36 + r1 * Math.sin(rad)}   y1={36 - r1 * Math.cos(rad)}
-              x2={36 + 34 * Math.sin(rad)}    y2={36 - 34 * Math.cos(rad)}
-              stroke={isCard ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.08)'}
-              strokeWidth={isCard ? 1.5 : 0.8}
+              x1={36 + r1 * Math.sin(rad)} y1={36 - r1 * Math.cos(rad)}
+              x2={36 + 34 * Math.sin(rad)} y2={36 - 34 * Math.cos(rad)}
+              className={isCard ? 'compass-tick' : 'compass-tick minor'}
             />
           );
         })}
@@ -713,9 +757,7 @@ function WindCompass({ windDeg, cardinal, label }) {
         ].map(({ l, x, y }) => (
           <text key={l} x={x} y={y}
             textAnchor="middle" dominantBaseline="middle"
-            fontSize="7" fontWeight="700" fontFamily="Inter, sans-serif"
-            fill={l === 'N' ? '#ef4444' : 'rgba(255,255,255,0.24)'}
-            letterSpacing="0.06em"
+            className={`compass-letter${l === 'N' ? ' n' : ''}`}
           >{l}</text>
         ))}
         <g style={{
@@ -724,23 +766,17 @@ function WindCompass({ windDeg, cardinal, label }) {
           transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
         }}>
           <polygon points="36,10 33,36 36,31 39,36" fill="#ef4444" opacity="0.95"
-            style={{ animation: 'needleSway 2.6s ease-in-out infinite' }}/>
-          <polygon points="36,62 33,36 36,41 39,36" fill="rgba(255,255,255,0.18)"/>
-          <circle cx="36" cy="36" r="3.5" fill="#fafafa" opacity="0.7"/>
-          <circle cx="36" cy="36" r="1.5" fill="#0a0a0e"/>
+            style={{ animation: 'needleSway 2.6s ease-in-out infinite', filter: `drop-shadow(0 0 4px ${needleShadow})` }}/>
+          <polygon className="compass-tail" points="36,62 33,36 36,41 39,36" fill={needleTail}/>
+          <circle className="compass-hub"      cx="36" cy="36" r="3.5" fill={dark ? '#fafafa' : '#1c1c1f'}/>
+          <circle className="compass-hub-core" cx="36" cy="36" r="1.5" />
         </g>
       </svg>
 
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#a1a1aa', letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 3 }}>
-          {label}
-        </div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: '#f4f4f5', fontFamily: 'monospace', letterSpacing: '0.04em' }}>
-          {cardinal ?? '\u2014'}
-        </div>
-        <div style={{ fontSize: 11, fontWeight: 500, color: '#a1a1aa', fontFamily: 'monospace', marginTop: 2 }}>
-          {rot}&deg;
-        </div>
+        <div className="compass-label">{label}</div>
+        <div className="compass-cardinal">{cardinal ?? '\u2014'}</div>
+        <div className="compass-deg">{rot}&deg;</div>
       </div>
     </div>
   );
@@ -755,7 +791,7 @@ function ConnectionBanner({ status, lastUpdated }) {
                   icon: '\u23F3', text: 'Refreshing data\u2026' },
     stale:      { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.25)', color: '#f59e0b',
                   icon: '\u26A0\uFE0F', text: 'Live feed degraded \u2014 showing last known data' },
-    offline:    { bg: 'rgba(239,68,68,0.07)', border: 'rgba(239,68,68,0.22)', color: '#f87171',
+    offline:    { bg: 'rgba(239,68,68,0.07)', border: 'rgba(239,68,68,0.22)', color: 'var(--destructive)',
                   icon: '\uD83D\uDCE1', text: 'Backend offline \u2014 cached snapshot shown' },
   };
   const cfg = configs[status] ?? configs.stale;
@@ -772,7 +808,7 @@ function ConnectionBanner({ status, lastUpdated }) {
           {cfg.text}
         </div>
         {lastUpdated && (
-          <div style={{ fontSize: 10, color: '#71717a', marginTop: 2 }}>
+          <div style={{ fontSize: 10, color: 'var(--muted-foreground)', marginTop: 2 }}>
             Last update: {fmt(lastUpdated)}
           </div>
         )}
@@ -791,10 +827,10 @@ function SimulationBanner({ onRevert, loading }) {
     }}>
       <span style={{ fontSize: 14, animation: 'livePulse 1.2s ease-in-out infinite' }}>&#x26A1;</span>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--destructive)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
           SIMULATED DATA ACTIVE
         </div>
-        <div style={{ fontSize: 10, color: '#a1a1aa', marginTop: 2 }}>
+        <div style={{ fontSize: 10, color: 'var(--muted-foreground)', marginTop: 2 }}>
           Emergency fallback \u2014 not real sensor readings
         </div>
       </div>
@@ -804,7 +840,7 @@ function SimulationBanner({ onRevert, loading }) {
         style={{
           padding: '4px 10px', borderRadius: 6,
           border: '1px solid rgba(239,68,68,0.35)',
-          background: 'rgba(239,68,68,0.12)', color: '#f87171',
+          background: 'rgba(239,68,68,0.12)', color: 'var(--destructive)',
           fontSize: 10, fontWeight: 700, cursor: loading ? 'wait' : 'pointer',
           fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase',
           opacity: loading ? 0.6 : 1,
@@ -836,11 +872,11 @@ export default function Screen4PollutionInvestigation() {
   const [cityContext, setCityContext] = useState(routeCity || 'Pune');
 
   useEffect(() => {
-    if (stationId && stationId !== currentStation) {
-      setCurrentStation(stationId);
+    if (stationId) {
+      setCurrentStation((prev) => (prev === stationId ? prev : stationId));
     }
-    if (routeCity && routeCity !== cityContext) {
-      setCityContext(routeCity);
+    if (routeCity) {
+      setCityContext((prev) => (prev === routeCity ? prev : routeCity));
     }
   }, [stationId, routeCity]);
 
@@ -1002,6 +1038,7 @@ export default function Screen4PollutionInvestigation() {
   const windDeg     = weather_snapshot?.wind_direction_deg ?? 0;
   const t           = I18N[activeLang] ?? I18N.en;
   const gt          = useLanguage().t;   // global dictionaries (trend card labels)
+  const themeMode   = useThemeMode();    // html.light/dark tracker (MutationObserver)
   const selSrc      = ranked_candidates?.find((s) => s?.id === activeSource) ?? null;
   const compassDeg  = selSrc?.weather_snapshot?.wind_direction_deg    ?? windDeg;
   const compassCard = selSrc?.weather_snapshot?.wind_direction_cardinal ?? weather_snapshot?.wind_direction_cardinal ?? '\u2014';
@@ -1268,6 +1305,18 @@ export default function Screen4PollutionInvestigation() {
     }
   }, [currentStation]);
 
+  // ── STATION SELECTION (single source of truth: the ROUTE) ──────────────────
+  // Clicking any map marker navigates to /investigate/:station?city=…
+  // — exactly what CityMap (Screen 2) does. One route → one resolvedStation →
+  // every panel, marker style, popup, label, the trend and Listen derive from
+  // it. No per-marker state, no duplicated selectedStation, no reload.
+  const handleStationSelect = useCallback((stationName) => {
+    if (!stationName) return;
+    navigate(
+      `/investigate/${encodeURIComponent(stationName)}?city=${encodeURIComponent(cityContext)}`,
+    );
+  }, [navigate, cityContext]);
+
   // ── RENDER ────────────────────────────────────────────────────────────────────
   return (
     <div className="aq-root">
@@ -1276,11 +1325,11 @@ export default function Screen4PollutionInvestigation() {
       {websocketAlert && (
         <div style={{
           position: 'fixed', top: '24px', right: '24px', zIndex: 9999,
-          width: '380px', background: 'rgba(15,10,10,0.92)',
+          width: '380px', background: 'var(--popover)',
           border: '1px solid rgba(239,68,68,0.3)', borderRadius: '16px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5), 0 0 20px rgba(239,68,68,0.15)',
+          boxShadow: '0 10px 30px var(--map-shadow), 0 0 20px rgba(239,68,68,0.15)',
           backdropFilter: 'blur(20px)', padding: '16px',
-          color: '#ffffff', fontFamily: 'Inter, sans-serif',
+          color: 'var(--foreground)', fontFamily: 'Inter, sans-serif',
           animation: 'slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -1291,14 +1340,14 @@ export default function Screen4PollutionInvestigation() {
               </span>
             </div>
             <button onClick={() => setWebsocketAlert(null)}
-              style={{ background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer', fontSize: '16px', padding: '0 4px', lineHeight: 1 }}
+              style={{ background: 'none', border: 'none', color: 'var(--muted-foreground)', cursor: 'pointer', fontSize: '16px', padding: '0 4px', lineHeight: 1 }}
             >&times;</button>
           </div>
 
-          <div style={{ fontSize: '14px', fontWeight: 700, color: '#f4f4f5', marginBottom: '4px' }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--foreground)', marginBottom: '4px' }}>
             &#x1F6A8; Spike detected at {websocketAlert.station}
           </div>
-          <div style={{ fontSize: '12px', color: '#a1a1aa', marginBottom: '12px', lineHeight: '1.4' }}>
+          <div style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginBottom: '12px', lineHeight: '1.4' }}>
             {activeLang === 'hi'
               ? '\u0935\u093E\u0938\u094D\u0924\u0935\u093F\u0915 \u0938\u092E\u092F \u0938\u0947\u0902\u0938\u0930 \u0928\u0947\u091F\u0935\u0930\u094D\u0915 \u0928\u0947 \u0905\u0932\u0930\u094D\u091F \u091F\u094D\u0930\u093F\u0917\u0930 \u0915\u093F\u092F\u093E'
               : activeLang === 'mr'
@@ -1323,7 +1372,7 @@ export default function Screen4PollutionInvestigation() {
               View Radar
             </button>
             <button onClick={() => setWebsocketAlert(null)}
-              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#d4d4d8', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--muted)', color: 'var(--foreground)', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'monospace', textTransform: 'uppercase' }}>
               Dismiss
             </button>
           </div>
@@ -1343,18 +1392,9 @@ export default function Screen4PollutionInvestigation() {
           <BrandMark />
           <button
             type="button"
+            className="station-back-btn"
             onClick={() => navigate(`/city/${encodeURIComponent(cityContext)}`)}
             title={`Back to ${cityContext} — City Intelligence`}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0,
-              background: 'rgba(8,8,10,0.85)', padding: '7px 14px', borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)',
-              cursor: 'pointer', color: '#d4d4d8', fontSize: 11, fontWeight: 700,
-              letterSpacing: '0.04em', fontFamily: "'Inter','Noto Sans Devanagari',sans-serif",
-              textTransform: 'uppercase', transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,146,60,0.4)'; e.currentTarget.style.color = '#fb923c'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#d4d4d8'; }}
           >
             <span aria-hidden="true" style={{ fontSize: 13, lineHeight: 1 }}>←</span>
             {/* Label is exactly "Back to {city}": renders "BACK TO MUMBAI" on
@@ -1378,9 +1418,15 @@ export default function Screen4PollutionInvestigation() {
           zoomControl={false}
           attributionControl={false}
         >
+          {/* Basemap follows the GLOBAL theme (NFR-083): light → standard OSM,
+              dark → darkened via CSS filter. key={themeMode} forces the tile
+              layer to remount when the theme flips (URL identical on purpose). */}
           <TileLayer
-            url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-            maxZoom={20}
+            key={themeMode}
+            url={TILES[themeMode].url}
+            attribution={TILES[themeMode].attribution}
+            className={TILES[themeMode].className}
+            maxZoom={TILES[themeMode].maxZoom}
           />
 
           <MapInstanceTracker setMapRef={setMapRef} />
@@ -1414,8 +1460,16 @@ export default function Screen4PollutionInvestigation() {
             );
           })}
 
-          {/* ── TRIGGER STATION MARKER ── */}
-          <Marker position={mapCenter} icon={createTriggerIcon(windDeg)}>
+          {/* ── TRIGGER STATION MARKER ──
+              Remounts per station (key) so the plume/tooltip reset cleanly and
+              the camera's flyTo re-anchors on station change. Also clickable —
+              clicking the selected station simply re-selects it. */}
+          <Marker
+            key={`trigger-${effectiveTriggerStation?.name ?? currentStation}`}
+            position={mapCenter}
+            icon={createTriggerIcon(windDeg)}
+            eventHandlers={{ click: () => handleStationSelect(effectiveTriggerStation?.name ?? currentStation) }}
+          >
             {/* Permanent station-name label so every marker is readable at a glance */}
             <Tooltip permanent direction="top" offset={[0, -36]} className="station-name-label trigger-label" opacity={1}>
               {effectiveTriggerStation?.name ?? currentStation}
@@ -1436,7 +1490,8 @@ export default function Screen4PollutionInvestigation() {
             </Popup>
           </Marker>
 
-          {/* ── YELLOW DOTS: non-trigger CPCB monitoring stations (task 2) ── */}
+          {/* ── YELLOW DOTS: non-trigger CPCB monitoring stations (task 2) ──
+              ALL clickable: click → route change → full screen update. */}
           {stationsData
             .filter(st => st.name !== (effectiveTriggerStation?.name ?? currentStation))
             .map(st => {
@@ -1446,6 +1501,8 @@ export default function Screen4PollutionInvestigation() {
                   key={`ydot-${st.name}`}
                   position={[st.coordinates[1], st.coordinates[0]]}
                   icon={createYellowDotIcon()}
+                  zIndexOffset={400}
+                  eventHandlers={{ click: () => handleStationSelect(st.name) }}
                 >
                   {/* Permanent station-name label (all non-trigger stations) */}
                   <Tooltip permanent direction="right" offset={[11, 0]} className="station-name-label" opacity={1}>
@@ -1455,8 +1512,8 @@ export default function Screen4PollutionInvestigation() {
                     <div className="popup-inner">
                       <div className="popup-station-name">{st.name}</div>
                       <div className="popup-yellow-aqi">
-                        CPCB CAAQMS &middot; {st.city ?? 'Pune'}<br/>
-                        {st.spike_aqi ? `AQI ${st.spike_aqi}` : 'Click station to load'}
+                        CPCB CAAQMS &middot; {st.city ?? cityContext}<br/>
+                        Click station to load
                       </div>
                     </div>
                   </Popup>
@@ -1499,12 +1556,11 @@ export default function Screen4PollutionInvestigation() {
             : connectionStatus === 'refreshing' ? (activeLang === 'hi' ? '\u0905\u092A\u0921\u0947\u091F...' : activeLang === 'mr' ? '\u0905\u092A\u0921\u0947\u091F...' : 'Refreshing\u2026')
             : connectionStatus === 'stale'    ? (activeLang === 'hi' ? '\u092A\u0941\u0930\u093E\u0928\u093E \u0921\u0947\u091F\u093E' : activeLang === 'mr' ? '\u091C\u0941\u0928\u093E \u0921\u0947\u091F\u093E' : 'Stale Data')
             : (activeLang === 'hi' ? '\u0911\u092B\u0932\u093E\u0907\u0928' : activeLang === 'mr' ? '\u0911\u092B\u0932\u093E\u0907\u0928' : 'Offline')}
-          </span>
-          {lastUpdated && connectionStatus === 'live' && (
-            <span style={{ fontSize: 9, color: '#71717a', fontFamily: 'monospace', marginLeft: 4 }}>
-              {fmt(lastUpdated)}
-            </span>
-          )}
+          </span>            {lastUpdated && connectionStatus === 'live' && (
+              <span style={{ fontSize: 9, color: 'var(--muted-foreground)', fontFamily: 'monospace', marginLeft: 4 }}>
+                {fmt(lastUpdated)}
+              </span>
+            )}
         </div>
 
         {/* ── MET STRIP ── */}
@@ -1607,7 +1663,7 @@ export default function Screen4PollutionInvestigation() {
             <ConnectionBanner status={connectionStatus} lastUpdated={lastUpdated} />
           )}
           {usingCachedFallback && !spikeActive && connectionStatus === 'live' && (
-            <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 10, padding: '8px 12px', fontSize: 11, color: '#f87171', fontWeight: 700 }}>
+            <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 10, padding: '8px 12px', fontSize: 11, color: 'var(--destructive)', fontWeight: 700 }}>
               &#x1F4E1; OFFLINE \u2014 cached snapshot
             </div>
           )}
@@ -1656,7 +1712,7 @@ export default function Screen4PollutionInvestigation() {
               <div
                 className="mt-4 p-4 border border-red-500/30 bg-red-950/20 rounded-xl space-y-3"
                 style={{
-                  background: 'rgba(69,10,10,0.22)',
+                  background: 'color-mix(in oklab, var(--destructive), transparent 90%)',
                   border: '1px solid rgba(239,68,68,0.3)',
                   borderRadius: 12,
                   padding: 14,
@@ -1682,7 +1738,7 @@ export default function Screen4PollutionInvestigation() {
                       fontWeight: 800,
                       textTransform: 'uppercase',
                       letterSpacing: '0.08em',
-                      color: '#f87171',
+                      color: 'var(--destructive)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 6,
@@ -1718,20 +1774,20 @@ export default function Screen4PollutionInvestigation() {
                     gap: 8,
                     fontSize: 11,
                     fontFamily: 'monospace',
-                    color: '#cbd5e1',
+                    color: 'var(--foreground)',
                     marginBottom: 10,
                   }}
                 >
                   <div>
-                    <span className="text-slate-500 block text-[10px] uppercase" style={{ color: '#64748b', display: 'block', fontSize: 9, textTransform: 'uppercase' }}>
+                    <span className="text-slate-500 block text-[10px] uppercase" style={{ color: 'var(--muted-foreground)', display: 'block', fontSize: 9, textTransform: 'uppercase' }}>
                       {activeLang === 'en' ? 'Enforcement Lead'
                       : activeLang === 'hi' ? '\u092A\u094D\u0930\u0935\u0930\u094D\u0924\u0928 \u092A\u094D\u0930\u092D\u093E\u0930\u0940'
                       : '\u0915\u093E\u0930\u094D\u092F\u0935\u093E\u0939\u0940 \u092A\u094D\u0930\u092E\u0941\u0916'}
                     </span>
-                    <span className="font-semibold" style={{ fontWeight: 700, color: '#f1f5f9' }}>{activeData?.actionable_intelligence?.squad_lead || (activeLang === 'en' ? "Officer In-Charge" : activeLang === 'hi' ? '\u0925\u093E\u0928\u0927\u094D\u092F\u0915\u094D\u0937 \u0905\u0927\u093F\u0915\u093E\u0930\u0940' : '\u0911\u092B\u093F\u0938\u0930 \u0932\u093E \u091C\u092C\u093E\u092C\u0926\u093E\u0930')}</span>
+                    <span className="font-semibold" style={{ fontWeight: 700, color: 'var(--foreground)' }}>{activeData?.actionable_intelligence?.squad_lead || (activeLang === 'en' ? "Officer In-Charge" : activeLang === 'hi' ? '\u0925\u093E\u0928\u0927\u094D\u092F\u0915\u094D\u0937 \u0905\u0927\u093F\u0915\u093E\u0930\u0940' : '\u0911\u092B\u093F\u0938\u0930 \u0932\u093E \u091C\u092C\u093E\u092C\u0926\u093E\u0930')}</span>
                   </div>
                   <div className="text-right" style={{ textAlign: 'right' }}>
-                    <span className="text-slate-500 block text-[10px] uppercase" style={{ color: '#64748b', display: 'block', fontSize: 9, textTransform: 'uppercase' }}>
+                    <span className="text-slate-500 block text-[10px] uppercase" style={{ color: 'var(--muted-foreground)', display: 'block', fontSize: 9, textTransform: 'uppercase' }}>
                       {activeLang === 'en' ? 'Response ETA'
                       : activeLang === 'hi' ? '\u092A\u094D\u0930\u0924\u093F\u0915\u094D\u0930\u093F\u092F\u093E \u0915\u093E \u0938\u092E\u092F'
                       : '\u092A\u094D\u0930\u0924\u093F\u0915\u094D\u0930\u093F\u092F\u0947\u091A\u093E \u0915\u093e\u0933'}
@@ -1740,8 +1796,8 @@ export default function Screen4PollutionInvestigation() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5 pt-1" style={{ paddingTop: 6, borderTop: '1px dashed rgba(255,255,255,0.06)' }}>
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wide" style={{ color: '#94a3b8', display: 'block', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                <div className="space-y-1.5 pt-1" style={{ paddingTop: 6, borderTop: '1px dashed var(--border)' }}>
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--muted-foreground)', display: 'block', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
                     {activeLang === 'en' ? 'Statutory Directives (Air Act 1981):'
                     : activeLang === 'hi' ? '\u0935\u0948\u0927\u0941\u0915 \u0928\u093F\u0930\u094D\u0926\u0947\u0936 (\u0935\u093e\u092f\u0941 \u0905\u0927\u093f\u0928\u093f\u092f\u092e 1981):'
                     : '\u0935\u0948\u0927\u093e\u0928\u0941\u0936\u0902\u0917\u093f\u0915 \u0928\u093f\u0930\u094d\u0926\u0947\u0936 (\u0939\u0935\u093e \u0915\u092f\u0926\u093e 1981):'}
@@ -1765,8 +1821,8 @@ export default function Screen4PollutionInvestigation() {
                       '\u0938\u094d\u0925\u0933\u093f\u0915 \u0924\u092a\u093e\u0938\u0923\u0940\u0938\u093e\u0920\u0940 PMC \u0935\u0949\u0930\u094d\u0921 \u092a\u0925\u0915 \u092a\u093e\u0920\u0935\u093e'
                     ]
                   ))?.map((action, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-xs text-slate-200" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 11, color: '#e2e8f0', marginBottom: 5 }}>
-                      <input type="checkbox" checked={false} readOnly className="mt-0.5 rounded border-slate-700 bg-slate-900 accent-red-500" style={{ marginTop: 2, cursor: 'pointer' }} />
+                    <div key={idx} className="flex items-start gap-2 text-xs text-slate-200" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 11, color: 'var(--foreground)', marginBottom: 5 }}>
+                      <input type="checkbox" checked={false} readOnly className="mt-0.5 rounded accent-red-500" style={{ marginTop: 2, cursor: 'pointer' }} />
                       <span style={{ lineHeight: 1.4 }}>{action}</span>
                     </div>
                   ))}
@@ -1791,7 +1847,7 @@ export default function Screen4PollutionInvestigation() {
               <div style={{ background: 'rgba(251,146,60,0.025)', border: '1px solid rgba(251,146,60,0.12)', borderRadius: 14, padding: 14, position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1.5px', background: 'linear-gradient(to right, #fb923c, transparent)' }}/>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#f4f4f5' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--foreground)' }}>
                     {translateSourceName(activeData.pre_alerts.source, activeLang)}
                   </div>
                   <div style={{ textAlign: 'right' }}>
@@ -1803,12 +1859,12 @@ export default function Screen4PollutionInvestigation() {
                     </div>
                   </div>
                 </div>
-                <p style={{ fontSize: 12, color: '#d4d4d8', lineHeight: 1.6, marginBottom: 10, fontWeight: 500 }}>
+                <p style={{ fontSize: 12, color: 'var(--foreground)', lineHeight: 1.6, marginBottom: 10, fontWeight: 500 }}>
                   {translatePreAlertAdvisory(activeData.pre_alerts.advisory, activeLang)}
                 </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.04)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--muted)', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)' }}>
                   <span style={{ fontSize: 12, animation: 'livePulse 1.5s ease-in-out infinite' }}>&#x23F1;</span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: '#a1a1aa' }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted-foreground)' }}>
                     {activeLang === 'en' ? 'Impact ETA: '
                     : activeLang === 'hi' ? '\u092A\u094D\u0930\u092D\u093E\u0935 \u0915\u093E \u0938\u092E\u092F: '
                     : '\u092A\u094D\u0930\u092D\u093E\u0935 \u0935\u0947\u0933: '}
@@ -1883,7 +1939,7 @@ export default function Screen4PollutionInvestigation() {
                 );
               })}
               {(!ranked_candidates || ranked_candidates.length === 0) && !loading && (
-                <div style={{ fontSize: 12, color: '#52525b', textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ fontSize: 12, color: 'var(--muted-foreground)', textAlign: 'center', padding: '20px 0' }}>
                   No sources attributed
                 </div>
               )}
@@ -1918,14 +1974,14 @@ function StationTrendCard({ points, range, onRangeChange, loading, isDemo, demoL
       animationDuration: 700,
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(12,12,16,0.95)',
-        borderColor: 'rgba(255,255,255,0.1)',
-        textStyle: { color: '#f4f4f5', fontSize: 12 },
+        backgroundColor: 'var(--popover)',
+        borderColor: 'var(--border)',
+        textStyle: { color: 'var(--foreground)', fontSize: 12 },
         formatter: (params) => {
           const item = params?.[0];
           if (!item) return '';
           return `<div style="font-family:monospace">
-            <div style="font-size:10px;color:#a1a1aa">${item.axisValue}</div>
+            <div style="font-size:10px;color:var(--muted-foreground)">${item.axisValue}</div>
             <div style="font-weight:700;color:#2dd4bf">AQI ${item.data}</div>
           </div>`;
         },
@@ -1935,15 +1991,15 @@ function StationTrendCard({ points, range, onRangeChange, loading, isDemo, demoL
         type: 'category',
         data: timestamps,
         boundaryGap: false,
-        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.12)' } },
+        axisLine: { lineStyle: { color: 'var(--border)' } },
         axisTick: { show: false },
-        axisLabel: { color: '#8b8f96', fontSize: 9, fontFamily: 'monospace' },
+        axisLabel: { color: 'var(--muted-foreground)', fontSize: 9, fontFamily: 'monospace' },
       },
       yAxis: {
         type: 'value',
         axisLine: { show: false },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.07)', type: 'dashed' } },
-        axisLabel: { color: '#8b8f96', fontSize: 9, fontFamily: 'monospace' },
+        splitLine: { lineStyle: { color: 'var(--border)', type: 'dashed', opacity: 0.5 } },
+        axisLabel: { color: 'var(--muted-foreground)', fontSize: 9, fontFamily: 'monospace' },
       },
       series: [{
         name: 'AQI',

@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react"
 import { dictionaries } from "@/lib/i18n/dictionaries"
 import { useLanguage } from "@/lib/i18n/language-provider"
 import { ListenControl } from "@/components/national-panel"
+import { useThemeMode } from "@/components/city/CityMap"
 
 // Language switcher button labels (same visual language as the old advisory switcher)
 const LANG_LABELS = { en: "EN", hi: "\u0939\u093F", mr: "\u092E" }
@@ -34,6 +35,10 @@ const CATEGORY_TO_SEVERITY = {
 export function StationInsightCard({ data, activeLang, onLangChange }) {
   const { t } = useLanguage()
   const navigate = useNavigate()
+  // Theme-reactive surfaces: read the GLOBAL html.light/dark state (same source
+  // as the navbar) instead of hardcoded dark-only rgba literals.
+  const themeMode = useThemeMode()
+  const light = themeMode === "light"
 
   const insight = useMemo(() => {
     const reading = data?.trigger_station?.reading
@@ -199,15 +204,15 @@ export function StationInsightCard({ data, activeLang, onLangChange }) {
     <section
       aria-label={S.insightLabel}
       style={{
-        background: "rgba(255,255,255,0.018)",
-        border: "1px solid rgba(255,255,255,0.055)",
+        background: "color-mix(in oklab, var(--card), transparent 55%)",
+        border: "1px solid var(--border)",
         borderRadius: 15,
         padding: 16,
         position: "relative",
         overflow: "hidden",
       }}
     >
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "1.5px", background: "linear-gradient(to right, rgba(239,68,68,0.4), transparent)" }} />
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "1.5px", background: light ? "linear-gradient(to right, rgba(220,38,38,0.55), transparent)" : "linear-gradient(to right, rgba(239,68,68,0.4), transparent)" }} />
 
       {/* Header row: section label + Listen BESIDE the title + language switcher */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
@@ -218,7 +223,7 @@ export function StationInsightCard({ data, activeLang, onLangChange }) {
           <ListenControl
             text={insight.summary}
             lang={activeLang}
-            disabled={!insight.summary || insight.summary === insight.labels.noData}
+            disabled={!insight.summary}
             className="listen-control"
             style={{ marginTop: 0 }}
           />
@@ -266,17 +271,17 @@ export function StationInsightCard({ data, activeLang, onLangChange }) {
             gap: 6,
             padding: "6px 14px",
             borderRadius: 10,
-            border: "1px solid rgba(45, 212, 191, 0.35)",
-            background: "rgba(45, 212, 191, 0.10)",
-            color: "#2dd4bf",
+            border: "1px solid color-mix(in oklab, var(--teal), transparent 65%)",
+            background: "color-mix(in oklab, var(--teal), transparent 90%)",
+            color: light ? "#0f766e" : "#2dd4bf",
             fontSize: 12,
             fontWeight: 700,
             cursor: "pointer",
             fontFamily: "'Inter','Noto Sans Devanagari',sans-serif",
             transition: "background 0.15s ease, border-color 0.15s ease",
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(45, 212, 191, 0.18)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(45, 212, 191, 0.10)"; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "color-mix(in oklab, var(--teal), transparent 80%)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "color-mix(in oklab, var(--teal), transparent 90%)"; }}
         >
           {S.askAi}
           <ArrowRight size={14} aria-hidden="true" />
@@ -287,10 +292,13 @@ export function StationInsightCard({ data, activeLang, onLangChange }) {
 }
 
 function Fact({ tag, value, tone = "default" }) {
+  const light = typeof document !== "undefined" && document.documentElement.classList.contains("light")
   const colors = {
-    default: { bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.08)", color: "#e4e4e7" },
-    critical: { bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.28)", color: "#f87171" },
-    warn: { bg: "rgba(251,191,36,0.10)", border: "rgba(251,191,36,0.25)", color: "#fbbf24" },
+    default: light
+      ? { bg: "rgba(0,0,0,0.04)", border: "rgba(0,0,0,0.12)", color: "#27272a" }
+      : { bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.08)", color: "#e4e4e7" },
+    critical: { bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.28)", color: light ? "#b91c1c" : "#f87171" },
+    warn: { bg: "rgba(251,191,36,0.10)", border: "rgba(251,191,36,0.25)", color: light ? "#a16207" : "#fbbf24" },
   }[tone]
   return (
     <span

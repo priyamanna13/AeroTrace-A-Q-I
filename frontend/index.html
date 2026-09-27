@@ -7,6 +7,20 @@
     <title>AeroTrace A(Q)I — Atmospheric Forensic Attribution & Environmental Intelligence</title>
     <meta name="description" content="AeroTrace A(Q)I — Trace the air. Understand the source. PJMT National Green Earth Challenge 2026." />
 
+    <!-- Restore the persisted GLOBAL theme BEFORE first paint (prevents flash +)
+         guarantees useThemeTransition's class-based initializer reads the right
+         value. 'aerotrace_theme' is written by useThemeTransition (Settings). -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('aerotrace_theme');
+          document.documentElement.classList.add(saved === 'light' ? 'light' : 'dark');
+        } catch (e) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+
     <!-- Google Fonts: Bodoni Moda (Display), Archivo (Sans), Noto Devanagari -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

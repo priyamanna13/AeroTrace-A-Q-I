@@ -1,9 +1,18 @@
 import React, { useRef, useEffect } from 'react';
 import * as echarts from 'echarts';
 
+function currentThemeMode() {
+  if (typeof document !== 'undefined' && document.documentElement.classList.contains('light')) {
+    return 'light';
+  }
+  return 'dark';
+}
+
 /**
  * Universal responsive ECharts wrapper component for AeroTrace A-Q-I.
- * Integrates directly with React lifecycle and dark obsidian theme.
+ * Integrates directly with React lifecycle and follows the GLOBAL light/dark
+ * theme (html.light) — the chart re-initializes when the theme flips so axis
+ * labels, tooltips and canvases never stay stuck in the previous theme.
  */
 export default function EChartsWrapper({
   option,
@@ -14,12 +23,22 @@ export default function EChartsWrapper({
 }) {
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
+  const [themeMode, setThemeMode] = React.useState(currentThemeMode);
+
+  // Track the global theme class so charts follow the app-wide theme switch.
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setThemeMode(currentThemeMode());
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!chartRef.current) return;
 
-    // Initialize ECharts instance with dark theme
-    const chart = echarts.init(chartRef.current, 'dark', {
+    // 'dark'/'light' are echarts' built-in base themes; our option supplies colors.
+    const chart = echarts.init(chartRef.current, themeMode, {
       renderer: 'canvas',
     });
     chartInstanceRef.current = chart;
@@ -39,12 +58,12 @@ export default function EChartsWrapper({
       chart.dispose();
       chartInstanceRef.current = null;
     };
-  }, []);
+  }, [themeMode]);
 
   useEffect(() => {
     if (!chartInstanceRef.current || !option) return;
     chartInstanceRef.current.setOption(option, true);
-  }, [option]);
+  }, [option, themeMode]);
 
   useEffect(() => {
     if (!chartInstanceRef.current) return;
