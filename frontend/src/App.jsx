@@ -11,8 +11,6 @@ import Screen2CityIntelligence from './screens/Screen2CityIntelligence';
 import Screen3StationIntelligence from './screens/Screen3StationIntelligence';
 import Screen4PollutionInvestigation from './screens/Screen4PollutionInvestigation';
 import Screen5Prediction from './screens/Screen5Prediction';
-import Screen6Intervention from './screens/Screen6Intervention';
-import Screen7Analytics from './screens/Screen7Analytics';
 import Screen8Alerts from './screens/Screen8Alerts';
 import Screen9AiAssistant from './screens/Screen9AiAssistant';
 import NotFoundScreen from './screens/NotFoundScreen';
@@ -48,12 +46,6 @@ export default function App() {
             <Route path="/prediction" element={<Screen5Prediction />} />
             <Route path="/prediction/:cityName" element={<Screen5Prediction />} />
             <Route path="/prediction/:cityName/:stationName" element={<Screen5Prediction />} />
-
-            {/* Screen 6: Impact & Policy Intervention */}
-            <Route path="/intervention" element={<Screen6Intervention />} />
-
-            {/* Screen 7: Analytics & Trends (Phase 3 Anish/Priya) */}
-            <Route path="/analytics" element={<Screen7Analytics />} />
 
             {/* Screen 8: Alerts Feed — city via params */}
             <Route path="/alerts" element={<Screen8Alerts />} />

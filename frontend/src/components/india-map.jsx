@@ -1,6 +1,6 @@
 import React from "react"
 import { ArrowLeft, ArrowRight } from "lucide-react"
-import { CITIES, SEVERITY_BANDS, severityColor, severityFor } from "@/lib/aqi"
+import { SEVERITY_BANDS, severityColor, severityFor } from "@/lib/aqi"
 import { useLanguage } from "@/lib/i18n/language-provider"
 import { cn } from "@/lib/utils"
 
@@ -13,6 +13,9 @@ export function IndiaMap({
   geometry,
   selectedCity,
   hoveredCity,
+  cityAqis = [],
+  dataStatus = "loading",
+  onRetry,
   onHover,
   onSelect,
   onReset,
@@ -25,7 +28,8 @@ export function IndiaMap({
   const zoomTransform = focus
     ? `translate(${width / 2 - ZOOM * focus.x}px, ${height / 2 - ZOOM * focus.y}px) scale(${ZOOM})`
     : "translate(0px, 0px) scale(1)"
-  const selected = CITIES.find((city) => city.id === selectedCity)
+  // Live AQI feed (shared useNationalAqi instance) — one entry per monitored city.
+  const selected = cityAqis.find((city) => city.id === selectedCity)
 
   return (
     <div className="relative size-full overflow-hidden bg-[var(--map-water)]">
@@ -64,7 +68,7 @@ export function IndiaMap({
         >
           {geography}
 
-          {CITIES.map((city) => {
+          {cityAqis.map((city) => {
             const point = positions[city.id]
             if (!point) return null
             const severity = severityFor(city.aqi)
@@ -82,7 +86,7 @@ export function IndiaMap({
                   role="button"
                   tabIndex={0}
                   aria-pressed={isActive}
-                  aria-label={t.map.cityAria(name, city.aqi, t.severity[severity])}
+                  aria-label={t.map.cityAria(name, city.aqi ?? "—", t.severity[severity])}
                   onMouseEnter={() => onHover(city.id)}
                   onMouseLeave={() => onHover(null)}
                   onFocus={() => onHover(city.id)}
@@ -119,7 +123,7 @@ export function IndiaMap({
                       {name}
                     </tspan>
                     <tspan x={right ? 20 : -20} dy={19} fontSize={13} fontWeight={600} className="font-mono" style={{ fill: color }}>
-                      AQI {city.aqi}
+                      AQI {city.aqi ?? "—"}
                     </tspan>
                   </text>
                 </g>
@@ -140,6 +144,21 @@ export function IndiaMap({
         <p className="text-muted-foreground">{t.map.nextInFlow}</p>
       </div>
 
+      {dataStatus === "error" && (
+        <div className="absolute inset-x-0 top-1/2 z-20 flex -translate-y-1/2 justify-center px-4">
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card/95 px-6 py-5 text-center shadow-xl backdrop-blur">
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-destructive">{t.liveError}</p>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="rounded-full border border-border px-4 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {t.retry}
+            </button>
+          </div>
+        </div>
+      )}
+
       {selected && (
         <div className="absolute bottom-16 left-4 right-4 z-10 flex flex-col gap-4 rounded-2xl border border-border bg-card/95 p-5 shadow-xl backdrop-blur animate-in fade-in slide-in-from-bottom-4 duration-500 sm:right-auto sm:w-80 lg:left-8">
           <div className="flex items-start justify-between gap-4">
@@ -148,7 +167,7 @@ export function IndiaMap({
               <h2 className="heading-primary text-3xl leading-tight">{t.cities[selected.id]}</h2>
             </div>
             <div className="text-right">
-              <p className="font-display text-4xl font-bold leading-none tabular-nums">{selected.aqi}</p>
+              <p className="font-display text-4xl font-bold leading-none tabular-nums">{selected.aqi ?? "—"}</p>
               <p className="mt-1 text-sm font-semibold" style={{ color: severityColor(severityFor(selected.aqi)) }}>
                 {t.severity[severityFor(selected.aqi)]}
               </p>

@@ -341,7 +341,11 @@ export default function Screen0Landing() {
         for (let x = 0; x <= lon; x++) {
           const longitude = x / lon;
           const phi = longitude * Math.PI * 2 - Math.PI;
-          pos.push(sinT * Math.cos(phi), cosT, sinT * Math.sin(phi));
+          // Geographic (non-mirrored) equirectangular mapping, matching three.js
+          // SphereGeometry handedness: negated sin(phi) keeps east RIGHT when the
+          // camera looks down −Z. The previous +sinT*sin(phi) mirrored the globe
+          // east/west, which placed Arabia east of India.
+          pos.push(sinT * Math.cos(phi), cosT, -sinT * Math.sin(phi));
           uvs.push(longitude, 1 - latitude);
         }
       }
@@ -486,11 +490,19 @@ export default function Screen0Landing() {
     const light    = [0.48, 0.56, 0.82];
     const indiaLat = 22.5 * Math.PI / 180;
     const indiaLon = 78.5 * Math.PI / 180;
+    // Geographic position of the pin, matching the CORRECTED (non-mirrored)
+    // sphere mapping: vertex(longitude λ) = (cosλ·sinθ, cosθ, −sinλ·sinθ).
+    // The previous +sin(lon) z-component belonged to the mirrored mapping.
     let canvasWidth = typeof window !== 'undefined' ? window.innerWidth : 1440;
     let canvasHeight = typeof window !== 'undefined' ? window.innerHeight : 900;
     let projection = perspective(42 * Math.PI / 180, canvasWidth / Math.max(canvasHeight, 1), 0.1, 100);
     const baseTilt = 0.28;
-    let targetRotation  = -0.68;
+    // Rotation base for the CORRECTED sphere: India's texture vertex sits at
+    // (0.184, 0.383, −0.905) at rotation 0, so the old mirrored-era −0.68 would
+    // rotate it to the far side. +2.863 rad (164°) puts India at the same
+    // front-left composition spot (−0.43, 0.38, +0.82) the design expects.
+    const BASE_ROTATION = 2.863;
+    let targetRotation  = BASE_ROTATION;
     let currentRotation = targetRotation;
     let targetTilt  = baseTilt;
     let currentTilt = targetTilt;
@@ -506,8 +518,11 @@ export default function Screen0Landing() {
       const rotX = cos * point[0] + sin * point[2];
       const rotZ = -sin * point[0] + cos * point[2];
       const tC = Math.cos(tilt), tS = Math.sin(tilt);
-      const tiltY = tC * point[1] - tS * rotZ;
-      const tiltZ = tS * point[1] + tC * rotZ;
+      // Match the vertex shader's rotateX exactly (y'' = c*y + s*z, z'' = -s*y + c*z).
+      // The previous negated signs made the pin diverge pole-ward from the
+      // rendered texture point it is supposed to sit on.
+      const tiltY = tC * point[1] + tS * rotZ;
+      const tiltZ = -tS * point[1] + tC * rotZ;
       const wX = model[0]*rotX + model[4]*tiltY + model[8]*tiltZ + model[12];
       const wY = model[1]*rotX + model[5]*tiltY + model[9]*tiltZ + model[13];
       const wZ = model[2]*rotX + model[6]*tiltY + model[10]*tiltZ + model[14];
@@ -574,7 +589,9 @@ export default function Screen0Landing() {
       const indiaPoint = [
         Math.cos(indiaLat) * Math.cos(indiaLon),
         Math.sin(indiaLat),
-        Math.cos(indiaLat) * Math.sin(indiaLon),
+        // Negated to match the CORRECTED non-mirrored sphere mapping:
+        // vertex(longitude λ) = (cosλ·sinθ, cosθ, −sinλ·sinθ).
+        -Math.cos(indiaLat) * Math.sin(indiaLon),
       ];
       const pp = projectPoint(indiaPoint, model, currentRotation, currentTilt);
       const pinEl = getPinEl();
@@ -666,7 +683,7 @@ export default function Screen0Landing() {
         targetTilt = Math.max(0.12, Math.min(0.42, targetTilt + (e.clientY - lastPY) * 0.0012));
         lastPX = e.clientX; lastPY = e.clientY;
       } else if (e.pointerType === 'mouse') {
-        targetRotation = -0.68 + (e.clientX / window.innerWidth - 0.5) * 0.12;
+        targetRotation = BASE_ROTATION + (e.clientX / window.innerWidth - 0.5) * 0.12;
         targetTilt = baseTilt + (e.clientY / window.innerHeight - 0.5) * -0.08;
       }
     };

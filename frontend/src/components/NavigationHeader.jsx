@@ -17,8 +17,6 @@ export default function NavigationHeader() {
   // Extended analytics and intelligence modules
   const moduleLinks = [
     { to: '/prediction', label: t('nav.prediction') },
-    { to: '/intervention', label: t('nav.intervention') },
-    { to: '/analytics', label: t('nav.analytics') },
     { to: '/alerts', label: t('nav.alerts') },
     { to: '/ai', label: t('nav.ai'), ai: true },
   ];
