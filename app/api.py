@@ -26,10 +26,14 @@ from zoneinfo import ZoneInfo
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Path, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Path, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from .cache import ScaledRouteCache, get_route_cache
 from .config import get_settings, load_city_config
 from .demo_scenarios import get_scenario, list_scenario_names
 
@@ -97,21 +101,72 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# ─── GLOBAL ROUTE CACHE ──────────────────────────────────────────────────────
-# Stores (payload, timestamp) tuples. Attribution entries expire after 30 s so
-# wet-scavenging logic is re-evaluated when weather or spike conditions change.
+# ─── SCALED MULTI-CITY ROUTE CACHE (Phase 6 Hardening) ──────────────────────
+# Bounded (512 max items), thread-safe, 30s TTL in-memory cache for attribution
+# and meteorological route-level calculations across all 28 physical stations.
 import time as _time
-GLOBAL_ROUTE_CACHE: dict[str, dict] = {}
-_CACHE_TIMESTAMPS: dict[str, float] = {}
+_SERVER_START_TIME: float = _time.time()
 _ATTRIBUTION_TTL_S: float = 30.0   # seconds before an attribution entry expires
 
-# ─── Station → default category mapping (static, evaluated once) ─────────────
+route_cache: ScaledRouteCache = get_route_cache()
+
+
+class _RouteCacheCompat(dict):
+    """Backwards-compatible dict interface proxying to ScaledRouteCache."""
+
+    def get(self, key, default=None):
+        val = route_cache.get(key)
+        return val if val is not None else default
+
+    def __getitem__(self, key):
+        val = route_cache.get(key)
+        if val is None:
+            raise KeyError(key)
+        return val
+
+    def __setitem__(self, key, value):
+        route_cache.set(key, value, ttl_seconds=_ATTRIBUTION_TTL_S)
+
+    def pop(self, key, default=None):
+        val = route_cache.get(key)
+        route_cache.invalidate(key)
+        return val if val is not None else default
+
+    def clear(self):
+        route_cache.clear()
+
+    def __contains__(self, key):
+        return route_cache.get(key) is not None
+
+    def __len__(self):
+        return len(route_cache)
+
+
+GLOBAL_ROUTE_CACHE: _RouteCacheCompat = _RouteCacheCompat()
+_CACHE_TIMESTAMPS: dict[str, float] = {}
+
+# ─── Station → default category mapping ───────────────────────────────────────
 _STATION_CATEGORY = {
     "Shivajinagar": "Construction",
     "Swargate":     "Traffic",
     "Hadapsar":     "Industrial",
     "Kothrud":      "Ambiguity",
 }
+
+
+def _get_default_category(station_name: str) -> str:
+    """Resolve default UI category tab for any of the 28 physical stations."""
+    if station_name in _STATION_CATEGORY:
+        return _STATION_CATEGORY[station_name]
+    try:
+        sc = get_scenario(station_name, fallback=True)
+        if sc.candidates:
+            top_src = sc.candidates[0].source_type.title()
+            if top_src in ("Construction", "Traffic", "Industrial"):
+                return top_src
+    except Exception:
+        pass
+    return "Construction"
 
 # ─── Station → lat/lon + WAQI station slugs ───────────────────────────────────
 _STATION_COORDS: dict[str, tuple[float, float]] = {
@@ -447,6 +502,78 @@ from .ai_router import router as ai_router
 app.include_router(ai_router)
 
 
+# ─── SECURITY HEADERS MIDDLEWARE (Phase 6 Hardening) ─────────────────────────
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
+
+# ─── GLOBAL PRODUCTION EXCEPTION HANDLERS (Phase 6 Sanitization) ────────────
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    now_iso = datetime.now(timezone.utc).isoformat()
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "status": "error",
+            "status_code": exc.status_code,
+            "detail": exc.detail,
+            "path": request.url.path,
+            "timestamp": now_iso,
+        },
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    now_iso = datetime.now(timezone.utc).isoformat()
+    formatted_errors = []
+    for err in exc.errors():
+        loc = " -> ".join(str(l) for l in err.get("loc", []))
+        msg = err.get("msg", "Validation error")
+        formatted_errors.append(f"{loc}: {msg}" if loc else msg)
+
+    return JSONResponse(
+        status_code=422,
+        content={
+            "status": "error",
+            "status_code": 422,
+            "detail": "; ".join(formatted_errors) if formatted_errors else "Validation failed",
+            "errors": exc.errors(),
+            "path": request.url.path,
+            "timestamp": now_iso,
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    error_id = str(uuid.uuid4())
+    log.exception(
+        "Unhandled server exception [error_id=%s] on %s: %s",
+        error_id,
+        request.url.path,
+        exc,
+    )
+    now_iso = datetime.now(timezone.utc).isoformat()
+    return JSONResponse(
+        status_code=500,
+        content={
+            "status": "error",
+            "status_code": 500,
+            "detail": "An internal server error occurred. Please contact system administrator.",
+            "error_id": error_id,
+            "path": request.url.path,
+            "timestamp": now_iso,
+        },
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Health & Observability
 # --------------------------------------------------------------------------- #
@@ -455,10 +582,19 @@ def health():
     """Observability & health endpoint for AeroTrace NGEC 2026."""
     from .cities import list_available_cities
     cities = list_available_cities()
+    from .demo_scenarios import list_scenario_names
+    all_stations = list_scenario_names()
 
     db_connected = False
     has_postgis = False
     db_error_msg = None
+    db_engine = "unknown"
+
+    settings = get_settings()
+    if settings.is_sqlite:
+        db_engine = "sqlite"
+    elif "postgres" in settings.database_url:
+        db_engine = "postgresql"
 
     try:
         from .db import get_session
@@ -473,22 +609,37 @@ def health():
             except Exception:
                 has_postgis = False
     except Exception as exc:
-        db_error_msg = str(exc)
+        # Sanitize database error: strictly prevent connection URI / credential leakage
+        db_error_msg = "Database connection failed"
+        log.warning("Database health check error: %s", exc)
+
+    cache_metrics = route_cache.get_metrics()
+    uptime_s = round(_time.time() - _SERVER_START_TIME, 1)
 
     return {
-        "status": "ok",
+        "status": "ok" if db_connected or settings.is_sqlite else "degraded",
         "service": "AeroTrace Environmental Intelligence API",
         "version": "3.1.0",
         "pipeline_version": "3.1.0",
+        "environment": "production" if not settings.is_sqlite else "development",
+        "uptime_seconds": uptime_s,
         "database": {
             "connected": db_connected,
             "postgis_enabled": has_postgis,
+            "engine": db_engine,
             "error": db_error_msg,
         },
         "multi_city": {
             "configured_count": len(cities),
+            "total_physical_stations": len(all_stations),
             "cities": cities,
         },
+        "weather_adapter": {
+            "provider": "Open-Meteo",
+            "cache_ttl_seconds": 30.0,
+            "active": True,
+        },
+        "attribution_cache": cache_metrics,
         "cadence": {
             "application_refresh_seconds": 30,
             "staleness_threshold_minutes": 60,
@@ -1087,12 +1238,13 @@ def get_attribution(
     pipeline evaluation (wet-scavenging, OSM discovery, etc.).
     """
     # ── CACHE GATE: absolute first operation — zero processing on hit ────
-    cache_key = f"{station_name}_{active_category_tab or _STATION_CATEGORY.get(station_name, 'Construction')}"
-    now = _time.monotonic()
+    default_cat = _get_default_category(station_name)
+    category_tab = active_category_tab or default_cat
+    cache_key = f"{station_name}_{category_tab}"
 
     if not live:
-        cached = GLOBAL_ROUTE_CACHE.get(cache_key)
-        if cached is not None and (now - _CACHE_TIMESTAMPS.get(cache_key, 0)) < _ATTRIBUTION_TTL_S:
+        cached = route_cache.get(cache_key)
+        if cached is not None:
             return cached
 
     # ── Cache miss / TTL expiry / live override: run full pipeline ───────
@@ -1192,8 +1344,13 @@ def get_attribution(
     # Strip internal-only fields before caching
     res.pop("reading", None)
 
-    GLOBAL_ROUTE_CACHE[cache_key] = res
-    _CACHE_TIMESTAMPS[cache_key] = now
+    route_cache.set(
+        cache_key,
+        res,
+        ttl_seconds=_ATTRIBUTION_TTL_S,
+        station_name=station_name,
+        category=category_tab,
+    )
     return res
 
 
@@ -1594,9 +1751,7 @@ async def trigger_spike(
     reading = res.pop("reading", None)
 
     # ── Bust the attribution cache for this station so the next GET ──────
-    bust_key = f"{station_name}_{_STATION_CATEGORY.get(station_name, 'Construction')}"
-    GLOBAL_ROUTE_CACHE.pop(bust_key, None)
-    _CACHE_TIMESTAMPS.pop(bust_key, None)
+    route_cache.invalidate_station(station_name)
 
     # Attach simulation metadata
     res["simulation"] = True
