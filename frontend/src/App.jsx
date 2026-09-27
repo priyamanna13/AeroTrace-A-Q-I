@@ -59,6 +59,7 @@ export default function App() {
 
             {/* Screen 9: AI Environmental Intelligence (Phase 5 Anish) */}
             <Route path="/ai" element={<Screen9AiAssistant />} />
+            <Route path="/ai/:cityName" element={<Screen9AiAssistant />} />
 
             {/* 404 Not Found Catch-All */}
             <Route path="*" element={<NotFoundScreen />} />

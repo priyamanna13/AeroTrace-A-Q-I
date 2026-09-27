@@ -40,7 +40,7 @@ export function CitySelector({ cityId, onChange }) {
         onClick={() => setOpen((value) => !value)}
         className="group flex items-center gap-3 rounded-xl border border-border bg-card/70 px-4 py-2.5 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
-        <span className="font-display text-2xl font-bold leading-none tracking-tight md:text-3xl">
+        <span className="heading-primary text-2xl leading-none md:text-3xl">
           {t.cities[active.id]}
         </span>
         <span

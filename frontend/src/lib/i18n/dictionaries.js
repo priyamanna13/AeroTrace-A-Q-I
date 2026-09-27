@@ -202,6 +202,70 @@ export const dictionaries = {
       historyEmpty: "No alert history available for this city.",
       sev: { critical: "Critical", high: "High", moderate: "Moderate" },
     },
+    aiScreen: {
+      title: "AI",
+      description: "Ask AeroTrace A(Q)I about air quality, pollution sources, stations, trends, alerts, and what the data means.",
+      liveChip: "LIVE DATA",
+      contextLabel: "Context",
+      cityLabel: "City",
+      stationLabel: "Station",
+      change: "Change",
+      workspaceLabel: "Conversation",
+      aiTag: "AI",
+      emptyTitle: "AeroTrace AI",
+      emptyLine1: "Ask questions about the air around you.",
+      emptyLine2: "Understand what's happening, where it's happening, and why.",
+      starterHeading: "What would you like to know?",
+      starters: [
+        "Why is AQI high?",
+        "What is driving PM2.5?",
+        "Is it getting worse?",
+      ],
+      inputPlaceholder: "Ask about this city's air quality…",
+      inputAria: "Ask the AI assistant",
+      send: "Send",
+      micAria: "Voice input",
+      micUnavailable: "Voice input is not supported in this browser",
+      micListening: "Listening…",
+      quickActions: ["Explain AQI", "Explain PM2.5", "Compare stations", "Forecast"],
+      quickQuestions: [
+        "Explain the current AQI.",
+        "What is driving PM2.5 right now?",
+        "Compare stations in this city.",
+        "What is the forecast?",
+      ],
+      loading: "Analyzing current station data…",
+      dataUnavailable: "DATA UNAVAILABLE",
+      unavailable: () =>
+        "I couldn't retrieve the required station data for this question. Try selecting another station or asking about currently available data.",
+      provObserved: "OBSERVED DATA",
+      provDerived: "DERIVED ANALYSIS",
+      provPrediction: "PREDICTION — DEMO FORECAST",
+      provNoteObserved: "Grounded on live CPCB station readings.",
+      provNoteDerived: "Analysis derived from observed station values.",
+      provNotePrediction: "Based on the labeled demo forecast — not a confirmed forecast.",
+      listen: "Listen",
+      answers: {
+        current: (d) =>
+          `Current AQI at ${d.station}, ${d.city} is ${d.aqi} (${d.category}), primarily driven by elevated ${d.pollutant} levels. PM2.5 stands at ${d.pm25} µg/m³ across ${d.count} monitored stations.`,
+        driver: (d) =>
+          `${d.pollutant} is currently the dominant contributor at ${d.station}. PM2.5 is ${d.pm25} µg/m³ and PM10 is ${d.pm10} µg/m³; with the current dispersion conditions this sustains the observed AQI of ${d.aqi} (${d.category}).`,
+        areas: (d) =>
+          `Across ${d.count} monitored stations in ${d.city}, the highest reading is ${d.worstName} at AQI ${d.worstAqi} (${d.worstCategory}); the cleanest is ${d.bestName} at AQI ${d.bestAqi}. Exposure is highest around ${d.worstName} and nearby dense zones.`,
+        compare: (d) =>
+          `Station comparison for ${d.city}: ${d.list}. ${d.worstName} currently records the poorest air (AQI ${d.worstAqi}), roughly ${Math.max(1, Math.round(d.worstAqi / Math.max(1, d.bestAqi) * 10) / 10)}× ${d.bestName}.`,
+        trendRise: (d) =>
+          `Conditions at ${d.station} are expected to worsen: the demo forecast trends toward AQI ${d.forecastAqi} with a peak near ${d.peakValue} around ${d.peakTime}. This is a model indication, not a certainty.`,
+        trendFall: (d) =>
+          `Conditions at ${d.station} are expected to ease: the demo forecast trends toward AQI ${d.forecastAqi} with a peak near ${d.peakValue} around ${d.peakTime}. This is a model indication, not a certainty.`,
+        trendFlat: (d) =>
+          `Conditions at ${d.station} are expected to hold near AQI ${d.forecastAqi}, peaking around ${d.peakValue} at ${d.peakTime}. This is a model indication, not a certainty.`,
+        forecast: (d) =>
+          `The ${d.city} demo forecast points to AQI ${d.forecastAqi} at ${d.station}, peaking near ${d.peakValue} around ${d.peakTime}. Treat this as a model estimate — the current observed AQI is ${d.aqi}.`,
+        fallback: (d) =>
+          `Here is what current data shows for ${d.station}, ${d.city}: AQI ${d.aqi} (${d.category}), dominant pollutant ${d.pollutant}, PM2.5 at ${d.pm25} µg/m³. Ask about drivers, affected areas, trends, or the forecast for a deeper look.`,
+      },
+    },
   },
   hi: {
     languageName: "हिन्दी",
@@ -398,6 +462,70 @@ export const dictionaries = {
       historyEmpty: "इस शहर के लिए अलर्ट इतिहास उपलब्ध नहीं है।",
       sev: { critical: "गंभीर", high: "उच्च", moderate: "मध्यम" },
     },
+    aiScreen: {
+      title: "एआई",
+      description: "AeroTrace A(Q)I से वायु गुणवत्ता, प्रदूषण स्रोतों, स्टेशनों, रुझान, अलर्ट और डेटा के अर्थ के बारे में पूछें।",
+      liveChip: "लाइव डेटा",
+      contextLabel: "संदर्भ",
+      cityLabel: "शहर",
+      stationLabel: "स्टेशन",
+      change: "बदलें",
+      workspaceLabel: "बातचीत",
+      aiTag: "एआई",
+      emptyTitle: "AeroTrace AI",
+      emptyLine1: "अपने आस-पास की हवा के बारे में पूछें।",
+      emptyLine2: "समझें क्या हो रहा है, कहाँ हो रहा है, और क्यों।",
+      starterHeading: "आप क्या जानना चाहेंगे?",
+      starters: [
+        "AQI अभी ऊँचा क्यों है?",
+        "PM2.5 क्या बढ़ा रहा है?",
+        "क्या यह और बिगड़ेगा?",
+      ],
+      inputPlaceholder: "इस शहर की वायु गुणवत्ता के बारे में पूछें…",
+      inputAria: "एआई सहायक से पूछें",
+      send: "भेजें",
+      micAria: "वॉइस इनपुट",
+      micUnavailable: "वॉइस इनपुट इस ब्राउज़र में समर्थित नहीं है",
+      micListening: "सुन रहा है…",
+      quickActions: ["AQI समझाएँ", "PM2.5 समझाएँ", "स्टेशन तुलना", "पूर्वानुमान"],
+      quickQuestions: [
+        "वर्तमान AQI समझाइए।",
+        "PM2.5 अभी क्या बढ़ा रहा है?",
+        "इस शहर के स्टेशनों की तुलना कीजिए।",
+        "पूर्वानुमान क्या है?",
+      ],
+      loading: "वर्तमान स्टेशन डेटा का विश्लेषण…",
+      dataUnavailable: "डेटा उपलब्ध नहीं",
+      unavailable: () =>
+        "इस प्रश्न के लिए आवश्यक स्टेशन डेटा प्राप्त नहीं हो सका। कोई दूसरा स्टेशन चुनें या उपलब्ध डेटा के बारे में पूछें।",
+      provObserved: "प्रेक्षित डेटा",
+      provDerived: "व्युत्पन्न विश्लेषण",
+      provPrediction: "पूर्वानुमान — डेमो",
+      provNoteObserved: "लाइव CPCB स्टेशन रीडिंग पर आधारित।",
+      provNoteDerived: "प्रेक्षित स्टेशन मानों से प्राप्त विश्लेषण।",
+      provNotePrediction: "लेबल किए गए डेमो पूर्वानुमान पर आधारित — पक्का पूर्वानुमान नहीं।",
+      listen: "सुनें",
+      answers: {
+        current: (d) =>
+          `${d.city} के ${d.station} पर वर्तमान AQI ${d.aqi} (${d.category}) है, जो मुख्य रूप से बढ़े हुए ${d.pollutant} स्तर से संचालित है। PM2.5 ${d.pm25} µg/m³ है, ${d.count} स्टेशनों की निगरानी हो रही है।`,
+        driver: (d) =>
+          `${d.station} पर इस समय ${d.pollutant} मुख्य योगदानकर्ता है। PM2.5 ${d.pm25} µg/m³ और PM10 ${d.pm10} µg/m³ है; वर्तमान फैलाव स्थितियों में यह प्रेक्षित AQI ${d.aqi} (${d.category}) बनाए हुए है।`,
+        areas: (d) =>
+          `${d.city} के ${d.count} निगरानी वाले स्टेशनों में सबसे ऊँची रीडिंग ${d.worstName} की AQI ${d.worstAqi} (${d.worstCategory}) है; सबसे साफ़ ${d.bestName} है, AQI ${d.bestAqi}। ${d.worstName} और आस-पास के घने इलाकों में संपर्क सबसे अधिक है।`,
+        compare: (d) =>
+          `${d.city} की स्टेशन तुलना: ${d.list}। ${d.worstName} में अभी सबसे खराब हवा (AQI ${d.worstAqi}) है, लगभग ${Math.max(1, Math.round(d.worstAqi / Math.max(1, d.bestAqi) * 10) / 10)}× ${d.bestName} के बराबर।`,
+        trendRise: (d) =>
+          `${d.station} की स्थिति बिगड़ने की संभावना: डेमो पूर्वानुमान AQI ${d.forecastAqi} की ओर है, ${d.peakTime} के आस-पास चरम ${d.peakValue} के नज़दीक। यह मॉडल संकेत है, निश्चितता नहीं।`,
+        trendFall: (d) =>
+          `${d.station} की स्थिति सुधरने की संभावना: डेमो पूर्वानुमान AQI ${d.forecastAqi} की ओर है, ${d.peakTime} के आस-पास चरम ${d.peakValue} के नज़दीक। यह मॉडल संकेत है, निश्चितता नहीं।`,
+        trendFlat: (d) =>
+          `${d.station} की स्थिति AQI ${d.forecastAqi} के आस-पास बनी रह सकती है, ${d.peakTime} के आस-पास चरम ${d.peakValue} के नज़दीक। यह मॉडल संकेत है, निश्चितता नहीं।`,
+        forecast: (d) =>
+          `${d.city} का डेमो पूर्वानुमान ${d.station} पर AQI ${d.forecastAqi} दिखाता है, चरम ${d.peakTime} के आस-पास ${d.peakValue} के नज़दीक। इसे मॉडल अनुमान मानें — वर्तमान प्रेक्षित AQI ${d.aqi} है।`,
+        fallback: (d) =>
+          `${d.city} के ${d.station} का वर्तमान डेटा: AQI ${d.aqi} (${d.category}), प्रमुख प्रदूषक ${d.pollutant}, PM2.5 ${d.pm25} µg/m³। गहराई के लिए कारणों, प्रभावित इलाकों, रुझान या पूर्वानुमान के बारे में पूछें।`,
+      },
+    },
   },
   mr: {
     languageName: "मराठी",
@@ -593,6 +721,70 @@ export const dictionaries = {
       loadMore: "अधिक पहा",
       historyEmpty: "या शहरासाठी अलर्ट इतिहास उपलब्ध नाही.",
       sev: { critical: "गंभीर", high: "उच्च", moderate: "मध्यम" },
+    },
+    aiScreen: {
+      title: "एआय",
+      description: "AeroTrace A(Q)I ला हवा-गुणवत्ता, प्रदूषण स्रोत, स्थानके, ट्रेंड, अलर्ट आणि डेटाचा अर्थ याविषयी विचारा.",
+      liveChip: "थेट डेटा",
+      contextLabel: "संदर्भ",
+      cityLabel: "शहर",
+      stationLabel: "स्थानक",
+      change: "बदला",
+      workspaceLabel: "संवाद",
+      aiTag: "एआय",
+      emptyTitle: "AeroTrace AI",
+      emptyLine1: "तुमच्या आजूबाजूच्या हवेविषयी विचारा.",
+      emptyLine2: "काय घडतंय, कुठे घडतंय आणि का, हे समजून घ्या.",
+      starterHeading: "तुम्हाला काय जाणून घ्यायचं आहे?",
+      starters: [
+        "AQI सध्या जास्त का आहे?",
+        "PM2.5 कशामुळे वाढतंय?",
+        "अजून बिघडेल का?",
+      ],
+      inputPlaceholder: "या शहराच्या हवा-गुणवत्तेविषयी विचारा…",
+      inputAria: "एआय सहाय्यकास विचारा",
+      send: "पाठवा",
+      micAria: "व्हॉइस इनपुट",
+      micUnavailable: "या ब्राउझरमध्ये व्हॉइस इनपुट समर्थित नाही",
+      micListening: "ऐकत आहे…",
+      quickActions: ["AQI समजावून", "PM2.5 समजावून", "स्थानक तुलना", "अंदाज"],
+      quickQuestions: [
+        "सध्याचा AQI समजावून सांगा.",
+        "PM2.5 सध्या कशामुळे वाढतंय?",
+        "या शहरातील स्थानकांची तुलना करा.",
+        "अंदाज काय आहे?",
+      ],
+      loading: "सध्याच्या स्थानक डेटाचे विश्लेषण…",
+      dataUnavailable: "डेटा अनुपलब्ध",
+      unavailable: () =>
+        "या प्रश्नासाठी आवश्यक स्थानक डेटा मिळवता आला नाही. दुसरे स्थानक निवडा किंवा उपलब्ध डेटाविषयी विचारा.",
+      provObserved: "प्रत्यक्ष डेटा",
+      provDerived: "साधलेले विश्लेषण",
+      provPrediction: "अंदाज — डेमो",
+      provNoteObserved: "थेट CPCB स्थानक वाचनांवर आधारित.",
+      provNoteDerived: "प्रत्यक्ष स्थानक मूल्यांवरून साधलेले विश्लेषण.",
+      provNotePrediction: "लेबल केलेल्या डेमो अंदाजावर आधारित — निश्चित अंदाज नाही.",
+      listen: "ऐका",
+      answers: {
+        current: (d) =>
+          `${d.city} मधील ${d.station} येथे सध्याचा AQI ${d.aqi} (${d.category}) आहे, मुख्यतः वाढलेल्या ${d.pollutant} पातळीमुळे. PM2.5 ${d.pm25} µg/m³ आहे, ${d.count} स्थानकांचे निरीक्षण सुरू आहे.`,
+        driver: (d) =>
+          `${d.station} येथे सध्या ${d.pollutant} प्रमुख घटक आहे. PM2.5 ${d.pm25} µg/m³ आणि PM10 ${d.pm10} µg/m³ आहे; सध्याच्या पसरण्याच्या परिस्थितीत हे प्रत्यक्ष AQI ${d.aqi} (${d.category}) टिकवून आहे.`,
+        areas: (d) =>
+          `${d.city} मधील ${d.count} निरीक्षण स्थानकांपैकी सर्वात जास्त वाचन ${d.worstName} चे AQI ${d.worstAqi} (${d.worstCategory}) आहे; सर्वात स्वच्छ ${d.bestName} आहे, AQI ${d.bestAqi}. ${d.worstName} व जवळच्या घनदाट भागांत संपर्क सर्वाधिक आहे.`,
+        compare: (d) =>
+          `${d.city} ची स्थानक तुलना: ${d.list}. ${d.worstName} येथे सध्या सर्वात वाईट हवा (AQI ${d.worstAqi}) आहे, जवळपास ${Math.max(1, Math.round(d.worstAqi / Math.max(1, d.bestAqi) * 10) / 10)}× ${d.bestName} इतकी.`,
+        trendRise: (d) =>
+          `${d.station} ची परिस्थिती बिघडण्याची शक्यता: डेमो अंदाज AQI ${d.forecastAqi} कडे आहे, ${d.peakTime} च्या आसपास तीव्रतम ${d.peakValue} जवळ. हा मॉडेल संकेत आहे, निश्चितता नाही.`,
+        trendFall: (d) =>
+          `${d.station} ची परिस्थिती सुधारण्याची शक्यता: डेमो अंदाज AQI ${d.forecastAqi} कडे आहे, ${d.peakTime} च्या आसपास तीव्रतम ${d.peakValue} जवळ. हा मॉडेल संकेत आहे, निश्चितता नाही.`,
+        trendFlat: (d) =>
+          `${d.station} ची परिस्थिती AQI ${d.forecastAqi} जवळ राहू शकते, ${d.peakTime} च्या आसपास तीव्रतम ${d.peakValue} जवळ. हा मॉडेल संकेत आहे, निश्चितता नाही.`,
+        forecast: (d) =>
+          `${d.city} चा डेमो अंदाज ${d.station} येथे AQI ${d.forecastAqi} दर्शवतो, तीव्रतम ${d.peakTime} च्या आसपास ${d.peakValue} जवळ. हा मॉडेल अंदाज माना — सध्याचा प्रत्यक्ष AQI ${d.aqi} आहे.`,
+        fallback: (d) =>
+          `${d.city} मधील ${d.station} चा सध्याचा डेटा: AQI ${d.aqi} (${d.category}), प्रमुख प्रदूषक ${d.pollutant}, PM2.5 ${d.pm25} µg/m³. अधिक जाणण्यासाठी कारणे, प्रभावित भाग, ट्रेंड किंवा अंदाजाविषयी विचारा.`,
+      },
     },
   },
 }

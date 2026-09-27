@@ -145,7 +145,7 @@ export function IndiaMap({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{t.map.india}</p>
-              <h2 className="font-display text-3xl font-bold leading-tight">{t.cities[selected.id]}</h2>
+              <h2 className="heading-primary text-3xl leading-tight">{t.cities[selected.id]}</h2>
             </div>
             <div className="text-right">
               <p className="font-display text-4xl font-bold leading-none tabular-nums">{selected.aqi}</p>
