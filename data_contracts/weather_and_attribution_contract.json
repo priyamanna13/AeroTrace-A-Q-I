@@ -1,0 +1,251 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AeroTrace Weather and Attribution Data Contract",
+  "description": "API contract for Screen 4 (Pollution Investigation & Attribution) and Real-Time Weather Services.",
+  "endpoints": {
+    "weather": {
+      "path": "/api/v1/weather/{city_name}",
+      "method": "GET",
+      "description": "Real-time atmospheric snapshot across all 7 cities via Open-Meteo live integration.",
+      "parameters": {
+        "city_name": {
+          "type": "string",
+          "description": "Target city name (Pune, Mumbai, Delhi, Bengaluru, Kolkata, Hyderabad, Chennai)",
+          "required": true
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "city",
+          "coordinates",
+          "weather_snapshot",
+          "raw_observation",
+          "pasquill_stability",
+          "data_source",
+          "data_timestamp",
+          "data_currency"
+        ],
+        "properties": {
+          "city": { "type": "string" },
+          "coordinates": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[longitude, latitude] GeoJSON order"
+          },
+          "weather_snapshot": {
+            "type": "object",
+            "required": [
+              "source",
+              "observed_at",
+              "wind_speed_kmh",
+              "wind_direction_deg",
+              "wind_direction_cardinal",
+              "temperature_c",
+              "relative_humidity_pct",
+              "pressure_hpa",
+              "cloud_cover_oktas",
+              "precipitation_mm_last_1h",
+              "visibility_km",
+              "mixing_layer_height_m",
+              "atmospheric_stability"
+            ]
+          },
+          "raw_observation": {
+            "type": "object",
+            "properties": {
+              "wind_speed_kmh": { "type": "number" },
+              "wind_direction_deg": { "type": "integer" },
+              "wind_cardinal": { "type": "string" },
+              "temperature_c": { "type": "number" },
+              "relative_humidity_pct": { "type": "integer" },
+              "pressure_hpa": { "type": "number" },
+              "cloud_cover_oktas": { "type": "integer" },
+              "precipitation_mm_last_1h": { "type": "number" },
+              "visibility_km": { "type": "number" },
+              "mixing_layer_height_m": { "type": "integer" }
+            }
+          },
+          "pasquill_stability": {
+            "type": "object",
+            "required": ["pasquill_class", "label", "description", "dispersion_coefficient"],
+            "properties": {
+              "pasquill_class": { "type": "string", "enum": ["A", "B", "C", "D", "E", "F"] },
+              "label": { "type": "string" },
+              "description": { "type": "string" },
+              "dispersion_coefficient": { "type": "number" }
+            }
+          },
+          "data_source": { "type": "string" },
+          "data_timestamp": { "type": "string", "format": "date-time" },
+          "data_currency": { "type": "string" }
+        }
+      }
+    },
+    "attribution": {
+      "path": "/api/v1/attribution/{station_name}",
+      "method": "GET",
+      "description": "Full source attribution pipeline resolving wind cone, candidate emission sources, and field squads across all 28 physical stations.",
+      "parameters": {
+        "station_name": {
+          "type": "string",
+          "description": "Physical CAAQMS station name across any of the 7 cities",
+          "required": true
+        },
+        "live": {
+          "type": "boolean",
+          "description": "Bypass route cache and evaluate live sensor concentrations",
+          "default": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": [
+          "event_id",
+          "event_severity",
+          "pipeline_version",
+          "generated_at",
+          "trigger_station",
+          "weather_snapshot",
+          "wind_cone_geometry",
+          "ranked_candidates",
+          "actionable_intelligence",
+          "pre_alerts"
+        ],
+        "properties": {
+          "event_id": { "type": "string", "format": "uuid" },
+          "event_severity": { "type": "string" },
+          "pipeline_version": { "type": "string" },
+          "generated_at": { "type": "string" },
+          "trigger_station": {
+            "type": "object",
+            "required": ["id", "name", "network", "city", "state", "coordinates", "elevation_m", "reading"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "network": { "type": "string" },
+              "city": { "type": "string" },
+              "state": { "type": "string" },
+              "coordinates": { "type": "array", "items": { "type": "number" } },
+              "elevation_m": { "type": "integer" },
+              "reading": {
+                "type": "object",
+                "required": ["timestamp", "total_aqi", "dominant_pollutant", "sub_pollutants", "chemical_fingerprint"]
+              }
+            }
+          },
+          "weather_snapshot": { "type": "object" },
+          "wind_cone_geometry": {
+            "type": "object",
+            "required": ["type", "geometry", "properties"],
+            "properties": {
+              "type": { "type": "string", "enum": ["Feature"] },
+              "geometry": { "type": "object" },
+              "properties": {
+                "station_name": { "type": "string" },
+                "wind_direction_deg": { "type": "integer" },
+                "half_angle_deg": { "type": "number" },
+                "reach_km": { "type": "number" },
+                "pasquill_class": { "type": "string" }
+              }
+            }
+          },
+          "ranked_candidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "type",
+                "distance_from_station_km",
+                "bearing_from_station_deg",
+                "compliance_profile",
+                "score_breakdown"
+              ],
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "type": { "type": "string" },
+                "distance_from_station_km": { "type": "number" },
+                "bearing_from_station_deg": { "type": "number" },
+                "compliance_profile": {
+                  "type": "object",
+                  "required": ["compliance_status", "compliance_note"],
+                  "properties": {
+                    "permit_id": { "type": ["string", "null"] },
+                    "compliance_status": { "type": "string" },
+                    "compliance_note": { "type": "string" },
+                    "dust_suppression_required": { "type": "boolean" },
+                    "dust_suppression_observed": { "type": "boolean" },
+                    "last_inspection_date": { "type": ["string", "null"] },
+                    "violation_count_90d": { "type": "integer" },
+                    "near_school": { "type": "boolean" },
+                    "near_hospital": { "type": "boolean" }
+                  }
+                },
+                "score_breakdown": {
+                  "type": "object",
+                  "required": ["confidence_score", "wind_alignment", "chemical_match", "temporal_match", "proximity", "compliance_penalty"],
+                  "properties": {
+                    "confidence_score": { "type": "number", "minimum": 0, "maximum": 1 },
+                    "wind_alignment": { "type": "number" },
+                    "chemical_match": { "type": "number" },
+                    "temporal_match": { "type": "number" },
+                    "proximity": { "type": "number" },
+                    "compliance_penalty": { "type": "number" }
+                  }
+                }
+              }
+            }
+          },
+          "actionable_intelligence": {
+            "type": "object",
+            "required": [
+              "ambiguous",
+              "enforcement_priority",
+              "priority_justification",
+              "recommended_actions",
+              "estimated_response_time_min",
+              "localized_advisory",
+              "field_team_assignment"
+            ],
+            "properties": {
+              "ambiguous": { "type": "boolean" },
+              "enforcement_priority": { "type": "string" },
+              "priority_justification": { "type": "string" },
+              "recommended_actions": { "type": "array", "items": { "type": "string" } },
+              "estimated_response_time_min": { "type": "integer" },
+              "localized_advisory": {
+                "type": "object",
+                "required": ["en", "hi", "mr"],
+                "properties": {
+                  "en": { "type": "string" },
+                  "hi": { "type": "string" },
+                  "mr": { "type": "string" }
+                }
+              },
+              "field_team_assignment": {
+                "type": "object",
+                "required": ["team_id", "team_lead", "contact", "jurisdiction", "eta_minutes"],
+                "properties": {
+                  "team_id": { "type": "string" },
+                  "team_lead": { "type": "string" },
+                  "contact": { "type": "string" },
+                  "jurisdiction": { "type": "string" },
+                  "eta_minutes": { "type": "integer" }
+                }
+              }
+            }
+          },
+          "pre_alerts": {
+            "type": "object",
+            "required": ["source", "eta_minutes", "estimated_aqi_increase", "advisory"]
+          }
+        }
+      }
+    }
+  }
+}

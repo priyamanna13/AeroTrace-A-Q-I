@@ -1,0 +1,60 @@
+# city_configs/hyderabad.yml — Hyderabad, Telangana
+city:
+  name: "Hyderabad"
+  state: "Telangana"
+  country: "IN"
+  timezone: "Asia/Kolkata"
+  center:
+    lat: 17.3850
+    lon: 78.4867
+  bbox:
+    south: 17.25
+    west: 78.25
+    north: 17.60
+    east: 78.65
+  utm_srid: 32644  # UTM Zone 44N
+
+stations:
+  - name: "Sanathnagar"
+    cpcb_station_id: "site_5401"
+    lat: 17.4589
+    lon: 78.4357
+    network: "TSPCB_CAAQMS"
+    elevation_m: 536
+
+  - name: "Zoo Park"
+    cpcb_station_id: "site_5402"
+    lat: 17.3496
+    lon: 78.4514
+    network: "CPCB_CAAQMS"
+    elevation_m: 505
+
+  - name: "ICRISAT"
+    cpcb_station_id: "site_5403"
+    lat: 17.5111
+    lon: 78.2750
+    network: "CPCB_CAAQMS"
+    elevation_m: 545
+
+  - name: "Central University"
+    cpcb_station_id: "site_5404"
+    lat: 17.4577
+    lon: 78.3248
+    network: "TSPCB_CAAQMS"
+    elevation_m: 540
+
+polling:
+  cpcb_interval_minutes: 15
+  owm_interval_minutes: 10
+  overpass_refresh_hours: 6
+
+thresholds:
+  spike_aqi: 150
+  spike_exceedance: 1.5
+  rate_of_change_delta: 50
+  rate_of_change_window_seconds: 3600
+
+search:
+  max_radius_m: 5000
+  min_radius_m: 1500
+  wind_speed_radius_scale: 40

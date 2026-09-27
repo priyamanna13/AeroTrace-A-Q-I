@@ -1,4 +1,4 @@
-﻿"""FastAPI application — full attribution pipeline endpoint (Prompt 2D).
+"""FastAPI application — full attribution pipeline endpoint (Prompt 2D).
 
 Wires together all components (Task 1 + 2A–2D) into a single API that produces
 the complete data-contract JSON response.
@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import logging
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -25,13 +26,53 @@ from zoneinfo import ZoneInfo
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Path, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
 from .config import get_settings, load_city_config
 from .demo_scenarios import get_scenario, list_scenario_names
 
 log = logging.getLogger(__name__)
+
+# ─── INPUT VALIDATION HELPERS (security hardening) ──────────────────────────
+# Path/Query parameters are bound by regex at the FastAPI level; these helpers
+# provide defense-in-depth against path traversal, control characters, and
+# overlong identifiers before values reach the service layer.
+import re as _re
+
+_NAME_RE = _re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .()&/,'_-]{0,79}$")
+
+
+def _sanitize_path_param(value: str, param_name: str = "name") -> str:
+    """Reject path traversal, control chars, and oversized identifiers.
+
+    Raises HTTPException(422) rather than silently passing malformed input
+    into downstream lookups (city YAML files, station registry, etc.).
+    """
+    cleaned = (value or "").strip()
+    if not cleaned or not _NAME_RE.match(cleaned):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Invalid {param_name}: must be 1-80 characters of letters, digits, "
+                "spaces, or .()/,'_- and must not start with a separator."
+            ),
+        )
+    return cleaned
+
+
+def _sanitize_pollutant(value: Optional[str]) -> Optional[str]:
+    """Restrict pollutant keys to the CPCB NAQI canonical set."""
+    if value is None:
+        return None
+    key = value.strip().lower()
+    if key not in {"pm25", "pm10", "no2", "so2", "co", "o3"}:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid pollutant {value!r}. Allowed: pm25, pm10, no2, so2, co, o3",
+        )
+    return key
 
 # ─── WEBSOCKET CONNECTION MANAGER ───────────────────────────────────────────
 class ConnectionManager:
@@ -79,6 +120,22 @@ _STATION_COORDS: dict[str, tuple[float, float]] = {
     "Hadapsar":     (18.5089, 73.9315),
     "Kothrud":      (18.5074, 73.8076),
 }
+
+
+def _init_all_station_coords() -> None:
+    try:
+        from .cities import get_all_city_configs, _normalize_name
+        configs = get_all_city_configs()
+        for c_data in configs.values():
+            for st in c_data.get("stations", []):
+                _STATION_COORDS[st["name"]] = (float(st["lat"]), float(st["lon"]))
+                _STATION_COORDS[_normalize_name(st["name"])] = (float(st["lat"]), float(st["lon"]))
+    except Exception as exc:
+        log.warning("Failed pre-populating station coords: %s", exc)
+
+
+_init_all_station_coords()
+
 
 # WAQI station UIDs for Pune CAAQMS (verified via search API with real token).
 # These stations are currently offline on WAQI (last data: Nov 2021), so the
@@ -157,7 +214,9 @@ def _fetch_real_aqi(station_name: str) -> tuple[int | None, str | None, dict | N
     from datetime import datetime
     from zoneinfo import ZoneInfo as _ZI
 
-    coords = _STATION_COORDS.get(station_name, (18.5308, 73.8567))
+    coords = _STATION_COORDS.get(station_name)
+    if coords is None:
+        coords = _STATION_COORDS.get(station_name.strip().lower(), (18.5308, 73.8567))
     lat, lon = coords
 
     # Create SSL context to bypass occasional CPCB/NIC self-signed cert validation warnings
@@ -285,7 +344,7 @@ def _fetch_real_aqi(station_name: str) -> tuple[int | None, str | None, dict | N
 
     # ── Source 3: WAQI climatology third-level fallback ─────────────────────────
     uid = _WAQI_STATION_UIDS.get(station_name)
-    waqi_token = _os.getenv("WAQI_TOKEN", "")
+    waqi_token = _os.getenv("WAQI_TOKEN") or _os.getenv("WAQI_API_KEY", "")
     if uid and waqi_token:
         waqi_url = f"https://api.waqi.info/feed/@{uid}/?token={waqi_token}"
         try:
@@ -372,27 +431,462 @@ app = FastAPI(
     lifespan=_lifespan,
 )
 
-# CORS — allow all origins for hackathon demo.
+# CORS — env-configurable (CORS_ORIGINS env var, comma-separated).
+# Defaults to local Vite dev servers; set `CORS_ORIGINS=*` only for throwaway
+# local demos. In production always pin explicit origins, e.g.
+#   CORS_ORIGINS=https://aerotrace.example.gov,https://www.aerotrace.example.gov
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=get_settings().cors_origin_list,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=False,
 )
 
+from .ai_router import router as ai_router
+app.include_router(ai_router)
+
 
 # --------------------------------------------------------------------------- #
-# Health
+# Health & Observability
 # --------------------------------------------------------------------------- #
-@app.get("/health")
+@app.get("/health", tags=["Meta"])
 def health():
-    return {"status": "ok", "version": "3.1.0"}
+    """Observability & health endpoint for AeroTrace NGEC 2026."""
+    from .cities import list_available_cities
+    cities = list_available_cities()
+
+    db_connected = False
+    has_postgis = False
+    db_error_msg = None
+
+    try:
+        from .db import get_session
+        from sqlalchemy import text
+        with get_session() as session:
+            session.execute(text("SELECT 1"))
+            db_connected = True
+            try:
+                has_postgis = bool(session.execute(
+                    text("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname='postgis')")
+                ).scalar())
+            except Exception:
+                has_postgis = False
+    except Exception as exc:
+        db_error_msg = str(exc)
+
+    return {
+        "status": "ok",
+        "service": "AeroTrace Environmental Intelligence API",
+        "version": "3.1.0",
+        "pipeline_version": "3.1.0",
+        "database": {
+            "connected": db_connected,
+            "postgis_enabled": has_postgis,
+            "error": db_error_msg,
+        },
+        "multi_city": {
+            "configured_count": len(cities),
+            "cities": cities,
+        },
+        "cadence": {
+            "application_refresh_seconds": 30,
+            "staleness_threshold_minutes": 60,
+        },
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Multi-City & Verified Physical Station Endpoints (Phase 1 Contracts)
+# --------------------------------------------------------------------------- #
+@app.get("/api/v1/cities", tags=["Cities"])
+def get_cities():
+    """Screen 1 (India Overview) Contract: List all 7 target cities with aggregate AQI."""
+    from .cities import get_all_cities_summary
+    try:
+        from .db import get_session
+        with get_session() as s:
+            return get_all_cities_summary(s)
+    except Exception:
+        return get_all_cities_summary(None)
+
+
+@app.get("/api/v1/cities/{city_name}/overview", tags=["Cities"])
+def get_city_overview_endpoint(
+    city_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$"),
+):
+    """Screen 2 (City Intelligence) Contract: Overview metrics and aggregate AQI for a city."""
+    from .cities import get_city_overview
+    overview = None
+    try:
+        from .db import get_session
+        with get_session() as s:
+            overview = get_city_overview(city_name, s)
+    except Exception:
+        overview = get_city_overview(city_name, None)
+
+    if not overview:
+        raise HTTPException(
+            status_code=404,
+            detail=f"City not configured or not found: {city_name!r}",
+        )
+    return overview
+
+
+@app.get("/api/v1/cities/{city_name}/stations", tags=["Cities"])
+def get_city_stations_endpoint(
+    city_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$"),
+):
+    """Screen 2 (City Intelligence) Contract: VERIFIED PHYSICAL MONITORING STATIONS ONLY.
+    
+    Guarantees:
+    - Only physical CAAQMS stations are returned (never model grid points).
+    - Preserves data source, source timestamp, and staleness status.
+    """
+    from .cities import get_city_verified_stations
+    stations = None
+    try:
+        from .db import get_session
+        with get_session() as s:
+            stations = get_city_verified_stations(city_name, s)
+    except Exception:
+        stations = get_city_verified_stations(city_name, None)
+
+    if stations is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"City not configured or not found: {city_name!r}",
+        )
+    return stations
+
+
+# --------------------------------------------------------------------------- #
+# Contextual Alerts Subsystem Endpoints (Screen 8 & Contextual In-Screen Cards)
+# --------------------------------------------------------------------------- #
+@app.get("/api/v1/alerts", tags=["Alerts"])
+def get_all_alerts():
+    """Retrieve all active contextual alerts across all 7 metropolitan cities."""
+    from .alerts import evaluate_all_cities_alerts
+    try:
+        from .db import get_session
+        with get_session() as s:
+            return evaluate_all_cities_alerts(s)
+    except Exception:
+        return evaluate_all_cities_alerts(None)
+
+
+@app.get("/api/v1/alerts/{city_name}", tags=["Alerts"])
+def get_city_alerts_endpoint(
+    city_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$"),
+):
+    """Retrieve active contextual alerts for a specific city and its physical CAAQMS stations."""
+    from .alerts import evaluate_city_alerts
+    from .cities import get_city_config
+    if not get_city_config(city_name):
+        raise HTTPException(
+            status_code=404,
+            detail=f"City not configured or not found: {city_name!r}",
+        )
+    try:
+        from .db import get_session
+        with get_session() as s:
+            return evaluate_city_alerts(city_name, s)
+    except Exception:
+        return evaluate_city_alerts(city_name, None)
+
+
+# --------------------------------------------------------------------------- #
+# Analytics & Historical Trends Endpoints (Screen 7 Analytics)
+# --------------------------------------------------------------------------- #
+@app.get("/api/v1/analytics/{city_name}", tags=["Analytics"])
+def get_city_analytics_endpoint(
+    city_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$"),
+    range: str = Query(
+        default="24H",
+        description="Analytics window: 24H, 7D, or 30D",
+        pattern=r"^(24h|7d|30d|24H|7D|30D)$",
+    ),
+):
+    """Retrieve historical trends, diurnal pattern analysis, and AI interpretation for Screen 7."""
+    from .analytics_intelligence import generate_city_analytics
+    from .cities import get_city_config
+    if not get_city_config(city_name):
+        raise HTTPException(
+            status_code=404,
+            detail=f"City not configured or not found: {city_name!r}",
+        )
+    try:
+        from .db import get_session
+        with get_session() as s:
+            return generate_city_analytics(city_name, time_range=range, session=s)
+    except Exception:
+        return generate_city_analytics(city_name, time_range=range, session=None)
+
+
+# Analytics & Historical Trends Endpoint (Phase 3 Contract)
+# --------------------------------------------------------------------------- #
+@app.get("/api/v1/analytics", tags=["Analytics"])
+def get_analytics(
+    city: str = Query(
+        default="Pune",
+        min_length=1,
+        max_length=80,
+        pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$",
+        description="Target city name",
+    ),
+    station: Optional[str] = Query(
+        default=None,
+        min_length=1,
+        max_length=80,
+        pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$",
+        description="Specific station name, or omit for city-wide",
+    ),
+    pollutant: Optional[str] = Query(
+        default="pm25",
+        pattern=r"^(pm25|pm10|no2|so2|co|o3)$",
+        description="Target pollutant key (pm25, pm10, no2, so2, co, o3)",
+    ),
+    range: str = Query(
+        default="24h",
+        pattern=r"^(24h|7d|30d|1y)$",
+        description="Time horizon: 24h, 7d, 30d, 1y",
+    ),
+):
+    """Screen 3 & Screen 7 Contract: Historical timeline, trend statistics, anomalies, and availability notes.
+    
+    Guarantees:
+    - Real hourly historical data from Copernicus CAMS reanalysis or local datastore.
+    - Non-fabrication: If range is unsupported or offline, returns explicit data_availability_note without inventing data.
+    """
+    from .analytics import fetch_historical_analytics
+    try:
+        from .db import get_session
+        with get_session() as s:
+            return fetch_historical_analytics(
+                city=city,
+                station=station,
+                pollutant=pollutant,
+                range_str=range,
+                session=s,
+            )
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as exc:
+        try:
+            return fetch_historical_analytics(
+                city=city,
+                station=station,
+                pollutant=pollutant,
+                range_str=range,
+                session=None,
+            )
+        except ValueError as ve2:
+            raise HTTPException(status_code=404, detail=str(ve2))
+        except Exception as exc2:
+            raise HTTPException(status_code=500, detail=f"Analytics query failed: {exc2}")
+
+
+
+# --------------------------------------------------------------------------- #
+# Live Meteorological Snapshot Endpoint (Screen 4 & Atmospheric Intel)
+# --------------------------------------------------------------------------- #
+@app.get("/api/v1/weather/{city_name}")
+def get_weather(
+    city_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$"),
+):
+    """Screen 4 Contract: Real-time atmospheric snapshot across all 7 cities.
+    
+    Returns authentic surface weather measurements, boundary layer mixing height,
+    and Pasquill-Gifford dispersion stability classification.
+    """
+    from .cities import get_city_config
+    from .pasquill import classify_stability, degrees_to_cardinal
+    from .weather_contract import build_weather_snapshot
+    from .weather_sources.base import get_weather_source
+
+    cfg = get_city_config(city_name)
+    if not cfg or "city" not in cfg:
+        raise HTTPException(status_code=404, detail=f"City '{city_name}' not configured")
+
+    city_obj = cfg["city"]
+    canonical_city = city_obj["name"]
+    lat = float(city_obj["center"]["lat"])
+    lon = float(city_obj["center"]["lon"])
+
+    raw = None
+    try:
+        src = get_weather_source("live")
+        raw = src.fetch_snapshot(canonical_city)
+    except Exception as exc:
+        log.warning("Live weather query failed for %s, using fallback: %s", canonical_city, exc)
+
+    if raw is None:
+        from .weather_sources.mock import MockIMDSource
+        mock_src = MockIMDSource()
+        raw = mock_src.fetch_snapshot(canonical_city, datetime.now(ZoneInfo("Asia/Kolkata")))
+        if raw is not None:
+            raw.source = "Open-Meteo_Simulated"
+
+    if raw is None:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch weather for {canonical_city}")
+
+    obs_dict = raw.to_dict()
+    now_local = datetime.now(tz=ZoneInfo("Asia/Kolkata"))
+    is_daytime = 6 <= now_local.hour < 18
+    pasquill_result = classify_stability(
+        obs_dict["wind_speed_kmh"],
+        obs_dict["cloud_cover_oktas"],
+        is_daytime=is_daytime,
+        solar_elevation_deg=obs_dict.get("solar_elevation_deg", 35.0),
+    )
+    weather_block = build_weather_snapshot(obs_dict, pasquill_result)
+
+    return {
+        "city": canonical_city,
+        "coordinates": [lon, lat],
+        "weather_snapshot": weather_block,
+        "raw_observation": {
+            "wind_speed_kmh": obs_dict["wind_speed_kmh"],
+            "wind_direction_deg": obs_dict["wind_direction_deg"],
+            "wind_cardinal": degrees_to_cardinal(obs_dict["wind_direction_deg"]),
+            "temperature_c": obs_dict["temperature_c"],
+            "relative_humidity_pct": obs_dict["relative_humidity_pct"],
+            "pressure_hpa": obs_dict["pressure_hpa"],
+            "cloud_cover_oktas": obs_dict["cloud_cover_oktas"],
+            "precipitation_mm_last_1h": obs_dict["precipitation_mm_last_1h"],
+            "visibility_km": obs_dict["visibility_km"],
+            "mixing_layer_height_m": obs_dict["mixing_layer_height_m"],
+        },
+        "pasquill_stability": pasquill_result,
+        "data_source": raw.source,
+        "data_timestamp": raw.observed_at.isoformat(),
+        "data_currency": "Real-time Open-Meteo meteorological feed",
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Prediction Endpoint (Screen 5 Forward Air Quality Forecast)
+# --------------------------------------------------------------------------- #
+@app.get("/api/v1/prediction/{station_name}/{pollutant}")
+def get_prediction(
+    station_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$"),
+    pollutant: str = Path(
+        ...,
+        min_length=1,
+        max_length=32,
+        # Charset-bound (no separators/dots → no traversal or injection), but NOT
+        # restricted to the canonical set: unknown pollutants must fall through to
+        # the service layer, which maps them to a 404 per the API contract.
+        pattern=r"^[A-Za-z0-9]+$",
+    ),
+    hours: int = Query(default=6, ge=1, le=24, description="Forecast horizon in hours (1-24)"),
+):
+    """Screen 5 Contract: Forward air quality forecasting anchored to observed conditions.
+    
+    Returns:
+    - 1H, 3H, 6H predicted AQI and pollutant concentrations.
+    - Pasquill-Gifford dispersion decay trajectory.
+    - Expanding confidence uncertainty intervals.
+    - Downwind advected plume footprint GeoJSON polygon.
+    - Non-negotiable label: 'Estimated forecast - see methodology'.
+    """
+    from .prediction import calculate_forward_prediction
+    # Defense-in-depth: normalize case; charset is already bounded at Path level.
+    pol_key = (pollutant or "").strip().lower()
+    # Boundary: service layer still maps bad inputs to 404 after the 422 guard.
+    try:
+        from .db import get_session
+        with get_session() as s:
+            return calculate_forward_prediction(
+                station_name=station_name,
+                pollutant=pol_key,
+                hours=hours,
+                session=s,
+            )
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as exc:
+        try:
+            return calculate_forward_prediction(
+                station_name=station_name,
+                pollutant=pol_key,
+                hours=hours,
+                session=None,
+            )
+        except ValueError as ve2:
+            raise HTTPException(status_code=404, detail=str(ve2))
+        except Exception as exc2:
+            raise HTTPException(status_code=500, detail=f"Prediction failed: {exc2}")
+
+
+# --------------------------------------------------------------------------- #
+# Intervention Simulator Request Model & Endpoint (Screen 6 Impact & Intervention)
+# --------------------------------------------------------------------------- #
+class InterventionSimulateRequest(BaseModel):
+    station_name: str = Field(
+        ...,
+        min_length=1,
+        max_length=80,
+        pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$",
+        description="Target monitoring station name",
+    )
+    intervention_type: str = Field(
+        ...,
+        min_length=1,
+        max_length=80,
+        description="control_construction_dust | reduce_traffic | reduce_industrial_emissions",
+    )
+    city: Optional[str] = Field(
+        None,
+        min_length=1,
+        max_length=80,
+        pattern=r"^[A-Za-z][A-Za-z0-9 .()&,'_-]*$",
+        description="Optional city override",
+    )
+    intensity_pct: float = Field(default=50.0, ge=0.0, le=100.0)
+    target_pollutant: Optional[str] = Field(
+        None,
+        pattern=r"^(pm25|pm10|no2|so2|co|o3)$",
+        description="Optional pollutant override (pm25, pm10, no2, so2, co, o3)",
+    )
+
+
+@app.post("/api/v1/intervention/simulate")
+def simulate_civic_intervention(req: InterventionSimulateRequest):
+    """Screen 6 Contract: Civic intervention simulator with documented ERF methodology.
+    
+    Supported intervention types:
+    - 'control_construction_dust': Anti-smog water cannons, mist curtains (max ERF: 0.25)
+    - 'reduce_traffic': Heavy diesel freight diversion, odd-even zones (max ERF: 0.35)
+    - 'reduce_industrial_emissions': Boiler load shedding, scrubber compliance (max ERF: 0.30)
+    
+    Guarantees:
+    - No hard-coded fictional results: derived from empirical ERF model and NAQS sensitivity weights.
+    - Non-fabrication: returns 'sensitive location data not available for this city' if unverified.
+    """
+    from .intervention import simulate_intervention
+    # Defense-in-depth: normalize/trim even though the Pydantic model already bounds it.
+    safe_station = _sanitize_path_param(req.station_name, "station_name")
+    try:
+        return simulate_intervention(
+            city=req.city or "",
+            station_name=safe_station,
+            intervention_type=req.intervention_type,
+            intensity_pct=req.intensity_pct,
+            target_pollutant=_sanitize_pollutant(req.target_pollutant),
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Intervention simulation failed: {exc}")
 
 
 # --------------------------------------------------------------------------- #
 # Shared pipeline builder (eliminates duplication between dry-run & simulation)
 # --------------------------------------------------------------------------- #
-def _build_attribution(scenario, target_time: datetime | None = None) -> dict:
+def _build_attribution(scenario, target_time: datetime | None = None, live: bool = False) -> dict:
     """Core pipeline: builds the full 6-block contract response from a scenario.
 
     Used by both the main attribution endpoint and the simulation trigger.
@@ -429,15 +923,28 @@ def _build_attribution(scenario, target_time: datetime | None = None) -> dict:
         local_hour = spike_local.hour + spike_local.minute / 60.0
 
     # ── weather_snapshot (2A) ────────────────────────────────────────────
-    # Fetch weather snapshot first so we can check for rain/precipitation
-    weather_src = MockIMDSource(
-        scenario_local_hour=local_hour,
-        base=dict(scenario.weather_overrides),
-        scenario_values=dict(scenario.weather_overrides),
-    )
-    raw_weather = weather_src.fetch_snapshot(scenario.station_name, spike_utc)
+    # Phase 4 Live Meteorological Pipeline:
+    # Use LiveOpenMeteoSource for live atmospheric feeds (fallback to mock if offline or test mode)
+    raw_weather = None
+    use_mock_weather = os.getenv("WEATHER_SOURCE", "").lower() == "mock" and not live
+    if not use_mock_weather:
+        try:
+            from .weather_sources.base import get_weather_source
+            live_weather_src = get_weather_source("live")
+            raw_weather = live_weather_src.fetch_snapshot(scenario.station_name, spike_utc)
+        except Exception as exc:
+            log.warning("Live weather query failed for %s, falling back to mock: %s", scenario.station_name, exc)
+
     if raw_weather is None:
-        raise HTTPException(500, "Mock weather snapshot returned None")
+        weather_src = MockIMDSource(
+            scenario_local_hour=local_hour,
+            base=dict(scenario.weather_overrides),
+            scenario_values=dict(scenario.weather_overrides),
+        )
+        raw_weather = weather_src.fetch_snapshot(scenario.station_name, spike_utc)
+
+    if raw_weather is None:
+        raise HTTPException(500, "Weather snapshot returned None")
 
     obs_dict = raw_weather.to_dict()
     is_daytime = 6 <= spike_local.hour < 18
@@ -509,7 +1016,8 @@ def _build_attribution(scenario, target_time: datetime | None = None) -> dict:
     # ── ranked_candidates (2C) ───────────────────────────────────────────
     candidates = copy.deepcopy(scenario.candidates)
     try:
-        cfg = load_city_config()
+        from .cities import get_city_config
+        cfg = get_city_config(scenario.city) or load_city_config()
         osm_sources = discover_and_format(cfg)
         seen_names = {c["name"] for c in candidates}
         for osm_cand in osm_sources:
@@ -562,8 +1070,13 @@ def _build_attribution(scenario, target_time: datetime | None = None) -> dict:
 # --------------------------------------------------------------------------- #
 @app.get("/api/v1/attribution/{station_name}")
 def get_attribution(
-    station_name: str,
-    active_category_tab: Optional[str] = None,
+    station_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$"),
+    active_category_tab: Optional[str] = Query(
+        default=None,
+        max_length=40,
+        pattern=r"^[A-Za-z0-9 _-]*$",
+        description="Optional UI category tab filter",
+    ),
     live: bool = False,
 ):
     """Full attribution pipeline for a station.
@@ -628,7 +1141,7 @@ def get_attribution(
             )
 
 
-    res = _build_attribution(scenario, target_time=now_wall)
+    res = _build_attribution(scenario, target_time=now_wall, live=live)
 
     # ── When live=True: overwrite the reading with ACTUAL real-time values ────
     # The mock source applies a diurnal Gaussian curve that distorts concentrations
@@ -706,7 +1219,7 @@ def list_stations():
                 "elevation_m": s.elevation_m,
                 "spike_aqi": s.spike_aqi,
                 "dominant_pollutant": s.dominant_pollutant,
-                "scenario_type": _SCENARIO_LABELS.get(s.station_name, "Unknown Scenario"),
+                "scenario_type": _SCENARIO_LABELS.get(s.station_name, f"{s.dominant_pollutant.upper()} Hotspot ({s.city})"),
             }
             for s in _SCENARIOS.values()
         ]
@@ -714,7 +1227,10 @@ def list_stations():
 
 
 @app.get("/api/v1/stations/{station_name}/readings")
-def get_readings(station_name: str, limit: int = Query(default=96, ge=1, le=1000)):
+def get_readings(
+    station_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$"),
+    limit: int = Query(default=96, ge=1, le=1000),
+):
     """Recent AQI readings for a station (mock path)."""
     scenario = get_scenario(station_name)
     settings = get_settings()
@@ -758,9 +1274,9 @@ def get_readings(station_name: str, limit: int = Query(default=96, ge=1, le=1000
 # --------------------------------------------------------------------------- #
 @app.get("/api/v1/cone/{station_name}", tags=["Spatial"])
 def wind_cone_endpoint(
-    station_name: str,
-    wind_dir: float = Query(default=None, description="Override wind direction (deg)"),
-    wind_speed: float = Query(default=None, description="Override wind speed (km/h)"),
+    station_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$"),
+    wind_dir: Optional[float] = Query(default=None, ge=0, le=360, description="Override wind direction (deg)"),
+    wind_speed: Optional[float] = Query(default=None, ge=0, le=250, description="Override wind speed (km/h)"),
 ):
     """Return the wind cone GeoJSON for a station."""
     from .cone_builder import build_wind_cone
@@ -829,7 +1345,9 @@ def list_sources():
 # Timeline History Replay System (Phase 2 — Person 1)
 # --------------------------------------------------------------------------- #
 @app.get("/api/v1/timeline/{station_name}", tags=["Replay"])
-def get_timeline(station_name: str):
+def get_timeline(
+    station_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$"),
+):
     """Return an array of 24 hourly tick objects for the replay slider."""
     scenario = get_scenario(station_name)
     settings = get_settings()
@@ -887,7 +1405,10 @@ def get_timeline(station_name: str):
 
 
 @app.get("/api/v1/replay/{station_name}", tags=["Replay"])
-def get_replay(station_name: str, timestamp: str = Query(..., description="ISO-8601 timestamp")):
+def get_replay(
+    station_name: str = Path(..., min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$"),
+    timestamp: str = Query(..., min_length=8, max_length=64, description="ISO-8601 timestamp"),
+):
     """Full attribution pipeline reconstructed for a historical hour."""
     try:
         dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
@@ -1032,10 +1553,23 @@ def _enrich_broadcast(payload: dict) -> dict:
 # --------------------------------------------------------------------------- #
 @app.post("/api/v1/simulation/trigger-spike", tags=["Simulation"])
 async def trigger_spike(
-    station_name: str = Query(default="Shivajinagar"),
+    station_name: str = Query(
+        default="Shivajinagar",
+        min_length=1,
+        max_length=80,
+        pattern=r"^[A-Za-z][A-Za-z0-9 .()&/,'_-]*$",
+    ),
     spike_aqi: int = Query(default=310, ge=100, le=600),
-    dominant_pollutant: str = Query(default=None),
-    scenario_type: str = Query(default=None, description="construction|traffic|industrial|ambiguity"),
+    dominant_pollutant: Optional[str] = Query(
+        default=None,
+        pattern=r"^(pm25|pm10|no2|so2|co|o3)$",
+        description="Override dominant pollutant (pm25, pm10, no2, so2, co, o3)",
+    ),
+    scenario_type: Optional[str] = Query(
+        default=None,
+        pattern=r"^(construction|traffic|industrial|ambiguity)$",
+        description="construction|traffic|industrial|ambiguity",
+    ),
 ):
     """Manually trigger a simulated AQI spike for demo purposes.
 

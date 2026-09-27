@@ -1,0 +1,60 @@
+# city_configs/delhi.yml — Delhi, National Capital Territory
+city:
+  name: "Delhi"
+  state: "Delhi"
+  country: "IN"
+  timezone: "Asia/Kolkata"
+  center:
+    lat: 28.6139
+    lon: 77.2090
+  bbox:
+    south: 28.40
+    west: 76.85
+    north: 28.88
+    east: 77.40
+  utm_srid: 32643  # UTM Zone 43N
+
+stations:
+  - name: "ITO"
+    cpcb_station_id: "site_142"
+    lat: 28.6318
+    lon: 77.2464
+    network: "CPCB_CAAQMS"
+    elevation_m: 216
+
+  - name: "Anand Vihar"
+    cpcb_station_id: "site_143"
+    lat: 28.6476
+    lon: 77.3158
+    network: "DPCC_CAAQMS"
+    elevation_m: 213
+
+  - name: "Punjabi Bagh"
+    cpcb_station_id: "site_144"
+    lat: 28.6720
+    lon: 77.1310
+    network: "DPCC_CAAQMS"
+    elevation_m: 218
+
+  - name: "RK Puram"
+    cpcb_station_id: "site_145"
+    lat: 28.5632
+    lon: 77.1869
+    network: "DPCC_CAAQMS"
+    elevation_m: 225
+
+polling:
+  cpcb_interval_minutes: 15
+  owm_interval_minutes: 10
+  overpass_refresh_hours: 6
+
+thresholds:
+  spike_aqi: 150
+  spike_exceedance: 1.5
+  rate_of_change_delta: 50
+  rate_of_change_window_seconds: 3600
+
+search:
+  max_radius_m: 5000
+  min_radius_m: 1500
+  wind_speed_radius_scale: 40

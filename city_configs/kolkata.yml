@@ -1,0 +1,60 @@
+# city_configs/kolkata.yml — Kolkata, West Bengal
+city:
+  name: "Kolkata"
+  state: "West Bengal"
+  country: "IN"
+  timezone: "Asia/Kolkata"
+  center:
+    lat: 22.5726
+    lon: 88.3639
+  bbox:
+    south: 22.45
+    west: 88.25
+    north: 22.70
+    east: 88.48
+  utm_srid: 32645  # UTM Zone 45N
+
+stations:
+  - name: "Victoria Memorial"
+    cpcb_station_id: "site_5301"
+    lat: 22.5448
+    lon: 88.3426
+    network: "WBPCB_CAAQMS"
+    elevation_m: 9
+
+  - name: "Rabindra Bharati University"
+    cpcb_station_id: "site_5302"
+    lat: 22.6279
+    lon: 88.3784
+    network: "CPCB_CAAQMS"
+    elevation_m: 11
+
+  - name: "Ballygunge"
+    cpcb_station_id: "site_5303"
+    lat: 22.5280
+    lon: 88.3653
+    network: "WBPCB_CAAQMS"
+    elevation_m: 10
+
+  - name: "Jadavpur"
+    cpcb_station_id: "site_5304"
+    lat: 22.4988
+    lon: 88.3718
+    network: "WBPCB_CAAQMS"
+    elevation_m: 10
+
+polling:
+  cpcb_interval_minutes: 15
+  owm_interval_minutes: 10
+  overpass_refresh_hours: 6
+
+thresholds:
+  spike_aqi: 150
+  spike_exceedance: 1.5
+  rate_of_change_delta: 50
+  rate_of_change_window_seconds: 3600
+
+search:
+  max_radius_m: 5000
+  min_radius_m: 1500
+  wind_speed_radius_scale: 40

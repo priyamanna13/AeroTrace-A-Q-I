@@ -1,0 +1,60 @@
+# city_configs/bengaluru.yml — Bengaluru, Karnataka
+city:
+  name: "Bengaluru"
+  state: "Karnataka"
+  country: "IN"
+  timezone: "Asia/Kolkata"
+  center:
+    lat: 12.9716
+    lon: 77.5946
+  bbox:
+    south: 12.80
+    west: 77.40
+    north: 13.15
+    east: 77.78
+  utm_srid: 32643  # UTM Zone 43N
+
+stations:
+  - name: "BTM Layout"
+    cpcb_station_id: "site_5201"
+    lat: 12.9135
+    lon: 77.5959
+    network: "KSPCB_CAAQMS"
+    elevation_m: 910
+
+  - name: "City Railway Station"
+    cpcb_station_id: "site_5202"
+    lat: 12.9778
+    lon: 77.5700
+    network: "CPCB_CAAQMS"
+    elevation_m: 920
+
+  - name: "Peenya"
+    cpcb_station_id: "site_5203"
+    lat: 13.0271
+    lon: 77.5186
+    network: "CPCB_CAAQMS"
+    elevation_m: 930
+
+  - name: "Saneguruvanahalli"
+    cpcb_station_id: "site_5204"
+    lat: 12.9904
+    lon: 77.5459
+    network: "KSPCB_CAAQMS"
+    elevation_m: 925
+
+polling:
+  cpcb_interval_minutes: 15
+  owm_interval_minutes: 10
+  overpass_refresh_hours: 6
+
+thresholds:
+  spike_aqi: 150
+  spike_exceedance: 1.5
+  rate_of_change_delta: 50
+  rate_of_change_window_seconds: 3600
+
+search:
+  max_radius_m: 5000
+  min_radius_m: 1500
+  wind_speed_radius_scale: 40

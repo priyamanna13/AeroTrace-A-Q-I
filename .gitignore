@@ -2,6 +2,15 @@
 __pycache__/
 .pytest_cache/
 .venv/
+api_cache/
+*.log
+scratch/
+pipeline/
+PMJIT/
+*.docx
+*.pdf
+scripts/test_phase1_endpoints.py
+scripts/show_db.py
 .agent/
 .agents/
 *screenshot*

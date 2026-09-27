@@ -6,9 +6,9 @@
  * and globalVoice for seamless backward compatibility across the application.
  */
 
-import { voiceService, getVoiceLocale, findBestVoice, pcm16Base64ToFloat32 } from '../services/voiceService.js';
+import { voiceService, getVoiceLocale, findBestVoice, pcm16Base64ToFloat32, resolveSpeakableText, isDevanagariText } from '../services/voiceService.js';
 
-export { voiceService, getVoiceLocale, findBestVoice, pcm16Base64ToFloat32 };
+export { voiceService, getVoiceLocale, findBestVoice, pcm16Base64ToFloat32, resolveSpeakableText, isDevanagariText };
 
 export class VoiceController {
   constructor() {
@@ -31,9 +31,10 @@ export class VoiceController {
     this.voiceService.stop();
   }
 
-  speak(text, lang = 'en', onComplete = null) {
+  speak(text, lang = 'en', onComplete = null, fallbackText = null) {
     this.voiceService.speak(text, {
       lang,
+      fallbackText: fallbackText || undefined,
       onEnd: onComplete,
     });
   }

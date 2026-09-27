@@ -1,0 +1,60 @@
+# city_configs/chennai.yml — Chennai, Tamil Nadu
+city:
+  name: "Chennai"
+  state: "Tamil Nadu"
+  country: "IN"
+  timezone: "Asia/Kolkata"
+  center:
+    lat: 13.0827
+    lon: 80.2707
+  bbox:
+    south: 12.90
+    west: 80.05
+    north: 13.25
+    east: 80.35
+  utm_srid: 32644  # UTM Zone 44N
+
+stations:
+  - name: "Alandur Bus Depot"
+    cpcb_station_id: "site_5501"
+    lat: 13.0033
+    lon: 80.2033
+    network: "TNPCB_CAAQMS"
+    elevation_m: 12
+
+  - name: "Manali"
+    cpcb_station_id: "site_5502"
+    lat: 13.1651
+    lon: 80.2644
+    network: "CPCB_CAAQMS"
+    elevation_m: 7
+
+  - name: "Velachery"
+    cpcb_station_id: "site_5503"
+    lat: 12.9801
+    lon: 80.2184
+    network: "TNPCB_CAAQMS"
+    elevation_m: 10
+
+  - name: "IIT Madras"
+    cpcb_station_id: "site_5504"
+    lat: 12.9915
+    lon: 80.2337
+    network: "CPCB_CAAQMS"
+    elevation_m: 14
+
+polling:
+  cpcb_interval_minutes: 15
+  owm_interval_minutes: 10
+  overpass_refresh_hours: 6
+
+thresholds:
+  spike_aqi: 150
+  spike_exceedance: 1.5
+  rate_of_change_delta: 50
+  rate_of_change_window_seconds: 3600
+
+search:
+  max_radius_m: 5000
+  min_radius_m: 1500
+  wind_speed_radius_scale: 40

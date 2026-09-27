@@ -1,0 +1,167 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AeroTrace Analytics Contract",
+  "description": "API contract for Screen 3 (Station Intelligence) and Screen 7 (Analytics Workspace) historical trend data.",
+  "endpoint": "/api/v1/analytics",
+  "method": "GET",
+  "parameters": {
+    "city": {
+      "type": "string",
+      "description": "City name (e.g. Pune, Mumbai, Delhi, Bengaluru, Kolkata, Hyderabad, Chennai)",
+      "required": true,
+      "default": "Pune"
+    },
+    "station": {
+      "type": "string",
+      "description": "Verified physical CAAQMS station name. If omitted, returns city-wide aggregate.",
+      "required": false
+    },
+    "pollutant": {
+      "type": "string",
+      "enum": ["pm25", "pm10", "no2", "so2", "co", "o3"],
+      "default": "pm25"
+    },
+    "range": {
+      "type": "string",
+      "enum": ["24h", "7d", "30d", "1y"],
+      "default": "24h"
+    }
+  },
+  "response_schema": {
+    "type": "object",
+    "required": [
+      "city",
+      "station",
+      "pollutant",
+      "range",
+      "data_source",
+      "data_availability_note",
+      "data_points",
+      "anomalies",
+      "trend_summary"
+    ],
+    "properties": {
+      "city": { "type": "string" },
+      "station": { "type": "string" },
+      "pollutant": { "type": "string" },
+      "range": { "type": "string" },
+      "data_source": { "type": "string" },
+      "data_availability_note": { "type": "string" },
+      "data_points": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "timestamp",
+            "aqi",
+            "aqi_category",
+            "dominant_pollutant",
+            "pollutant_value",
+            "sub_pollutants",
+            "is_anomaly"
+          ],
+          "properties": {
+            "timestamp": { "type": "string", "format": "date-time" },
+            "aqi": { "type": "integer" },
+            "aqi_category": { "type": "string" },
+            "dominant_pollutant": { "type": "string" },
+            "pollutant_value": { "type": "number" },
+            "sub_pollutants": {
+              "type": "object",
+              "properties": {
+                "pm25": { "type": "number" },
+                "pm10": { "type": "number" },
+                "no2": { "type": "number" },
+                "so2": { "type": "number" },
+                "co": { "type": "number" },
+                "o3": { "type": "number" }
+              }
+            },
+            "is_anomaly": { "type": "boolean" }
+          }
+        }
+      },
+      "anomalies": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["timestamp", "aqi", "dominant_pollutant", "severity", "description"],
+          "properties": {
+            "timestamp": { "type": "string" },
+            "aqi": { "type": "integer" },
+            "dominant_pollutant": { "type": "string" },
+            "severity": { "type": "string" },
+            "description": { "type": "string" }
+          }
+        }
+      },
+      "trend_summary": {
+        "type": ["object", "null"],
+        "properties": {
+          "min_aqi": { "type": "integer" },
+          "max_aqi": { "type": "integer" },
+          "avg_aqi": { "type": "number" },
+          "first_aqi": { "type": "integer" },
+          "last_aqi": { "type": "integer" },
+          "change_pct": { "type": "number" },
+          "direction": { "type": "string", "enum": ["improving", "deteriorating", "stable"] },
+          "dominant_pollutant": { "type": "string" },
+          "total_data_points": { "type": "integer" },
+          "anomaly_count": { "type": "integer" }
+        }
+      }
+    }
+  },
+  "sample_responses": {
+    "24h_station_trend": {
+      "city": "Pune",
+      "station": "Shivajinagar",
+      "pollutant": "pm25",
+      "range": "24h",
+      "data_source": "Open-Meteo Air Quality (Copernicus CAMS)",
+      "data_availability_note": "Authentic hourly historical data (24 points) sourced from Copernicus CAMS reanalysis.",
+      "data_points": [
+        {
+          "timestamp": "2026-09-23T18:00:00+05:30",
+          "aqi": 115,
+          "aqi_category": "Moderate",
+          "dominant_pollutant": "PM2.5",
+          "pollutant_value": 41.2,
+          "sub_pollutants": {
+            "pm25": 41.2,
+            "pm10": 84.5,
+            "no2": 18.2,
+            "so2": 4.1,
+            "co": 0.45,
+            "o3": 28.0
+          },
+          "is_anomaly": false
+        }
+      ],
+      "anomalies": [],
+      "trend_summary": {
+        "min_aqi": 92,
+        "max_aqi": 164,
+        "avg_aqi": 128.4,
+        "first_aqi": 115,
+        "last_aqi": 142,
+        "change_pct": 23.5,
+        "direction": "deteriorating",
+        "dominant_pollutant": "PM2.5",
+        "total_data_points": 24,
+        "anomaly_count": 2
+      }
+    },
+    "unavailable_range_1y": {
+      "city": "Mumbai",
+      "station": "All Stations (City Aggregate)",
+      "pollutant": "pm25",
+      "range": "1y",
+      "data_source": "None",
+      "data_availability_note": "Historical data is not available for 1Y range from current provider tier.",
+      "data_points": [],
+      "anomalies": [],
+      "trend_summary": null
+    }
+  }
+}
