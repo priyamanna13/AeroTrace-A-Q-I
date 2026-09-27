@@ -51,14 +51,13 @@ class Settings(BaseSettings):
         description="Path to city_config.yml (geographic-agnostic keystone).",
     )
 
-    # --- CORS -------------------------------------------------------------
     cors_origins: str = Field(
-        default="http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173",
+        default="*",
         description=(
             "Comma-separated list of allowed CORS origins. "
+            "Defaults to '*' for hackathon evaluation and demo compatibility. "
             "Override in production via CORS_ORIGINS env var, e.g. "
-            "'CORS_ORIGINS=https://aerotrace.example.gov'. Use '*' ONLY for "
-            "local development."
+            "'CORS_ORIGINS=https://aerotrace.example.gov'."
         ),
     )
 
