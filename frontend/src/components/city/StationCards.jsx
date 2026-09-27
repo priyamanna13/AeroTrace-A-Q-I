@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom"
 import { ArrowUpRight } from "lucide-react"
-import { severityColor, severityFor } from "@/lib/aqi"
+import { severityColor, severityFor, cityEnName } from "@/lib/aqi"
 import { useLanguage } from "@/lib/i18n/language-provider"
 
 /**
@@ -17,7 +17,11 @@ import { useLanguage } from "@/lib/i18n/language-provider"
 export function StationCards({ cityId, stations, loading, selectedStation, onSelectStation }) {
   const { t } = useLanguage()
   const navigate = useNavigate()
+  // Canonical English city for the forensic route — localized labels (t.cities)
+  // would produce /investigate/Worli?city=मुंबई under hi, which Screen 4 cannot
+  // resolve (falls back to Pune). Display text keeps using cityLabel.
   const cityLabel = t.cities[cityId] || cityId
+  const cityNavName = cityEnName(cityId)
 
   // Card click = select (same shared state as the map markers).
   const selectStation = (station) => {
@@ -27,7 +31,7 @@ export function StationCards({ cityId, stations, loading, selectedStation, onSel
   // Explicit navigation: opens the existing Forensic/Wind Plume UI with the
   // station already active. Back returns to City Intelligence.
   const openStation = (station) => {
-    navigate(`/investigate/${encodeURIComponent(station.name)}?city=${encodeURIComponent(cityLabel)}`)
+    navigate(`/investigate/${encodeURIComponent(station.name)}?city=${encodeURIComponent(cityNavName)}`)
   }
 
   return (

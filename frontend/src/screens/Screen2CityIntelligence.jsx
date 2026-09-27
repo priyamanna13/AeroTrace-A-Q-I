@@ -41,6 +41,14 @@ function Screen2Content() {
   // display name stays i18n-driven; contracts stay language-invariant.
   const cityNameLabel = cityEnName(cityId)
 
+  // Route to the forensic screen for a station. Uses the CANONICAL English city
+  // name (not the localized display label — t.cities[cityId] renders मुंबई under
+  // hi, which Screen 4 cannot resolve and would fall back to Pune).
+  const openStationForensic = (station) => {
+    if (!station?.name) return
+    navigate(`/investigate/${encodeURIComponent(station.name)}?city=${encodeURIComponent(cityNameLabel)}`)
+  }
+
   useEffect(() => {
     let isMounted = true
     setLoading(true)
@@ -134,6 +142,7 @@ function Screen2Content() {
               loading={loading}
               selectedStation={selectedStation}
               onSelectStation={setSelectedStation}
+              onOpenStation={openStationForensic}
             />
           </div>
         </div>

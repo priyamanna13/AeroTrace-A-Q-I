@@ -106,7 +106,7 @@ function stationChipIcon({ name, color, aqiText, isSelected, dimmed, ariaLabel }
  * Screen 2) flies the map to it and emphasizes the marker/label; clearing the
  * selection flies back out to the city framing.
  */
-export function CityMap({ cityId, stations, loading, selectedStation, onSelectStation }) {
+export function CityMap({ cityId, stations, loading, selectedStation, onSelectStation, onOpenStation }) {
   const { t } = useLanguage()
   const themeMode = useThemeMode()
   const tiles = TILES[themeMode]
@@ -222,9 +222,14 @@ export function CityMap({ cityId, stations, loading, selectedStation, onSelectSt
                   keyboard
                   zIndexOffset={isSelected ? 1000 : 0}
                   eventHandlers={{
-                    // Click = select (shared state). The screen decides what
-                    // selection means (focus here, navigation from cards).
-                    click: () => onSelectStation?.(isSelected ? null : station.name),
+                    // Click = open the station's forensic screen. Select first so
+                    // the chip highlights and the map flies to the pin, then Screen
+                    // 2 navigates via onOpenStation (canonical-city route). Deselect
+                    // stays available through the Clear Focus control and cards.
+                    click: () => {
+                      onSelectStation?.(station.name)
+                      onOpenStation?.(station)
+                    },
                   }}
                 />
               )
