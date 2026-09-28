@@ -488,8 +488,8 @@ export default function Screen0Landing() {
     const camera   = [0, 0, 3.6];
     const viewMat  = lookAt(camera, [0, 0, 0], [0, 1, 0]);
     const light    = [0.48, 0.56, 0.82];
-    const indiaLat = 22.5 * Math.PI / 180;
-    const indiaLon = 78.5 * Math.PI / 180;
+    const indiaLat = 21.5 * Math.PI / 180;
+    const indiaLon = 78.0 * Math.PI / 180;
     // Geographic position of the pin, matching the CORRECTED (non-mirrored)
     // sphere mapping: vertex(longitude λ) = (cosλ·sinθ, cosθ, −sinλ·sinθ).
     // The previous +sin(lon) z-component belonged to the mirrored mapping.
@@ -518,11 +518,9 @@ export default function Screen0Landing() {
       const rotX = cos * point[0] + sin * point[2];
       const rotZ = -sin * point[0] + cos * point[2];
       const tC = Math.cos(tilt), tS = Math.sin(tilt);
-      // Match the vertex shader's rotateX exactly (y'' = c*y + s*z, z'' = -s*y + c*z).
-      // The previous negated signs made the pin diverge pole-ward from the
-      // rendered texture point it is supposed to sit on.
-      const tiltY = tC * point[1] + tS * rotZ;
-      const tiltZ = -tS * point[1] + tC * rotZ;
+      // Match the vertex shader's rotateX exactly: y' = c*y - s*z, z' = s*y + c*z
+      const tiltY = tC * point[1] - tS * rotZ;
+      const tiltZ =  tS * point[1] + tC * rotZ;
       const wX = model[0]*rotX + model[4]*tiltY + model[8]*tiltZ + model[12];
       const wY = model[1]*rotX + model[5]*tiltY + model[9]*tiltZ + model[13];
       const wZ = model[2]*rotX + model[6]*tiltY + model[10]*tiltZ + model[14];

@@ -8,12 +8,15 @@ import { CITIES, cityEnName } from "@/lib/aqi"
  */
 
 function mapCityAqi(id, summary) {
+  const meta = CITIES.find((c) => c.id === id)
+  const labelSide = meta?.labelSide ?? "right"
   if (!summary || typeof summary.current_aqi !== "number" || !Number.isFinite(summary.current_aqi)) {
-    return { id, enName: cityEnName(id), aqi: null, dataTimestamp: null, isSimulated: false }
+    return { id, enName: cityEnName(id), labelSide, aqi: null, dataTimestamp: null, isSimulated: false }
   }
   return {
     id,
     enName: cityEnName(id),
+    labelSide,
     aqi: Math.round(summary.current_aqi),
     dataTimestamp: summary.data_timestamp ?? null,
     isSimulated: Boolean(summary.is_simulated),

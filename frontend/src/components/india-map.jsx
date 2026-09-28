@@ -1,6 +1,6 @@
 import React from "react"
 import { ArrowLeft, ArrowRight } from "lucide-react"
-import { SEVERITY_BANDS, severityColor, severityFor } from "@/lib/aqi"
+import { CITY_MAP_LAYOUT, SEVERITY_BANDS, severityColor, severityFor } from "@/lib/aqi"
 import { useLanguage } from "@/lib/i18n/language-provider"
 import { cn } from "@/lib/utils"
 
@@ -30,6 +30,13 @@ export function IndiaMap({
     : "translate(0px, 0px) scale(1)"
   // Live AQI feed (shared useNationalAqi instance) — one entry per monitored city.
   const selected = cityAqis.find((city) => city.id === selectedCity)
+
+  // Sort so hovered/selected city pin and label pop cleanly into the foreground in SVG stacking order
+  const displayCities = [...cityAqis].sort((a, b) => {
+    const aHot = a.id === selectedCity || a.id === hoveredCity ? 1 : 0
+    const bHot = b.id === selectedCity || b.id === hoveredCity ? 1 : 0
+    return aHot - bHot
+  })
 
   return (
     <div className="relative size-full overflow-hidden bg-[var(--map-water)]">
@@ -68,7 +75,7 @@ export function IndiaMap({
         >
           {geography}
 
-          {cityAqis.map((city) => {
+          {displayCities.map((city) => {
             const point = positions[city.id]
             if (!point) return null
             const severity = severityFor(city.aqi)
@@ -76,7 +83,14 @@ export function IndiaMap({
             const isActive = selectedCity === city.id
             const isHovered = hoveredCity === city.id
             const dimmed = selectedCity !== null && !isActive
-            const right = city.labelSide === "right"
+            const layout = CITY_MAP_LAYOUT[city.id] || {
+              side: city.labelSide || "right",
+              dx: city.labelSide === "left" ? -22 : 22,
+              dy: -28,
+            }
+            const isRight = layout.side === "right"
+            const labelX = layout.dx
+            const labelY = layout.dy
             const name = t.cities[city.id]
 
             return (
@@ -113,16 +127,16 @@ export function IndiaMap({
                   <path d={PIN_PATH} fill={color} stroke="var(--pin-ring)" strokeWidth={2.5} />
                   <circle cy={-27} r={5} fill="var(--pin-ring)" />
                   <text
-                    x={right ? 20 : -20}
-                    y={-30}
-                    textAnchor={right ? "start" : "end"}
-                    className="fill-foreground font-sans"
+                    x={labelX}
+                    y={labelY}
+                    textAnchor={isRight ? "start" : "end"}
+                    className="fill-foreground font-sans pointer-events-none select-none"
                     style={{ paintOrder: "stroke", stroke: "var(--label-bg)", strokeWidth: 5, strokeLinejoin: "round" }}
                   >
                     <tspan fontSize={17} fontWeight={700}>
                       {name}
                     </tspan>
-                    <tspan x={right ? 20 : -20} dy={19} fontSize={13} fontWeight={600} className="font-mono" style={{ fill: color }}>
+                    <tspan x={labelX} dy={19} fontSize={13} fontWeight={600} className="font-mono" style={{ fill: color }}>
                       AQI {city.aqi ?? "—"}
                     </tspan>
                   </text>

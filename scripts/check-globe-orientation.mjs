@@ -39,11 +39,11 @@ function referenceVertex(u, v) {
 }
 
 // Model rotations, matching the GLSL in the vertex shader:
-// rotateY: v' = (c·x + s·z, y, −s·x + c·z); rotateX: v' = (x, c·y + s·z, −s·y + c·z)
+// rotateY: v' = (c·x + s·z, y, −s·x + c·z); rotateX: v' = (x, c·y − s·z, s·y + c·z)
 const ROT = 2.863 // BASE_ROTATION post-fix
 const TILT = 0.28 // baseTilt
 function rotY(p, a) { const c = Math.cos(a), s = Math.sin(a); return [c * p[0] + s * p[2], p[1], -s * p[0] + c * p[2]] }
-function rotX(p, a) { const c = Math.cos(a), s = Math.sin(a); return [p[0], c * p[1] + s * p[2], -s * p[1] + c * p[2]] }
+function rotX(p, a) { const c = Math.cos(a), s = Math.sin(a); return [p[0], c * p[1] - s * p[2], s * p[1] + c * p[2]] }
 function model(p) { return rotX(rotY(p, ROT), TILT) }
 
 const sphere = createSphere(72, 128)
@@ -64,7 +64,7 @@ check(`mapping matches three.js reference (max err ${maxErr.toExponential(2)} < 
 // East must be RIGHT in the rendered frame: take the texture-India vertex and
 // its +15°E neighbour, run both through the model rotation, and compare screen
 // x (screen x ∝ world +x when the camera looks down −Z from +z).
-const INDIA_LAT = 22.5, INDIA_LON = 78.5
+const INDIA_LAT = 21.5, INDIA_LON = 78.0
 function geoVertex(latDeg, lonDeg) {
   const lat = latDeg * Math.PI / 180, lon = lonDeg * Math.PI / 180
   return [Math.cos(lat) * Math.cos(lon), Math.sin(lat), -Math.cos(lat) * Math.sin(lon)]
@@ -78,11 +78,11 @@ check(`north is up in rendered frame (${indiaNorth[1].toFixed(3)} > ${indiaCente
 // India must be on the FRONT hemisphere (world z > −0.2 visibility gate) and
 // in the left-of-center composition slot like the pre-fix design (−0.43).
 check(`India front-facing (z ${indiaCenter[2].toFixed(3)} > −0.2)`, indiaCenter[2] > -0.2)
-check(`India composed left of center (x ${indiaCenter[0].toFixed(3)} ≈ −0.43)`, Math.abs(indiaCenter[0] - -0.4258) < 0.02)
+check(`India composed left of center (x ${indiaCenter[0].toFixed(3)} ≈ −0.43)`, Math.abs(indiaCenter[0] - -0.432) < 0.02)
 
 // Pin/texture consistency: the render loop's indiaPoint (post-fix, corrected
 // z sign) must equal the texture-India vertex after the same model rotation.
-const indiaLat = 22.5 * Math.PI / 180, indiaLon = 78.5 * Math.PI / 180
+const indiaLat = 21.5 * Math.PI / 180, indiaLon = 78.0 * Math.PI / 180
 const pinPoint = [Math.cos(indiaLat) * Math.cos(indiaLon), Math.sin(indiaLat), -Math.cos(indiaLat) * Math.sin(indiaLon)]
 const pinRot = model(pinPoint)
 const texIndia = model(geoVertex(INDIA_LAT, INDIA_LON))

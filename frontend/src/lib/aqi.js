@@ -9,14 +9,28 @@
 
 /** Monitored cities in canonical display order with map pin metadata. */
 export const CITIES = [
-  { id: "pune", labelSide: "right" },
   { id: "mumbai", labelSide: "left" },
+  { id: "pune", labelSide: "right" },
   { id: "delhi", labelSide: "right" },
   { id: "bengaluru", labelSide: "left" },
-  { id: "kolkata", labelSide: "right" },
   { id: "hyderabad", labelSide: "right" },
   { id: "chennai", labelSide: "right" },
+  { id: "kolkata", labelSide: "right" },
 ]
+
+/**
+ * Geometric label offset and alignment sequencing to ensure zero collision between
+ * closely situated cities (e.g., Mumbai/Pune, Bengaluru/Chennai, Hyderabad).
+ */
+export const CITY_MAP_LAYOUT = {
+  mumbai:    { side: "left",  dx: -22, dy: -28 },
+  pune:      { side: "right", dx:  22, dy: -18 },
+  delhi:     { side: "right", dx:  22, dy: -28 },
+  bengaluru: { side: "left",  dx: -22, dy: -28 },
+  hyderabad: { side: "right", dx:  22, dy: -28 },
+  chennai:   { side: "right", dx:  22, dy: -28 },
+  kolkata:   { side: "right", dx:  22, dy: -28 },
+}
 
 /** Canonical route slugs for the seven monitored cities (Screen 2 selector). */
 export const CITY_IDS = CITIES.map((city) => city.id)
