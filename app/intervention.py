@@ -154,7 +154,11 @@ def simulate_intervention(
     # Compute effective reduction fraction
     # Delta_frac = max_erf * (intensity / 100.0) * weight
     reduction_fraction = cfg["max_erf"] * (clamped_intensity / 100.0) * weight
-    projected_aqi = max(25, int(round(current_aqi * (1.0 - reduction_fraction))))
+    raw_projected = int(round(current_aqi * (1.0 - reduction_fraction)))
+    if reduction_fraction > 0 and current_aqi >= 2:
+        projected_aqi = max(1, min(int(current_aqi) - 1, raw_projected))
+    else:
+        projected_aqi = max(1, raw_projected)
     aqi_delta = max(0, current_aqi - projected_aqi)
 
     percentage_reduction = 0.0

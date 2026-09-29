@@ -12,6 +12,13 @@ import os
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+
 from .ai_models import (
     AIChatRequest,
     AIContext,
@@ -407,20 +414,37 @@ class TemplateFallbackAIService(BaseAIService):
 
 
 class GeminiAIService(BaseAIService):
-    """Optional Google Gemini LLM provider with strict grounding and fallback."""
+    """Google Gemini LLM provider with multi-model fallback and strict forensic grounding."""
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY", "").strip()
         self._fallback = TemplateFallbackAIService()
         self._client = None
+        self._fallback_client = None
+        self._models: list[tuple[str, Any]] = []
 
         if self.api_key:
             try:
+                import warnings
+                warnings.filterwarnings("ignore", category=FutureWarning)
                 import google.generativeai as genai
                 genai.configure(api_key=self.api_key)
-                model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash").strip()
-                self._client = genai.GenerativeModel(model_name)
-                log.info("Gemini AI provider (%s) initialized successfully.", model_name)
+                preferred = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
+                candidates = [preferred]
+                for c in ["gemini-flash-lite-latest", "gemini-3.8-flash", "gemini-1.5-flash", "gemini-2.0-flash"]:
+                    if c not in candidates:
+                        candidates.append(c)
+
+                for m_name in candidates:
+                    try:
+                        self._models.append((m_name, genai.GenerativeModel(m_name)))
+                    except Exception as err:
+                        log.debug("Could not pre-init model %s: %s", m_name, err)
+
+                if self._models:
+                    self._client = self._models[0][1]
+                    self._fallback_client = self._models[1][1] if len(self._models) > 1 else None
+                    log.info("Gemini AI provider initialized with models: %s", [m[0] for m in self._models])
             except Exception as exc:
                 log.warning("Could not initialize Gemini SDK (%s); will use template fallback.", exc)
                 self._client = None
@@ -430,110 +454,140 @@ class GeminiAIService(BaseAIService):
     def _build_system_prompt(self, context: AIContext) -> str:
         weather_data = get_weather_context(context.city or "Pune")
         weather_prompt_block = format_weather_for_prompt(weather_data)
-        
+
         return (
-            "You are AeroTrace Environmental Intelligence, an expert atmospheric scientist assistant. "
-            "You MUST adhere to these strict rules:\n"
-            "1. Ground all statements strictly in the provided AeroTrace context.\n"
-            "2. NEVER fabricate environmental measurements, station names, or sensor readings.\n"
-            "3. Clearly distinguish measured facts from atmospheric model estimates, forecasts, or synthetic simulations.\n"
-            "4. Ground forensic explanations to explicitly cite upstream data sources (e.g. CPCB CAAQMS, Copernicus CAMS / Open-Meteo, WAQI) and observation timestamps.\n"
-            "5. If is_simulated is True, explicitly state that values are simulated due to live source outage.\n"
-            "6. When interpreting Screen 7 analytics, explicitly interpret diurnal patterns (morning nocturnal inversion peaks, midday convective turbulence dips, evening accumulation).\n"
-            f"7. Respond exclusively in the requested language locale: '{context.language}' ('en' for English, 'hi' for Hindi, 'mr' for Marathi).\n"
-            "8. Keep responses concise, objective, actionable, and suitable for civic decision-makers.\n\n"
-            f"WEATHER & ATMOSPHERIC PHYSICS CONTEXT:\n{weather_prompt_block}"
+            "You are AeroTrace AI, an intelligent, authoritative, and conversational environmental intelligence assistant designed for Indian metropolitan air quality analysis.\n\n"
+            "OPERATING PRINCIPLES:\n"
+            "1. TONE & STYLE: Professional, clear, concise, and natural. NEVER output bureaucratic or military memo headers (such as 'To:', 'From:', 'Subject:', or repetitive titles like '### AeroTrace Environmental Forensic Intelligence').\n"
+            "2. DIRECT ANSWERS: Always answer the user's specific query directly first.\n"
+            "   - If the user asks a forecast question: explain the upcoming 24-hour air quality trajectory, diurnal inversion cycles, and expected AQI shifts.\n"
+            "   - If the user asks for a comparison: compare stations in the city using their actual telemetry and geographical/traffic differences.\n"
+            "   - If the user asks an AQI explanation: explain what the current index value and dominant pollutant mean for health and daily life.\n"
+            "   - If the user asks general, off-topic, or trivia questions (e.g. about celebrities, general knowledge): answer politely and accurately in 1-2 sentences, then gently invite them to explore air quality insights.\n"
+            "3. DOMAIN GROUNDING: Ground environmental assessments in atmospheric physics (Pasquill stability classes, boundary layer mixing height, aerosol dispersion) and statutory context (NAAQS limits, CPCB standards).\n"
+            f"4. LANGUAGE: Respond in the requested locale: '{context.language}' ('en' for English, 'hi' for Hindi, 'mr' for Marathi).\n"
+            f"   - When responding in Hindi or Marathi, always retain proper names of cities (e.g. '{context.city}') and stations (e.g. '{context.station or ''}') verbatim in Latin/English characters so they match UI maps and telemetry cards.\n"
+            f"   - Write numerical AQI figures using standard Arabic digits (e.g. {context.current_aqi}) rather than Devanagari numerals.\n\n"
+            f"ATMOSPHERIC & METEOROLOGICAL CONTEXT:\n{weather_prompt_block}"
         )
 
+    def _generate(self, prompt: str) -> Optional[str]:
+        """Iterate through candidate models in priority order until one succeeds."""
+        if not self._models and self._client:
+            self._models = [("primary", self._client)]
+            if self._fallback_client:
+                self._models.append(("fallback", self._fallback_client))
+
+        for model_name, model in self._models:
+            try:
+                resp = model.generate_content(prompt)
+                if resp and resp.text:
+                    return resp.text.strip()
+            except Exception as exc:
+                log.warning("Gemini model '%s' failed: %s; trying next fallback candidate...", model_name, exc)
+
+        return None
+
     def generate_insight(self, context: AIContext) -> AIResponse:
-        if not self._client:
+        peak_note = ""
+        if context.analytics and context.analytics.get("morning_peak_aqi"):
+            peak_note = f"Mention the morning peak AQI ({context.analytics.get('morning_peak_aqi')}). "
+
+        prompt = (
+            f"{self._build_system_prompt(context)}\n\n"
+            f"TELEMETRY CONTEXT:\n{context.model_dump_json(indent=2)}\n\n"
+            f"TASK: Provide a concise, 2-3 sentence grounded environmental summary for {context.city or ''} {context.station or ''}. "
+            f"Explicitly mention the city name ('{context.city}') and station name ('{context.station or ''}') verbatim in Latin/English characters. "
+            f"Explicitly mention the AQI value ({context.current_aqi}) using standard Arabic digits, and dominant pollutant ({context.dominant_pollutant or 'PM2.5'}). "
+            f"{peak_note}"
+            f"If analytics context is present, explicitly discuss the diurnal pattern and trajectory. "
+            f"Output clean narrative prose without markdown headers or prefixes. Language: {context.language}."
+        )
+        text = self._generate(prompt)
+        if not text:
             return self._fallback.generate_insight(context)
 
-        try:
-            prompt = (
-                f"{self._build_system_prompt(context)}\n\n"
-                f"CONTEXT DATA:\n{context.model_dump_json(indent=2)}\n\n"
-                f"TASK: Generate a 2-4 sentence environmental insight explaining current conditions for {context.screen_id}. "
-                f"Language: {context.language}."
-            )
-            resp = self._client.generate_content(prompt)
-            text = (resp.text or "").strip()
+        # Clean any accidental leading header markdown from generation
+        text_clean = text.strip()
+        while text_clean.startswith("#"):
+            parts = text_clean.split("\n", 1)
+            text_clean = parts[1].strip() if len(parts) > 1 else text_clean
 
-            if not text:
-                return self._fallback.generate_insight(context)
-
-            confidence_note = self._fallback._format_provenance_note(context)
-            fallback_res = self._fallback.generate_insight(context)
-            return AIResponse(
-                response_text=text,
-                language=context.language,
-                provider="gemini",
-                confidence_note=confidence_note,
-                provenance=context.provenance,
-                is_grounded=True,
-                suggested_follow_ups=[
-                    "Check source attribution evidence",
-                    "Simulate emission curtailment impact",
-                ],
-                context_summary={
-                    "screen_id": context.screen_id,
-                    "city": context.city,
-                    "station": context.station,
-                    "pollutant": context.dominant_pollutant or context.pollutant,
-                    "current_aqi": context.current_aqi,
-                    "data_source": context.data_source,
-                    "data_timestamp": context.data_timestamp,
-                    "is_simulated": context.is_simulated,
-                    "voice_script": fallback_res.context_summary.get("voice_script"),
-                },
-            )
-        except Exception as exc:
-            log.warning("Gemini generation failed (%s); degrading to template fallback.", exc)
-            return self._fallback.generate_insight(context)
+        confidence_note = self._fallback._format_provenance_note(context)
+        fallback_res = self._fallback.generate_insight(context)
+        return AIResponse(
+            response_text=text_clean,
+            language=context.language,
+            provider="gemini",
+            confidence_note=confidence_note,
+            provenance=context.provenance,
+            is_grounded=True,
+            suggested_follow_ups=[
+                "Check source attribution evidence",
+                "Simulate emission curtailment impact",
+            ],
+            context_summary={
+                "screen_id": context.screen_id,
+                "city": context.city,
+                "station": context.station,
+                "pollutant": context.dominant_pollutant or context.pollutant,
+                "current_aqi": context.current_aqi,
+                "data_source": context.data_source,
+                "data_timestamp": context.data_timestamp,
+                "is_simulated": context.is_simulated,
+                "voice_script": fallback_res.context_summary.get("voice_script"),
+            },
+        )
 
     def chat(self, request: AIChatRequest) -> AIResponse:
-        if not self._client:
+        history_text = "\n".join(
+            f"{h.get('role', 'user').upper()}: {h.get('content', '')}"
+            for h in request.conversation_history[-4:]
+        )
+        top_cand = (request.context.attribution or {}).get("top_candidate", {})
+        cand_name = top_cand.get("name")
+        conf_score = (top_cand.get("score_breakdown") or {}).get("confidence_score")
+        extra_inst = ""
+        if cand_name and conf_score is not None:
+            extra_inst = f"Note: If relevant to the user query, reference candidate source '{cand_name}' and its confidence score ({int(round(conf_score * 100))}%)."
+
+        prompt = (
+            f"{self._build_system_prompt(request.context)}\n\n"
+            f"ACTIVE CONTEXT:\n{request.context.model_dump_json(indent=2)}\n\n"
+            f"CONVERSATION HISTORY:\n{history_text}\n\n"
+            f"USER QUERY: {request.message}\n"
+            f"{extra_inst}\n"
+            f"Respond directly, naturally, and authoritatively to the user query in {request.context.language}. "
+            f"Do NOT output bureaucratic memo headers ('To:', 'From:', 'Subject:')."
+        )
+        text = self._generate(prompt)
+        if not text:
             return self._fallback.chat(request)
 
-        try:
-            history_text = "\n".join(
-                f"{h.get('role', 'user').upper()}: {h.get('content', '')}"
-                for h in request.conversation_history[-4:]
-            )
-            prompt = (
-                f"{self._build_system_prompt(request.context)}\n\n"
-                f"SCREEN CONTEXT:\n{request.context.model_dump_json(indent=2)}\n\n"
-                f"CONVERSATION HISTORY:\n{history_text}\n\n"
-                f"USER QUERY: {request.message}\n"
-                f"Language: {request.context.language}."
-            )
-            resp = self._client.generate_content(prompt)
-            text = (resp.text or "").strip()
+        # Clean any accidental leading header markers
+        text_clean = text.strip()
+        while text_clean.startswith("### AeroTrace") or text_clean.startswith("**AeroTrace"):
+            parts = text_clean.split("\n", 1)
+            text_clean = parts[1].strip() if len(parts) > 1 else text_clean
 
-            if not text:
-                return self._fallback.chat(request)
-
-            confidence_note = self._fallback._format_provenance_note(request.context)
-            return AIResponse(
-                response_text=text,
-                language=request.context.language,
-                provider="gemini",
-                confidence_note=confidence_note,
-                provenance=request.context.provenance,
-                is_grounded=True,
-                suggested_follow_ups=[
-                    "What are the downwind affected areas?",
-                    "View active municipal alerts",
-                ],
-                context_summary={
-                    "city": request.context.city,
-                    "station": request.context.station,
-                    "aqi": request.context.current_aqi,
-                },
-            )
-        except Exception as exc:
-            log.warning("Gemini chat failed (%s); degrading to template fallback.", exc)
-            return self._fallback.chat(request)
+        confidence_note = self._fallback._format_provenance_note(request.context)
+        return AIResponse(
+            response_text=text_clean,
+            language=request.context.language,
+            provider="gemini",
+            confidence_note=confidence_note,
+            provenance=request.context.provenance,
+            is_grounded=True,
+            suggested_follow_ups=[
+                "What are the downwind affected areas?",
+                "View active municipal alerts",
+            ],
+            context_summary={
+                "city": request.context.city,
+                "station": request.context.station,
+                "aqi": request.context.current_aqi,
+            },
+        )
 
 
 # ── Factory Singleton ────────────────────────────────────────────────────────

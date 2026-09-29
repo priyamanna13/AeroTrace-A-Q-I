@@ -62,7 +62,8 @@ def _conc_for_aqi(pollutant: str, target_aqi: int) -> float:
     Works for any pollutant by looking up its breakpoint table from standards.
     """
     from ..standards import _AQI_BANDS
-    bands = _AQI_BANDS[pollutant]
+    pol_key = (pollutant or "pm25").strip().lower().replace(".", "")
+    bands = _AQI_BANDS.get(pol_key) or _AQI_BANDS.get(pollutant.lower()) or _AQI_BANDS["pm25"]
     for band in bands:
         if band.i_lo <= target_aqi <= band.i_hi:
             # Linear interpolation within the band (inverse of sub_index).

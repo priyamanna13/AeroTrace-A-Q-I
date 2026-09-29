@@ -18,3 +18,4 @@ take_screenshot.mjs
 .screen1-v0-source/
 .webgl-design-source/
 dist/
+*.db

@@ -324,8 +324,32 @@ function PredictionContent() {
         ? t.prediction.falling(forecast.currentAqi)
         : t.prediction.steady(forecast.currentAqi)
 
-  // AI Prediction Insight — grounded on the SAME demo-forecast data, localized
-  // via dictionaries so displayed text and spoken text are identical.
+  // AI Prediction Insight — fetches live grounded AI interpretation from the backend,
+  // falling back gracefully to the deterministic dictionary insight.
+  const [aiInsight, setAiInsight] = useState(null)
+  const [aiLoading, setAiLoading] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    setAiLoading(true)
+    API.getPredictionInsight(cityNameLabel, language)
+      .then((res) => {
+        if (!active) return
+        if (res && res.response_text) {
+          setAiInsight(res.response_text)
+        }
+      })
+      .catch((err) => {
+        console.warn("[Screen 5] AI Prediction Insight fetch failed, using fallback:", err)
+      })
+      .finally(() => {
+        if (active) setAiLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [cityNameLabel, language])
+
   const insight = useMemo(() => {
     const phrases = t.prediction.driverPhrases
     const d = forecast.drivers
@@ -335,6 +359,8 @@ function PredictionContent() {
     if (trendDir === "fall") return t.prediction.insightFalling(forecast.predictedAqi, forecast.peak.time, d1, d2)
     return t.prediction.insightSteady(forecast.predictedAqi, forecast.peak.time, d1, d2)
   }, [t, forecast, trendDir])
+
+  const displayedInsight = aiInsight || insight
 
   const header = (
     <header className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center justify-between px-6 py-4 lg:px-10">
@@ -527,11 +553,16 @@ function PredictionContent() {
             <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               {t.prediction.insightLabel}
             </span>
+            {aiInsight && !aiLoading && (
+              <span className="rounded-full border border-teal/40 bg-teal/10 px-2.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-teal">
+                AI Powered
+              </span>
+            )}
           </div>
           <p className="mt-3 text-pretty text-sm leading-relaxed text-foreground/90">
-            “{loading ? t.prediction.loading : insight}”
+            “{loading || aiLoading ? t.prediction.loading : displayedInsight}”
           </p>
-          <ListenControl text={loading ? "" : insight} disabled={loading} />
+          <ListenControl text={loading || aiLoading ? "" : displayedInsight} disabled={loading || aiLoading} />
         </section>
       </div>
     </div>

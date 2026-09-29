@@ -8,9 +8,10 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 from pathlib import Path
+from typing import Optional
 
 from dotenv import load_dotenv
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
@@ -26,6 +27,30 @@ class Settings(BaseSettings):
         default="postgresql+psycopg2://aq:aq@localhost:5432/aqdb",
         description="SQLAlchemy URL. PostGIS in prod; SQLite (no PostGIS) for tests/dry-run.",
     )
+    raw_database_url: Optional[str] = Field(default=None)
+
+    @model_validator(mode="after")
+    def _validate_db_connectivity(self) -> "Settings":
+        """Probe PostgreSQL liveness on startup; fallback to SQLite if offline."""
+        if not self.raw_database_url:
+            self.raw_database_url = self.database_url
+        if self.database_url.startswith("postgres"):
+            import logging
+            import socket
+            from urllib.parse import urlparse
+            try:
+                parsed = urlparse(self.database_url)
+                host = parsed.hostname or "localhost"
+                port = parsed.port or 5432
+                with socket.create_connection((host, port), timeout=0.8):
+                    pass
+            except Exception:
+                logging.getLogger("config").info(
+                    "PostgreSQL port %s on '%s' unreachable. Operating on local SQLite fallback (local_aq.db).",
+                    port, host
+                )
+                self.database_url = "sqlite:///local_aq.db"
+        return self
 
     # --- Ingestion source ----------------------------------------------
     aq_source: str = Field(
@@ -82,13 +107,14 @@ class Settings(BaseSettings):
         """Return database URL with sensitive credentials masked."""
         from urllib.parse import urlparse, urlunparse
         try:
-            parsed = urlparse(self.database_url)
+            target = self.raw_database_url or self.database_url
+            parsed = urlparse(target)
             if parsed.password:
                 netloc = f"{parsed.username or ''}:***@{parsed.hostname or ''}"
                 if parsed.port:
                     netloc += f":{parsed.port}"
                 return urlunparse(parsed._replace(netloc=netloc))
-            return self.database_url
+            return target
         except Exception:
             return "sanitized_database_url"
 

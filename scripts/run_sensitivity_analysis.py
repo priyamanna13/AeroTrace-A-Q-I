@@ -5,7 +5,13 @@ and plume half-angle) to demonstrate the robustness of the spatial ranker
 and confidence scoring model. Outputs a Markdown metrics table for the judges.
 """
 import copy
+import os
+import sys
 from pprint import pprint
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 from app.demo_scenarios import get_scenario
 from app.pasquill import classify_stability

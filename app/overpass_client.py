@@ -43,7 +43,7 @@ OVERPASS_QUERIES: dict[str, str] = {
         out center geom;''',
     "traffic": '''[out:json][timeout:30];
         (
-          way["highway"~"trunk|primary|secondary"]["lanes">=4]({bbox});
+          way["highway"~"trunk|primary|secondary"]({bbox});
         );
         out geom;''',
     "waste_burning": '''[out:json][timeout:30];
@@ -205,16 +205,7 @@ class OverpassSourceDiscovery:
         return f"{self.south},{self.west},{self.north},{self.east}"
 
     def _run_query(self, query_type: str) -> list[dict]:
-        """Execute a single Overpass query and normalise the results.
-
-        Args:
-            query_type: One of ``'industrial'``, ``'construction'``,
-                ``'traffic'``, or ``'waste_burning'``.
-
-        Returns:
-            A list of normalised source dictionaries.  Returns an empty
-            list if the query type is unknown or if a network error occurs.
-        """
+        """Execute a single Overpass query and normalise the results."""
         template = OVERPASS_QUERIES.get(query_type)
         if template is None:
             logger.warning("Unknown Overpass query type: %s", query_type)
@@ -228,11 +219,11 @@ class OverpassSourceDiscovery:
                 OVERPASS_URL,
                 data=query,
                 headers={"User-Agent": "AQI-Attribution-Engine/3.1.0"},
-                timeout=2.0,
+                timeout=1.5,
             )
             response.raise_for_status()
         except requests.exceptions.RequestException as exc:
-            logger.warning(
+            logger.debug(
                 "Overpass query '%s' failed: %s", query_type, exc,
             )
             return []
@@ -240,7 +231,7 @@ class OverpassSourceDiscovery:
         try:
             data = response.json()
         except ValueError:
-            logger.warning(
+            logger.debug(
                 "Overpass query '%s' returned non-JSON response", query_type,
             )
             return []
@@ -273,7 +264,7 @@ class OverpassSourceDiscovery:
     # ------------------------------------------------------------------
 
     def discover_sources(self) -> list[dict]:
-        """Run all Overpass queries and return deduplicated sources.
+        """Run all Overpass queries concurrently and return deduplicated sources.
 
         Results are cached by bbox string. Subsequent calls with the same
         bbox return instantly from _DISCOVERY_CACHE (< 1ms).
@@ -292,17 +283,17 @@ class OverpassSourceDiscovery:
         all_sources: list[dict] = []
         query_types = list(OVERPASS_QUERIES.keys())
 
-        for idx, qtype in enumerate(query_types):
-            results = self._run_query(qtype)
-            all_sources.extend(results)
-
-            # Rate-limit: sleep between queries (skip after the last one)
-            if idx < len(query_types) - 1:
-                logger.debug(
-                    "Rate-limit pause (%ds) before next query …",
-                    _RATE_LIMIT_DELAY,
-                )
-                time.sleep(_RATE_LIMIT_DELAY)
+        # Execute queries concurrently so all finish or timeout within ~1.5s
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(query_types))) as executor:
+            future_to_type = {executor.submit(self._run_query, qtype): qtype for qtype in query_types}
+            for future in concurrent.futures.as_completed(future_to_type):
+                qtype = future_to_type[future]
+                try:
+                    results = future.result()
+                    all_sources.extend(results)
+                except Exception as exc:
+                    logger.debug("Overpass concurrent worker failed for '%s': %s", qtype, exc)
 
         # Deduplicate by osm_id, keeping the first occurrence.
         seen: set[str] = set()
@@ -313,11 +304,17 @@ class OverpassSourceDiscovery:
                 seen.add(osm_id)
                 unique_sources.append(source)
 
-        logger.info(
-            "Discovered %d unique source(s) across %d query type(s) "
-            "(%d before dedup)",
-            len(unique_sources), len(query_types), len(all_sources),
-        )
+        if unique_sources:
+            logger.info(
+                "Discovered %d unique source(s) across %d query type(s) "
+                "(%d before dedup)",
+                len(unique_sources), len(query_types), len(all_sources),
+            )
+        else:
+            logger.debug(
+                "Discovered 0 unique source(s) across %d query type(s)",
+                len(query_types),
+            )
 
         # ── Store in cache for instant subsequent returns ──
         _DISCOVERY_CACHE[bbox_key] = unique_sources

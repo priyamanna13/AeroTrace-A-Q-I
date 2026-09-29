@@ -39,6 +39,7 @@ NAAQS_LIMITS: dict[str, float] = {
     "co": 4.0,
     "o3": 100.0,
 }
+NAAQS_LIMITS["pm2.5"] = NAAQS_LIMITS["pm25"]
 
 #: Official averaging period reported in the contract per pollutant.
 AVERAGING_PERIODS: dict[str, str] = {
@@ -49,6 +50,7 @@ AVERAGING_PERIODS: dict[str, str] = {
     "co": "8hr",
     "o3": "8hr",
 }
+AVERAGING_PERIODS["pm2.5"] = AVERAGING_PERIODS["pm25"]
 
 
 def canonical_unit(pollutant: str) -> str:
@@ -163,6 +165,7 @@ _AQI_BANDS: dict[str, tuple[AqiBand, ...]] = {
         AqiBand(401, 500, 747, 1000),
     ),
 }
+_AQI_BANDS["pm2.5"] = _AQI_BANDS["pm25"]
 
 #: Pollutants required before an AQI may be reported (CPCB guidance: need at least
 #: 3 pollutants, of which at least one must be PM2.5 or PM10). Otherwise AQI is

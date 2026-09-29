@@ -93,6 +93,7 @@ class TestAttributionLiveEndpoint:
         ("Shivajinagar", "Pune", "PMC-AQ-SQUAD-07"),
         ("ITO", "Delhi", "DPCC-ENF-SQUAD-04"),
         ("Bandra", "Mumbai", "MPCB-MUM-RAPID-01"),
+        ("Andheri", "Mumbai", "MPCB-MUM-RAPID-01"),
     ])
     def test_attribution_pipeline_multi_city(self, station_name, expected_city, expected_squad, monkeypatch):
         import app.overpass_client

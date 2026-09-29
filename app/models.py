@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import (
+    Boolean,
     Index,
     Integer,
     String,
@@ -91,24 +92,18 @@ class Station(Base):
         stored EWKT string.
         """
         if _USE_POSTGIS:
-            from geoalchemy2.elements import WKBElement  # type: ignore
-            from sqlalchemy.orm import object_session
-
-            sess = object_session(self)
-            if sess is not None:
-                row = sess.execute(
-                    text(
-                        "SELECT ST_X(:g), ST_Y(:g)"
-                    ).bindparams(g=self.geom)
-                ).one()
-                return float(row[0]), float(row[1])
-            # Fallback for in-memory / unflushed WKBElement.
-            if isinstance(self.geom, WKBElement):
+            try:
+                from geoalchemy2.shape import to_shape
+                pt = to_shape(self.geom)
+                return float(pt.x), float(pt.y)
+            except Exception:
+                pass
+            if hasattr(self.geom, "data"):
                 from shapely import wkb
                 pt = wkb.loads(bytes(self.geom.data))
-                return pt.x, pt.y
-            return _parse_ewkt(self.geom)
-        return _parse_ewkt(self.geom)
+                return float(pt.x), float(pt.y)
+            return _parse_ewkt(str(self.geom))
+        return _parse_ewkt(str(self.geom))
 
 
 def _parse_ewkt(ewkt: str) -> tuple[float, float]:
@@ -150,6 +145,9 @@ class AqiReading(Base):
     so2: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     co: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     o3: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    data_source: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, default="CPCB_CAAQMS")
+    is_simulated: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
 
     station: Mapped["Station"] = relationship(back_populates="readings")
 

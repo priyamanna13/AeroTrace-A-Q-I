@@ -20,6 +20,8 @@ from zoneinfo import ZoneInfo
 
 # Allow running as `python scripts/run_demo.py` from the repo root.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 from app.config import get_settings
 from app.contract import build_trigger_station_block

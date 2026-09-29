@@ -36,12 +36,12 @@ stations:
     network: "CPCB_CAAQMS"
     elevation_m: 14
 
-  - name: "Kurla"
-    cpcb_station_id: "site_5106"
-    lat: 19.0726
-    lon: 72.8845
+  - name: "Andheri"
+    cpcb_station_id: "site_5108"
+    lat: 19.1158
+    lon: 72.8660
     network: "CPCB_CAAQMS"
-    elevation_m: 8
+    elevation_m: 16
 
 polling:
   cpcb_interval_minutes: 15

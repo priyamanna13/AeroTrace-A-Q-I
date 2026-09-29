@@ -10,12 +10,13 @@ echo.
 
 :: Check Docker PostGIS
 echo [*] Checking Docker PostgreSQL / PostGIS container...
-docker ps --filter "name=aq_postgis" --filter "status=running" -q > nul 2>&1
-if errorlevel 1 (
-    echo [!] PostGIS container not detected. Starting via docker compose...
+set "RUNNING_CONTAINER="
+for /f "tokens=*" %%i in ('docker ps -q -f "name=aq_postgis" -f "status=running"') do set "RUNNING_CONTAINER=%%i"
+if not defined RUNNING_CONTAINER (
+    echo [!] PostGIS container not running. Starting via docker compose...
     docker compose up -d
 ) else (
-    echo [OK] PostGIS container is already active.
+    echo [OK] PostGIS container is active.
 )
 echo.
 

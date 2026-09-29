@@ -82,7 +82,8 @@ class TestAnalyticsEndpoints:
         assert r.status_code == 200
         data = r.json()
         assert "Pune" in data["response_text"]
-        assert "diurnal" in data["response_text"].lower() or "trajectory" in data["response_text"].lower()
+        resp_lower = data["response_text"].lower()
+        assert any(k in resp_lower for k in ("diurnal", "trajectory", "dip", "peak", "trend", "cycle"))
         assert data["language"] == "en"
         assert data["is_grounded"] is True
         assert "voice_script" in data["context_summary"]

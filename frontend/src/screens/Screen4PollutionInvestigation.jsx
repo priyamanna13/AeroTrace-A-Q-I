@@ -1054,9 +1054,9 @@ export default function Screen4PollutionInvestigation() {
 
       console.log(`[Poll] Fetching /attribution/${currentStation} at`, new Date().toLocaleTimeString());
 
-      // Abort after 8 s so a slow backend never blocks the UI indefinitely
+      // Abort after 15 s so a slow backend or cold OSM fetch never prematurely triggers offline mode
       const controller = new AbortController();
-      const abortTimer = setTimeout(() => controller.abort(), 8000);
+      const abortTimer = setTimeout(() => controller.abort(), 15000);
 
       try {
         if (pollFailureCount.current > 0) setConnectionStatus('refreshing');

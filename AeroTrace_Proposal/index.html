@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AeroTrace A(Q)I — PMJIT NGEC 2026–2027 · Sustainable Habitat · Final Proposal</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ================= PAGE 1 — THE THESIS ================= -->
+<section class="page" id="p1">
+  <div class="cols" style="height:100%">
+    <!-- LEFT 45% -->
+    <div style="width:45%;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;align-items:center;gap:2.6mm">
+          <!-- BRANDMARK: vector prism/wind emblem -->
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+            <path d="M13 1.5 24 22.5H2Z" stroke="#22d3ee" stroke-width="1.1"/>
+            <path d="M13 6.5 20 20H6Z" stroke="rgba(34,211,238,.45)" stroke-width="1"/>
+            <path d="M6 24c3.5-2.2 7-2.2 10.5 0" stroke="#fbbf24" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <div>
+            <div style="font:700 13px/1 var(--sans);letter-spacing:.06em;color:#f3f6f9">AeroTrace <span style="color:var(--cyan)">A(Q)I</span></div>
+            <div style="font:500 6.4px/1 var(--mono);letter-spacing:.22em;color:var(--ink3);margin-top:1.2mm">ENVIRONMENTAL FORENSIC INTELLIGENCE</div>
+          </div>
+        </div>
+        <div style="font:500 6.2px/1.5 var(--mono);letter-spacing:.14em;color:var(--ink3);text-align:right;text-transform:uppercase">PMJIT NGEC 2026–2027<br>Sustainable Habitat Track</div>
+      </div>
+
+      <div style="margin-top:8mm">
+        <div class="overline">01 · Thesis — Beyond the Number</div>
+        <h1 class="head" style="font-size:26.5px;margin-top:3.4mm">From knowing the air is hazardous to <em>tracing why</em>.</h1>
+        <p class="dek" style="margin-top:3mm">Environmental forensic intelligence for resilient urban habitats.</p>
+        <p class="small" style="margin-top:3.4mm;max-width:112mm">Cities already measure ambient air pollution. An aggregate index cannot locate an unmitigated excavation site, track an industrial plume, identify a school in the dispersion corridor, or prepare a municipal inspection workflow. AeroTrace A(Q)I addresses the gap between ambient sensing and municipal investigation — synthesizing atmospheric physics, chemical-signature analysis, and spatial intelligence into a decision-support pipeline.</p>
+      </div>
+
+      <div class="panel" style="margin-top:5mm">
+        <div class="plabel">The Conceptual Leap <span class="r">MEASURE → UNDERSTAND → TRACE → DECIDE</span></div>
+        <!-- DIAGRAM 1: DESCRIPTIVE VS DIAGNOSTIC -->
+        <svg viewBox="0 0 400 118" style="width:100%;height:auto">
+          <defs>
+            <marker id="ac" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6Z" fill="#38bdf8"/></marker>
+          </defs>
+          <!-- left: legacy -->
+          <text x="8" y="12" font-size="7" fill="#717d8a" letter-spacing="2" font-weight="600" font-family="JetBrains Mono">LEGACY PARADIGM</text>
+          <rect x="8" y="18" width="76" height="15" rx="2" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.14)"/>
+          <text x="46" y="28.5" font-size="7.6" fill="#c8d2da" text-anchor="middle">CPCB sensor</text>
+          <line x1="46" y1="33" x2="46" y2="43" stroke="#3d4d5a" stroke-width="1" marker-end="url(#ag)"/>
+          <rect x="8" y="44" width="76" height="15" rx="2" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.14)"/>
+          <text x="46" y="54.5" font-size="7.6" fill="#c8d2da" text-anchor="middle">AQI 310 · scalar</text>
+          <line x1="46" y1="59" x2="46" y2="69" stroke="#3d4d5a" stroke-width="1" marker-end="url(#ag)"/>
+          <rect x="8" y="70" width="76" height="15" rx="2" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.14)"/>
+          <text x="46" y="80.5" font-size="7.6" fill="#c8d2da" text-anchor="middle">Generic advisory</text>
+          <rect x="8" y="90" width="88" height="12" rx="6" fill="none" stroke="rgba(255,255,255,.12)"/>
+          <text x="52" y="98.5" font-size="6.4" fill="#717d8a" text-anchor="middle" letter-spacing="1.5" font-family="JetBrains Mono">DESCRIPTIVE / PASSIVE</text>
+
+          <!-- center conduit -->
+          <line x1="96" y1="47" x2="128" y2="47" stroke="#38bdf8" stroke-width="1.1" marker-end="url(#ac)"/>
+          <rect x="132" y="24" width="118" height="70" rx="3" fill="rgba(14,165,233,.07)" stroke="rgba(34,211,238,.4)"/>
+          <text x="191" y="38" font-size="7.4" fill="#7dd3fc" text-anchor="middle" font-weight="700" letter-spacing="1">AEROTRACE INTELLIGENCE LAYER</text>
+          <line x1="140" y1="44" x2="242" y2="44" stroke="rgba(34,211,238,.2)"/>
+          <text x="191" y="54" font-size="7.2" fill="#c8d2da" text-anchor="middle">Meteorology · Dispersion</text>
+          <text x="191" y="64" font-size="7.2" fill="#c8d2da" text-anchor="middle">Chemical-signature matching</text>
+          <text x="191" y="74" font-size="7.2" fill="#c8d2da" text-anchor="middle">Spatial GIS context</text>
+          <text x="191" y="87" font-size="6.2" fill="#717d8a" text-anchor="middle" font-family="JetBrains Mono">pipeline v3.1.0 · deterministic</text>
+
+          <!-- right: diagnostic -->
+          <line x1="250" y1="47" x2="282" y2="47" stroke="#38bdf8" stroke-width="1.1" marker-end="url(#ac)"/>
+          <text x="348" y="12" font-size="7" fill="#7dd3fc" letter-spacing="2" font-weight="600" text-anchor="middle" font-family="JetBrains Mono">AEROTRACE PARADIGM</text>
+          <rect x="286" y="18" width="106" height="13.5" rx="2" fill="rgba(14,165,233,.06)" stroke="rgba(34,211,238,.3)"/>
+          <text x="339" y="27.7" font-size="7.2" fill="#d9f2fb" text-anchor="middle">Upwind dispersion cone</text>
+          <line x1="339" y1="31.5" x2="339" y2="37.5" stroke="#3d7d99" stroke-width="1" marker-end="url(#ac)"/>
+          <rect x="286" y="38.5" width="106" height="13.5" rx="2" fill="rgba(14,165,233,.06)" stroke="rgba(34,211,238,.3)"/>
+          <text x="339" y="48.2" font-size="7.2" fill="#d9f2fb" text-anchor="middle">Chemical signature ratios</text>
+          <line x1="339" y1="52" x2="339" y2="58" stroke="#3d7d99" stroke-width="1" marker-end="url(#ac)"/>
+          <rect x="286" y="59" width="106" height="13.5" rx="2" fill="rgba(14,165,233,.06)" stroke="rgba(34,211,238,.3)"/>
+          <text x="339" y="68.7" font-size="7.2" fill="#d9f2fb" text-anchor="middle">Spatial candidate ranking</text>
+          <line x1="339" y1="72.5" x2="339" y2="78.5" stroke="#3d7d99" stroke-width="1" marker-end="url(#ac)"/>
+          <rect x="286" y="79.5" width="106" height="13.5" rx="2" fill="rgba(250,204,21,.07)" stroke="rgba(251,191,36,.45)"/>
+          <text x="339" y="89.2" font-size="6.9" fill="#fde68a" text-anchor="middle">Draft inspection checklists</text>
+          <rect x="282" y="97" width="114" height="12" rx="6" fill="none" stroke="rgba(34,211,238,.35)"/>
+          <text x="339" y="105.5" font-size="6.4" fill="#7dd3fc" text-anchor="middle" letter-spacing="1.2" font-family="JetBrains Mono">DIAGNOSTIC · DECISION SUPPORT</text>
+          <defs><marker id="ag" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6Z" fill="#3d4d5a"/></marker></defs>
+        </svg>
+      </div>
+
+      <div class="grow"></div>
+      <div class="chiprow" style="margin-top:4mm">
+        <span class="chip vi">Verified Implemented · Pipeline v3.1.0</span>
+        <span class="chip dp">Demonstrated Prototype</span>
+        <span class="chip pr">Proposed</span>
+        <span class="chip lv">Long-Term Vision</span>
+      </div>
+      <div class="citekey" style="margin-top:2.4mm"><b>[1]</b> CPCB Annual Report &amp; NCAP Portal — ~1,500+ manual &amp; continuous CAAQMS stations across Indian cities &nbsp;·&nbsp; <b>[2]</b> CPCB National Air Quality Index, 2014</div>
+    </div>
+
+    <!-- RIGHT 55% -->
+    <div style="width:55%;display:flex;flex-direction:column;gap:4mm">
+      <!-- HERO SHOT PLACEHOLDER -->
+      <div class="shot" style="flex:1;min-height:0">
+        <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+        <div class="slot">[ PLACE FINAL UI SCREENSHOT HERE ]</div>
+        <div class="name">FINAL LANDING SCREEN — 3D WEBGL SUBCONTINENTAL GLOBE</div>
+        <div class="req"><b>Purpose:</b> demonstrates the city-scale → subcontinental environmental intelligence canvas.<br>
+        <b>Required capture:</b> full landing view · WebGL2 raymarched atmospheric boundary layer · Indian-subcontinent coordinate projection · tri-lingual toggle <b>EN | हि | म</b> · obsidian atmosphere rim lighting.</div>
+        <div class="file">d:\ET hackathon\AeroTrace-A-Q-I\.webgl-design-source\aerotrace-landing-v2.png</div>
+        <div class="dims">2880 × 1800 · genuine application capture</div>
+        <div class="notai">⌘ Authentic application screen capture — not an AI render</div>
+      </div>
+
+      <!-- EVIDENCE STRIP -->
+      <div style="display:flex;gap:3.6mm">
+        <div class="panel tight" style="flex:1">
+          <div class="metric"><div class="n">1,500<em>+</em></div><div class="l">CAAQMS &amp; manual stations [1]</div><div class="s">Existing public sensing infrastructure — reporting remains predominantly descriptive</div></div>
+        </div>
+        <div class="panel tight" style="flex:1">
+          <div class="metric"><div class="n">58</div><div class="l">Automated tests · 10 modules</div><div class="s">Pytest unit &amp; integration suite · tri-lingual advisory generation verified</div></div>
+        </div>
+        <div class="panel tight" style="flex:1">
+          <div class="metric"><div class="n">v3.1<em>.0</em></div><div class="l">Pipeline · Python · FastAPI</div><div class="s">PostGIS spatial core · React 19 frontend · deterministic, auditable rules</div></div>
+        </div>
+      </div>
+
+      <!-- PROVENANCE ARTIFACT -->
+      <div class="artifact" style="height:21mm;flex-direction:row;gap:5mm;text-align:left;padding:2.6mm 4mm">
+        <div style="width:30mm;height:15.5mm;border:1px dashed rgba(134,239,172,.5);border-radius:2px;display:flex;align-items:center;justify-content:center;flex:none">
+          <span style="font:500 6.2px/1 var(--mono);color:#86efac;letter-spacing:.1em">SKETCH</span>
+        </div>
+        <div>
+          <div style="font:600 6.4px/1.5 var(--mono);letter-spacing:.16em;color:#86efac;text-transform:uppercase">Required team-created artifact · original human-made</div>
+          <div style="font:400 7.4px/1.5 var(--sans);color:var(--ink2);margin-top:1.2mm">Original hand-drawn ideation wireframe — “Trace the air. Understand the source.” Early UI thinking &amp; feature mapping. <span style="color:var(--ink3)">[PLACE TEAM ARTIFACT HERE]</span></div>
+          <div style="font:400 6.2px/1 var(--mono);color:#4c7d5e;margin-top:1.2mm">WhatsApp-Image-2026-09-24-at-8.08.03-PM.jpeg · thumbnail, bottom-margin provenance</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><span>AeroTrace A(Q)I · Environmental Forensic Intelligence</span><span class="tag">PMJIT NGEC 2026–2027 · Sustainable Habitat</span><span class="pn">PAGE 01 / 10</span></div>
+</section>
+
+<!-- ================= PAGE 2 — WHY THE PROBLEM MATTERS ================= -->
+<section class="page" id="p2">
+  <div class="overline">02 · The Human &amp; Epidemiological Reality</div>
+  <h1 class="head">The cost of inactionable data: aggregate indices mask urban exposure.</h1>
+  <p class="small" style="margin-top:2.2mm;max-width:225mm">Behind every city-wide AQI average is a localized dispersion plume impacting real schools, hospital wards, and residential communities that receive limited localized actionable context.</p>
+
+  <div class="cols" style="margin-top:4mm;flex:1;min-height:0">
+    <!-- LEFT: crisis + formula -->
+    <div style="width:50%;display:flex;flex-direction:column;gap:3.4mm">
+      <div style="display:flex;gap:3.6mm">
+        <div class="panel tight" style="flex:1"><div class="metric"><div class="n">1.67<em>M</em></div><div class="l">Premature deaths / year<span class="cite">[3]</span></div><div class="s">17.8% of total national mortality · ~$95B annual economic impact</div></div></div>
+        <div class="panel tight" style="flex:1"><div class="metric"><div class="n">−5.3<em> yrs</em></div><div class="l">Life expectancy lost<span class="cite">[4]</span></div><div class="s">Up to 8.2+ years in Indo-Gangetic Plain corridors</div></div></div>
+      </div>
+
+      <div class="panel">
+        <div class="plabel">The Mathematics of Masking — CPCB NAQI Aggregation <span class="r">CPCB 2014 [2]</span></div>
+        <div class="formula">AQI = max( I<sub>PM2.5</sub>, I<sub>PM10</sub>, I<sub>NO2</sub>, I<sub>SO2</sub>, I<sub>CO</sub>, I<sub>O3</sub> )</div>
+        <p class="micro" style="margin-top:2mm">A station reports only the <b>maximum sub-index</b> of a single dominant pollutant — the index communicates severity for public awareness, not composition, geography, or origin. <span class="r" style="color:#546070">WHAT THE SCALAR AQI CAN HIDE</span></p>
+      </div>
+
+      <div class="panel grow" style="display:flex;flex-direction:column">
+        <div class="plabel">Co-Pollutant Masking — Illustrative Station Event <span class="r">Shivajinagar · prototype scenario</span></div>
+        <div style="display:flex;align-items:center;gap:4mm">
+          <div style="flex:none;text-align:center;padding:0 3mm">
+            <div style="font:700 30px/1 var(--sans);color:#ef4444">310</div>
+            <div style="font:600 6.6px/1 var(--mono);letter-spacing:.14em;color:#ef4444;margin-top:1.4mm">VERY POOR · PM10</div>
+            <div style="font:500 6.2px/1 var(--mono);color:var(--ink3);margin-top:1mm">PUBLIC DISPLAY</div>
+          </div>
+          <div style="flex:1">
+            <!-- sub-index bars -->
+            <div class="ebar" style="margin-top:0"><div class="lbl"><span>PM10 · DOMINANT (REPORTED)</span><span class="v">387 µg/m³ · AQI 310</span></div><div class="track"><div class="fill" style="width:96%;background:linear-gradient(90deg,#dc2626,#ef4444)"></div></div></div>
+            <div class="ebar"><div class="lbl"><span>NO₂ · HIDDEN CO-POLLUTANT</span><span class="v">72.4 µg/m³ · 91% of NAAQS</span></div><div class="track"><div class="fill" style="width:91%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div></div>
+            <div class="ebar"><div class="lbl"><span>SO₂ · HIDDEN CO-POLLUTANT</span><span class="v">54.8 µg/m³ · 69% of NAAQS</span></div><div class="track"><div class="fill" style="width:69%;background:linear-gradient(90deg,#d97706,#f59e0b)"></div></div></div>
+            <p class="micro" style="margin-top:1.6mm">A maximum sub-index can obscure the simultaneous presence of other pollutants. Particulate matter acts as an inhalation carrier for adsorbed nitrogen and sulfur species — a compound dynamic a single number cannot express.</p>
+          </div>
+        </div>
+        <div class="chiprow" style="margin-top:auto;padding-top:2mm"><span class="chip is sq">Illustrative Scenario · Demonstrated Prototype</span></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: WHO chart + station sparsity map -->
+    <div style="width:50%;display:flex;flex-direction:column;gap:3.4mm">
+      <div class="panel">
+        <div class="plabel">Comparative Standard Discrepancy — WHO 2021 vs. India NAAQS (2009) <span class="r">µg/m³ · [5][6]</span></div>
+        <svg viewBox="0 0 430 128" style="width:100%;height:auto">
+          <!-- gridlines -->
+          <line x1="120" y1="6" x2="120" y2="108" stroke="rgba(255,255,255,.08)"/>
+          <line x1="235" y1="6" x2="235" y2="108" stroke="rgba(255,255,255,.08)"/>
+          <line x1="350" y1="6" x2="350" y2="108" stroke="rgba(255,255,255,.08)"/>
+          <text x="120" y="118" font-size="6.4" fill="#5b6672" text-anchor="middle" font-family="JetBrains Mono">10</text>
+          <text x="235" y="118" font-size="6.4" fill="#5b6672" text-anchor="middle" font-family="JetBrains Mono">20</text>
+          <text x="350" y="118" font-size="6.4" fill="#5b6672" text-anchor="middle" font-family="JetBrains Mono">30</text>
+          <text x="408" y="118" font-size="6.4" fill="#5b6672" text-anchor="middle" font-family="JetBrains Mono">40</text>
+          <line x1="408" y1="6" x2="408" y2="108" stroke="rgba(255,255,255,.14)" stroke-dasharray="3 3"/>
+          <!-- scale: x = 120 + (value/40)*288 -->
+          <!-- PM2.5 ANNUAL: WHO 5 -> 156 ; India 40 -> 408 -->
+          <text x="112" y="16" font-size="7.4" fill="#c8d2da" text-anchor="end" font-weight="600">PM2.5 · annual</text>
+          <rect x="120" y="7" width="36" height="9" fill="#22d3ee" opacity=".9" rx="1"/>
+          <text x="160" y="14.5" font-size="6.6" fill="#7dd3fc" font-family="JetBrains Mono">5</text>
+          <rect x="120" y="17.5" width="288" height="9" fill="#ef4444" opacity=".85" rx="1"/>
+          <text x="402" y="25" font-size="6.6" fill="#fca5a5" text-anchor="end" font-family="JetBrains Mono">40 · 8× WHO</text>
+          <!-- PM2.5 24H: WHO 15 -> 228 ; India 60 -> off scale (arrow) -->
+          <text x="112" y="43" font-size="7.4" fill="#c8d2da" text-anchor="end" font-weight="600">PM2.5 · 24-hr</text>
+          <rect x="120" y="34" width="108" height="9" fill="#22d3ee" opacity=".9" rx="1"/>
+          <text x="232" y="41.5" font-size="6.6" fill="#7dd3fc" font-family="JetBrains Mono">15</text>
+          <rect x="120" y="44.5" width="288" height="9" fill="#ef4444" opacity=".55" rx="1"/>
+          <text x="402" y="52" font-size="6.6" fill="#fca5a5" text-anchor="end" font-family="JetBrains Mono">60 →</text>
+          <!-- PM10 ANNUAL: WHO 15 -> 228 ; India 60 -> off scale -->
+          <text x="112" y="70" font-size="7.4" fill="#c8d2da" text-anchor="end" font-weight="600">PM10 · annual</text>
+          <rect x="120" y="61" width="108" height="9" fill="#22d3ee" opacity=".9" rx="1"/>
+          <text x="232" y="68.5" font-size="6.6" fill="#7dd3fc" font-family="JetBrains Mono">15</text>
+          <rect x="120" y="71.5" width="288" height="9" fill="#ef4444" opacity=".55" rx="1"/>
+          <text x="402" y="79" font-size="6.6" fill="#fca5a5" text-anchor="end" font-family="JetBrains Mono">60 →</text>
+          <!-- NO2 24H: WHO 10 -> 192 ; India 40 -> 408 -->
+          <text x="112" y="97" font-size="7.4" fill="#c8d2da" text-anchor="end" font-weight="600">NO₂ · 24-hr</text>
+          <rect x="120" y="88" width="72" height="9" fill="#22d3ee" opacity=".9" rx="1"/>
+          <text x="196" y="95.5" font-size="6.6" fill="#7dd3fc" font-family="JetBrains Mono">10</text>
+          <rect x="120" y="98.5" width="288" height="9" fill="#ef4444" opacity=".85" rx="1"/>
+          <text x="402" y="106" font-size="6.6" fill="#fca5a5" text-anchor="end" font-family="JetBrains Mono">40 · 4× WHO</text>
+          <!-- legend -->
+          <rect x="120" y="112" width="8" height="5" fill="#22d3ee"/><text x="132" y="116.5" font-size="6.4" fill="#a7b1bc">WHO 2021 guideline</text>
+          <rect x="228" y="112" width="8" height="5" fill="#ef4444"/><text x="240" y="116.5" font-size="6.4" fill="#a7b1bc">India NAAQS (2009)</text>
+        </svg>
+        <p class="micro" style="margin-top:1.6mm">WHO annual PM2.5 guideline is <b>5 µg/m³</b>; India's NAAQS is <b>40 µg/m³</b> — yet <b>85%+ of monitored cities</b> consistently exceed it <span class="cite">[5]</span>.</p>
+      </div>
+
+      <div class="panel grow">
+        <div class="plabel">Spatial Sparsity — Neighborhood Exposure vs. Station Coverage <span class="r">Illustrative · Pune</span></div>
+        <div style="display:flex;gap:4mm;align-items:center">
+          <svg viewBox="0 0 240 120" style="width:58%;height:auto;flex:none">
+            <!-- city outline blob -->
+            <path d="M20 62c10-30 48-44 92-44s104 16 108 48c3 26-34 42-84 46S28 104 18 88c-4-8-3-16 2-26Z" fill="rgba(255,255,255,.025)" stroke="rgba(255,255,255,.14)" stroke-width="1"/>
+            <!-- roads hint -->
+            <path d="M40 90 200 30M30 40 210 96" stroke="rgba(255,255,255,.05)" stroke-width="3" fill="none"/>
+            <!-- 4 stations -->
+            <g fill="#22d3ee">
+              <circle cx="62" cy="46" r="3"/><circle cx="178" cy="44" r="3"/><circle cx="64" cy="92" r="3"/><circle cx="176" cy="90" r="3"/>
+            </g>
+            <g font-family="JetBrains Mono" font-size="6" fill="#7dd3fc">
+              <text x="62" y="38" text-anchor="middle">CAAQMS</text>
+              <text x="178" y="36" text-anchor="middle">CAAQMS</text>
+              <text x="64" y="104" text-anchor="middle">CAAQMS</text>
+              <text x="176" y="102" text-anchor="middle">CAAQMS</text>
+            </g>
+            <!-- unmonitored hotspots -->
+            <g>
+              <circle cx="118" cy="66" r="13" fill="rgba(251,146,60,.16)" stroke="rgba(251,146,60,.5)" stroke-dasharray="2.5 2.5"/>
+              <circle cx="118" cy="66" r="3.2" fill="#fb923c"/>
+              <text x="118" y="54" font-size="6" fill="#fdba74" text-anchor="middle" font-family="JetBrains Mono">UNMONITORED</text>
+              <circle cx="120" cy="24" r="9" fill="rgba(251,146,60,.14)" stroke="rgba(251,146,60,.45)" stroke-dasharray="2.5 2.5"/>
+              <text x="120" y="15" font-size="6" fill="#fdba74" text-anchor="middle" font-family="JetBrains Mono">HOTSPOT</text>
+            </g>
+            <!-- school pin -->
+            <g transform="translate(148,70)">
+              <path d="M0-6a4.6 4.6 0 1 1 0 9.2C-2.6 3.2 0-6 0-6Z" transform="rotate(180)" fill="none"/>
+              <path d="M0 3.2C-2.8 0.4-4.6-1.4-4.6-3.6a4.6 4.6 0 1 1 9.2 0C4.6-1.4 2.8.4 0 3.2Z" fill="#fbbf24"/>
+              <circle cx="0" cy="-3.4" r="1.7" fill="#06080a"/>
+              <text x="7" y="-1" font-size="6.2" fill="#fde68a" font-family="JetBrains Mono">SCHOOL</text>
+            </g>
+          </svg>
+          <div style="flex:1">
+            <div style="display:flex;gap:4mm">
+              <div class="metric" style="flex:1"><div class="n">4</div><div class="l">Reference CAAQMS stations</div></div>
+              <div class="metric" style="flex:1"><div class="n">&gt;450<em> km²</em></div><div class="l">Urban area covered</div></div>
+            </div>
+            <p class="micro" style="margin-top:2mm">A school <b>300–400 m downwind</b> of an unmitigated excavation corridor experiences acute local exposure that a city-wide average cannot represent. Micro-hotspots remain invisible between stations.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="citekey" style="margin-top:3mm"><b>[3]</b> Pandey et al., GBD India — Lancet Planetary Health (2020; upd. 2022) &nbsp;·&nbsp; <b>[4]</b> AQLI, EPIC University of Chicago (2023/24) &nbsp;·&nbsp; <b>[5]</b> WHO Global Air Quality Guidelines (2021) &nbsp;·&nbsp; <b>[6]</b> CPCB NAAQS (2009)</div>
+
+  <div class="foot"><span>AeroTrace A(Q)I · Environmental Forensic Intelligence</span><span class="tag">PMJIT NGEC 2026–2027 · Sustainable Habitat</span><span class="pn">PAGE 02 / 10</span></div>
+</section>
+
+<!-- ================= PAGE 3 — SCIENTIFIC INSIGHT ================= -->
+<section class="page" id="p3">
+  <div class="cols" style="height:100%">
+    <!-- LEFT 55%: triad + decision tree -->
+    <div style="width:55%;display:flex;flex-direction:column">
+      <div class="overline">03 · The Scientific Insight</div>
+      <h1 class="head" style="font-size:23px">Pollution leaves <em>measurable signatures</em>.</h1>
+      <p class="small" style="margin-top:2.2mm;max-width:130mm">Many urban air-pollution events can be investigated through three complementary signatures: an upwind dispersion geometry, a stoichiometric chemical ratio, and a temporal operational rhythm.</p>
+
+      <!-- DIAGNOSTIC TRIAD -->
+      <div class="panel" style="margin-top:3.6mm">
+        <div class="plabel">The Diagnostic Triad <span class="r">AUDITABLE · RULE-BASED · NO BLACK BOX</span></div>
+        <svg viewBox="0 0 430 158" style="width:100%;height:auto">
+          <defs><marker id="a3" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6Z" fill="#38bdf8"/></marker></defs>
+          <!-- wind cone vector -->
+          <g>
+            <circle cx="52" cy="44" r="20" fill="rgba(34,211,238,.07)" stroke="rgba(34,211,238,.35)"/>
+            <circle cx="52" cy="44" r="3" fill="#22d3ee"/>
+            <path d="M52 44 L96 30 A46 46 0 0 1 96 58 Z" fill="rgba(251,146,60,.18)" stroke="rgba(251,146,60,.55)" stroke-width=".8"/>
+            <line x1="52" y1="44" x2="92" y2="44" stroke="#fb923c" stroke-width="1" stroke-dasharray="3 2"/>
+            <text x="52" y="76" font-size="7.2" fill="#d9f2fb" text-anchor="middle" font-weight="600">ATMOSPHERIC PHYSICS</text>
+            <text x="52" y="86" font-size="6.2" fill="#717d8a" text-anchor="middle">Pasquill-Gifford plume cone</text>
+            <text x="52" y="94" font-size="6.2" fill="#5b8aa5" text-anchor="middle" font-family="JetBrains Mono">wind_cone.py · pasquill.py</text>
+          </g>
+          <!-- chemical vector -->
+          <g>
+            <circle cx="52" cy="128" r="20" fill="rgba(34,211,238,.07)" stroke="rgba(34,211,238,.35)"/>
+            <text x="52" y="125" font-size="6.8" fill="#7dd3fc" text-anchor="middle" font-family="JetBrains Mono">PM2.5/PM10</text>
+            <text x="52" y="134" font-size="6.8" fill="#7dd3fc" text-anchor="middle" font-family="JetBrains Mono">NO2/SO2</text>
+            <text x="120" y="128" font-size="7.2" fill="#d9f2fb" font-weight="600">CHEMICAL-SIGNATURE MATCHING</text>
+            <text x="120" y="138" font-size="6.2" fill="#717d8a">Stoichiometric source-type ratios</text>
+            <text x="120" y="146" font-size="6.2" fill="#5b8aa5" font-family="JetBrains Mono">scoring.py</text>
+          </g>
+          <!-- spatial vector -->
+          <g>
+            <circle cx="52" cy="44" r="0"/>
+            <rect x="16" y="100" width="0" height="0"/>
+          </g>
+          <!-- convergence arrows -->
+          <path d="M78 52 C 130 40, 180 52, 216 70" fill="none" stroke="#38bdf8" stroke-width="1" marker-end="url(#a3)"/>
+          <path d="M78 122 C 130 128, 180 106, 216 84" fill="none" stroke="#38bdf8" stroke-width="1" marker-end="url(#a3)"/>
+          <path d="M150 26 C 190 34, 206 52, 218 68" fill="none" stroke="#38bdf8" stroke-width="1" marker-end="url(#a3)"/>
+          <!-- spatial vector (top right) -->
+          <g>
+            <circle cx="150" cy="18" r="13" fill="rgba(34,211,238,.07)" stroke="rgba(34,211,238,.35)"/>
+            <rect x="144" y="12" width="12" height="12" fill="none" stroke="#22d3ee" stroke-width="1" transform="rotate(45 150 18)"/>
+            <text x="150" y="44" font-size="0"/><text x="168" y="14" font-size="7.2" fill="#d9f2fb" font-weight="600">GEOSPATIAL TRACING</text>
+            <text x="168" y="24" font-size="6.2" fill="#717d8a">PostGIS / OSM land-use entities</text>
+            <text x="168" y="32" font-size="6.2" fill="#5b8aa5" font-family="JetBrains Mono">models.py · overpass_client.py</text>
+          </g>
+          <!-- focal point -->
+          <circle cx="252" cy="78" r="26" fill="rgba(14,165,233,.1)" stroke="rgba(34,211,238,.55)" stroke-width="1.2"/>
+          <circle cx="252" cy="78" r="18" fill="none" stroke="rgba(34,211,238,.25)" stroke-dasharray="2.5 2.5"/>
+          <text x="252" y="74" font-size="7" fill="#eaf6fb" text-anchor="middle" font-weight="700">CANDIDATE</text>
+          <text x="252" y="84" font-size="7" fill="#eaf6fb" text-anchor="middle" font-weight="700">SOURCE</text>
+          <text x="252" y="115" font-size="6.4" fill="#7dd3fc" text-anchor="middle" font-family="JetBrains Mono">+ PROTOTYPE ATTRIBUTION</text>
+          <text x="252" y="124" font-size="6.4" fill="#7dd3fc" text-anchor="middle" font-family="JetBrains Mono">CONFIDENCE SCORE</text>
+          <!-- to decision -->
+          <line x1="282" y1="78" x2="316" y2="78" stroke="#38bdf8" stroke-width="1.1" marker-end="url(#a3)"/>
+          <rect x="320" y="60" width="102" height="36" rx="3" fill="rgba(250,204,21,.06)" stroke="rgba(251,191,36,.4)"/>
+          <text x="371" y="75" font-size="7.2" fill="#fde68a" text-anchor="middle" font-weight="600">INVESTIGATION</text>
+          <text x="371" y="86" font-size="7.2" fill="#fde68a" text-anchor="middle" font-weight="600">RECOMMENDED · VERIFY</text>
+        </svg>
+      </div>
+
+      <!-- DECISION TREE -->
+      <div class="panel grow" style="margin-top:3.4mm;display:flex;flex-direction:column">
+        <div class="plabel">Chemical-Signature Decision Tree <span class="r">VERIFIED IMPLEMENTED · app/scoring.py [7]</span></div>
+        <svg viewBox="0 0 430 128" style="width:100%;height:auto;flex:1">
+          <defs><marker id="a4" markerWidth="5.5" markerHeight="5.5" refX="4.5" refY="2.75" orient="auto"><path d="M0 0L5.5 2.75L0 5.5Z" fill="#3d7d99"/></marker></defs>
+          <rect x="4" y="52" width="88" height="24" rx="2" fill="rgba(14,165,233,.07)" stroke="rgba(34,211,238,.4)"/>
+          <text x="48" y="62" font-size="6.6" fill="#7dd3fc" text-anchor="middle" font-family="JetBrains Mono">OBSERVED RATIOS</text>
+          <text x="48" y="71" font-size="6.4" fill="#a7b1bc" text-anchor="middle">+ max exceedance factor</text>
+          <g font-size="6.4" font-family="JetBrains Mono" fill="#5b8aa5">
+            <path d="M92 58 H132 M92 70 H132" stroke="none"/>
+          </g>
+          <line x1="92" y1="58" x2="136" y2="18" stroke="#3d7d99" stroke-width=".9" marker-end="url(#a4)"/>
+          <line x1="92" y1="63" x2="136" y2="45" stroke="#3d7d99" stroke-width=".9" marker-end="url(#a4)"/>
+          <line x1="92" y1="66" x2="136" y2="82" stroke="#3d7d99" stroke-width=".9" marker-end="url(#a4)"/>
+          <line x1="92" y1="70" x2="136" y2="110" stroke="#3d7d99" stroke-width=".9" marker-end="url(#a4)"/>
+          <!-- rule labels -->
+          <g font-size="5.8" fill="#4f96b8" font-family="JetBrains Mono">
+            <text x="100" y="28" transform="rotate(-18 100 28)">PM10 max · P2.5/P10&lt;0.40</text>
+            <text x="106" y="52" transform="rotate(-9 106 52)">PM2.5 max · NO2/SO2&gt;1.2</text>
+            <text x="102" y="82" transform="rotate(9 102 82)">SO2 max · EF_SO2&gt;1.5</text>
+            <text x="102" y="104" transform="rotate(17 102 104)">PM2.5 max · EF_CO≥1.0</text>
+          </g>
+          <!-- leaves -->
+          <g>
+            <rect x="140" y="8" width="150" height="20" rx="2" fill="rgba(251,146,60,.08)" stroke="rgba(251,146,60,.45)"/>
+            <text x="150" y="16.5" font-size="6.8" fill="#fdba74" font-weight="700">CRUSTAL MECHANICAL DUST</text>
+            <text x="150" y="24.5" font-size="6" fill="#a7b1bc">Excavation · unpaved road · construction</text>
+
+            <rect x="140" y="36" width="150" height="20" rx="2" fill="rgba(251,146,60,.08)" stroke="rgba(251,146,60,.45)"/>
+            <text x="150" y="44.5" font-size="6.8" fill="#fdba74" font-weight="700">COMBUSTION · VEHICULAR</text>
+            <text x="150" y="52.5" font-size="6" fill="#a7b1bc">High-temp diesel · transit corridor</text>
+
+            <rect x="140" y="72" width="150" height="20" rx="2" fill="rgba(251,146,60,.08)" stroke="rgba(251,146,60,.45)"/>
+            <text x="150" y="80.5" font-size="6.8" fill="#fdba74" font-weight="700">INDUSTRIAL SULFUR</text>
+            <text x="150" y="88.5" font-size="6" fill="#a7b1bc">Boiler · foundry · kiln</text>
+
+            <rect x="140" y="100" width="150" height="20" rx="2" fill="rgba(251,146,60,.08)" stroke="rgba(251,146,60,.45)"/>
+            <text x="150" y="108.5" font-size="6.8" fill="#fdba74" font-weight="700">BIOMASS / OPEN WASTE BURNING</text>
+            <text x="150" y="116.5" font-size="6" fill="#a7b1bc">Evening burning windows</text>
+          </g>
+          <!-- next column: disposition -->
+          <line x1="290" y1="18" x2="322" y2="18" stroke="#3d7d99" stroke-width=".9" marker-end="url(#a4)"/>
+          <line x1="290" y1="110" x2="322" y2="110" stroke="#3d7d99" stroke-width=".9" marker-end="url(#a4)"/>
+          <rect x="326" y="34" width="100" height="60" rx="2" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.14)"/>
+          <text x="376" y="50" font-size="6.6" fill="#c8d2da" text-anchor="middle" font-weight="600">CANDIDATE CLASS →</text>
+          <text x="376" y="61" font-size="6.6" fill="#c8d2da" text-anchor="middle" font-weight="600">MCDA SCORING</text>
+          <text x="376" y="74" font-size="6" fill="#717d8a" text-anchor="middle">Prototype classification</text>
+          <text x="376" y="83" font-size="6" fill="#717d8a" text-anchor="middle">thresholds — implemented</text>
+          <text x="376" y="92" font-size="6.2" fill="#5b8aa5" text-anchor="middle" font-family="JetBrains Mono">NOT universal laws</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- RIGHT 45%: Pasquill table -->
+    <div style="width:45%;display:flex;flex-direction:column">
+      <div class="panel grow" style="display:flex;flex-direction:column">
+        <div class="plabel">Pasquill-Gifford Stability Parameters — As Implemented <span class="r">pasquill.py · wind_cone.py [8][9]</span></div>
+        <table class="t">
+          <tr><th>Class</th><th>Condition</th><th>Wind u</th><th>Cone α</th><th>Reach R</th><th>σy / σz</th></tr>
+          <tr><td class="k">A</td><td>Extremely unstable · strong sun</td><td class="num">&lt;5 km/h</td><td class="num">25°</td><td class="num">2.5 km</td><td class="num">0.32 / 0.24</td></tr>
+          <tr><td class="k">B</td><td>Moderately unstable</td><td class="num">5–15 km/h</td><td class="num">22°</td><td class="num">3.0 km</td><td class="num">0.28 / 0.19</td></tr>
+          <tr><td class="k">C</td><td>Slightly unstable</td><td class="num">15–25 km/h</td><td class="num">20°</td><td class="num">3.5 km</td><td class="num">0.25 / 0.13</td></tr>
+          <tr class="hot"><td class="k" style="color:#7dd3fc">D</td><td>Neutral · overcast / high wind</td><td class="num">≥25 km/h</td><td class="num" style="color:#7dd3fc">18°</td><td class="num" style="color:#7dd3fc">4.5 km</td><td class="num">0.22 / 0.08</td></tr>
+          <tr><td class="k">E</td><td>Slightly stable · nighttime</td><td class="num">5–15 km/h</td><td class="num">15°</td><td class="num">5.5 km</td><td class="num">0.18 / 0.05</td></tr>
+          <tr><td class="k">F</td><td>Moderately stable · inversion</td><td class="num">&lt;5 km/h</td><td class="num">12°</td><td class="num">7.0 km</td><td class="num">0.14 / 0.03</td></tr>
+        </table>
+        <p class="micro" style="margin-top:2.4mm">Highlighted row: neutral Class D — the parameterization used in the illustrative Pune scenario (14.5 km/h from 290° WNW → 4.5 km reach, 18° half-angle).</p>
+
+        <div class="rule"></div>
+
+        <!-- wind cone schematic -->
+        <div class="plabel" style="margin-top:1mm">Plume Geometry Schematic <span class="r">CLASS D · 14.5 km/h · 290° WNW</span></div>
+        <svg viewBox="0 0 400 128" style="width:100%;height:auto">
+          <defs>
+            <linearGradient id="cone" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#fb923c" stop-opacity=".32"/><stop offset="1" stop-color="#fb923c" stop-opacity=".04"/>
+            </linearGradient>
+            <marker id="a5" markerWidth="5.5" markerHeight="5.5" refX="4.5" refY="2.75" orient="auto"><path d="M0 0L5.5 2.75L0 5.5Z" fill="#3d7d99"/></marker>
+          </defs>
+          <!-- ground line -->
+          <line x1="10" y1="112" x2="390" y2="112" stroke="rgba(255,255,255,.16)"/>
+          <g font-size="5.6" fill="#5b6672" font-family="JetBrains Mono">
+            <text x="12" y="122">0 km</text><text x="120" y="122">1.5 km</text><text x="228" y="122">3 km</text><text x="336" y="122">4.5 km</text>
+          </g>
+          <line x1="128" y1="112" x2="128" y2="116" stroke="rgba(255,255,255,.2)"/><line x1="236" y1="112" x2="236" y2="116" stroke="rgba(255,255,255,.2)"/><line x1="344" y1="112" x2="344" y2="116" stroke="rgba(255,255,255,.2)"/>
+          <!-- station -->
+          <circle cx="24" cy="112" r="4" fill="#22d3ee"/>
+          <text x="24" y="100" font-size="6.2" fill="#7dd3fc" text-anchor="middle" font-family="JetBrains Mono">STATION</text>
+          <!-- cone: apex at station, upwind to the right, half-angle 18deg, reach 4.5km->344px -->
+          <path d="M24 112 L368 47 L368 177 Z" fill="url(#cone)" stroke="rgba(251,146,60,.5)" stroke-width=".8"/>
+          <!-- centerline -->
+          <line x1="24" y1="112" x2="362" y2="112" stroke="#fb923c" stroke-width="1.1" stroke-dasharray="6 4"/>
+          <!-- candidate source -->
+          <g transform="translate(300,84)">
+            <rect x="-5" y="-5" width="10" height="10" fill="none" stroke="#fbbf24" stroke-width="1.2" transform="rotate(45)"/>
+            <text x="0" y="-12" font-size="6.2" fill="#fde68a" text-anchor="middle" font-family="JetBrains Mono">CANDIDATE SOURCE</text>
+            <text x="0" y="22" font-size="6" fill="#a7b1bc" text-anchor="middle">within cone · Δθ ≤ 18°</text>
+          </g>
+          <!-- school receptor -->
+          <g transform="translate(338,64)">
+            <path d="M0 3.2C-2.8 0.4-4.6-1.4-4.6-3.6a4.6 4.6 0 1 1 9.2 0C4.6-1.4 2.8.4 0 3.2Z" fill="#fbbf24" transform="scale(.9)"/>
+            <text x="0" y="-8" font-size="6" fill="#fde68a" text-anchor="middle" font-family="JetBrains Mono">RECEPTOR · 380m ↓</text>
+          </g>
+          <!-- angle annotation -->
+          <path d="M120 112 A96 96 0 0 0 115 82" fill="none" stroke="rgba(34,211,238,.5)" stroke-width=".8"/>
+          <text x="132" y="92" font-size="6.4" fill="#7dd3fc" font-family="JetBrains Mono">α = 18°</text>
+          <text x="180" y="128" font-size="6.4" fill="#fdba74" font-family="JetBrains Mono">UPWIND PLUME CONE · REACH 4.5 km</text>
+        </svg>
+        <p class="micro" style="margin-top:1mm">Grounded in classical fluid mechanics — auditable and rule-based. Pasquill (1961); Turner, Workbook of Atmospheric Dispersion Estimates (EPA, 1970) <span class="cite">[8][9]</span>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="citekey" style="margin-top:3mm"><b>[7]</b> Bhandari et al., Atmospheric Environment (2022) — continuous CAAQMS co-pollutant ratios discriminate source categories &nbsp;·&nbsp; <b>[8]</b> Pasquill, F. (1961), Q.J.R. Meteorol. Soc. &nbsp;·&nbsp; <b>[9]</b> Turner, D.B., Workbook of Atmospheric Dispersion Estimates (US EPA, 1970) &nbsp;·&nbsp; Seinfeld &amp; Pandis (2016)</div>
+
+  <div class="foot"><span>AeroTrace A(Q)I · Environmental Forensic Intelligence</span><span class="tag">PMJIT NGEC 2026–2027 · Sustainable Habitat</span><span class="pn">PAGE 03 / 10</span></div>
+</section>
+
+<!-- ================= PAGE 4 — SYSTEM ARCHITECTURE: THE FORENSIC FUNNEL ================= -->
+<section class="page" id="p4">
+  <div class="overline">04 · System Architecture</div>
+  <h1 class="head">The forensic attribution funnel: from urban-scale data to evaluated source candidates.</h1>
+  <p class="small" style="margin-top:2.2mm;max-width:235mm">A five-stage candidate-reduction workflow progressively evaluates background spatial entities through physical, chemical, and operational filters — isolating candidate sources with transparent, auditable confidence scores.</p>
+
+  <div class="cols" style="margin-top:3.6mm;flex:1;min-height:0">
+    <!-- LEFT 55%: funnel -->
+    <div style="width:55%;display:flex;flex-direction:column">
+      <div class="panel grow" style="display:flex;flex-direction:column">
+        <div class="plabel">5-Stage Attribution Funnel <span class="r">PROTOTYPE SCENARIO · CANDIDATE REDUCTION WORKFLOW [10]</span></div>
+        <svg viewBox="0 0 430 300" style="width:100%;height:auto;flex:1" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="fg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#0ea5e9" stop-opacity=".16"/><stop offset="1" stop-color="#0ea5e9" stop-opacity=".05"/>
+            </linearGradient>
+            <marker id="a6" markerWidth="5.5" markerHeight="5.5" refX="4.5" refY="2.75" orient="auto"><path d="M0 0L5.5 2.75L0 5.5Z" fill="#3d7d99"/></marker>
+          </defs>
+          <!-- STAGE 1 -->
+          <text x="6" y="14" font-size="6.6" fill="#7dd3fc" font-family="JetBrains Mono" letter-spacing="1">STAGE 1 · INGESTION &amp; VALIDATION</text>
+          <text x="424" y="14" font-size="6.4" fill="#5b8aa5" text-anchor="end" font-family="JetBrains Mono">15-min CAAQMS · sentinels −999/null/0.0 · NAQI Decimal</text>
+          <rect x="6" y="20" width="418" height="26" rx="3" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.14)"/>
+          <text x="20" y="36" font-size="7.4" fill="#dfe6ec">Urban spatial entities · 1,847 OSM &amp; municipal registry sites in bbox</text>
+          <path d="M6 50 L424 50" stroke="none"/>
+          <!-- funnel band 1 -->
+          <path d="M6 50 L424 50 L394 78 L36 78 Z" fill="url(#fg)" stroke="rgba(34,211,238,.3)" stroke-width=".8"/>
+          <text x="215" y="67" font-size="6.2" fill="#7dd3fc" text-anchor="middle" font-family="JetBrains Mono">FILTER 1 · UPWIND PASQUILL CONE POLYGON  R ≤ 4.5 km · |Δθ| ≤ 18°</text>
+          <!-- STAGE 2 -->
+          <text x="6" y="94" font-size="6.6" fill="#7dd3fc" font-family="JetBrains Mono" letter-spacing="1">STAGE 2 · ATMOSPHERIC TRUNCATION</text>
+          <rect x="36" y="100" width="358" height="24" rx="3" fill="rgba(14,165,233,.06)" stroke="rgba(34,211,238,.32)"/>
+          <text x="50" y="115" font-size="7.4" fill="#dfe6ec">Spatial upwind candidates · 23 sites</text>
+          <path d="M36 128 L394 128 L364 156 L66 156 Z" fill="url(#fg)" stroke="rgba(34,211,238,.3)" stroke-width=".8"/>
+          <text x="215" y="145" font-size="6.2" fill="#7dd3fc" text-anchor="middle" font-family="JetBrains Mono">FILTER 2 · STOICHIOMETRIC COMPATIBILITY  PM2.5/PM10 · NO2/SO2</text>
+          <!-- STAGE 3 -->
+          <text x="6" y="172" font-size="6.6" fill="#7dd3fc" font-family="JetBrains Mono" letter-spacing="1">STAGE 3 · CHEMICAL EVALUATION</text>
+          <rect x="66" y="178" width="298" height="24" rx="3" fill="rgba(14,165,233,.08)" stroke="rgba(34,211,238,.4)"/>
+          <text x="80" y="193" font-size="7.4" fill="#dfe6ec">Chemically compatible sources · 6 sites</text>
+          <path d="M66 206 L364 206 L334 234 L96 234 Z" fill="url(#fg)" stroke="rgba(34,211,238,.3)" stroke-width=".8"/>
+          <text x="215" y="223" font-size="6.2" fill="#7dd3fc" text-anchor="middle" font-family="JetBrains Mono">FILTER 3 · MCDA  0.30Sw + 0.25Sc + 0.20St + 0.15Sp + 0.10Pv</text>
+          <!-- STAGE 4 -->
+          <text x="6" y="250" font-size="6.6" fill="#7dd3fc" font-family="JetBrains Mono" letter-spacing="1">STAGE 4 · RANKED CANDIDATES</text>
+          <rect x="96" y="256" width="238" height="22" rx="3" fill="rgba(14,165,233,.1)" stroke="rgba(34,211,238,.5)"/>
+          <text x="110" y="270" font-size="7.2" fill="#dfe6ec">Top 4 ranked · #1 at 0.91</text>
+          <text x="324" y="270" font-size="6" fill="#7dd3fc" font-family="JetBrains Mono" text-anchor="end">prototype confidence score</text>
+          <path d="M96 282 L334 282 L304 296 L126 296 Z" fill="none"/>
+          <!-- STAGE 5 -->
+          <rect x="126" y="286" width="178" height="13" rx="6" fill="rgba(250,204,21,.08)" stroke="rgba(251,191,36,.5)"/>
+          <text x="215" y="295.5" font-size="6.4" fill="#fde68a" text-anchor="middle" font-family="JetBrains Mono">STAGE 5 · ACTIONABLE INTELLIGENCE PAYLOAD</text>
+          <!-- side annotations -->
+          <g font-size="6" fill="#717d8a" font-family="JetBrains Mono">
+            <text x="424" y="112" text-anchor="end">Pune illustrative scenario</text>
+            <text x="424" y="190" text-anchor="end">e.g. vehicular candidates</text>
+            <text x="424" y="198" text-anchor="end">removed in dust event</text>
+          </g>
+        </svg>
+        <div class="chiprow" style="margin-top:1mm">
+          <span class="chip is sq">Illustrative Scenario · Demonstrated Prototype</span>
+          <span class="chip vi">Verified Implemented · app/pipeline.py · ranker.py</span>
+          <span class="micro">Sub-second benchmark · ~150–250 ms local run [10]</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT 45%: MCDA matrix + contract -->
+    <div style="width:45%;display:flex;flex-direction:column;gap:3.4mm">
+      <div class="panel">
+        <div class="plabel">MCDA Scoring Weight Matrix <span class="r">VERIFIED · scoring.py [10]</span></div>
+        <table class="t">
+          <tr><th>Factor</th><th>Wt</th><th>Implemented rule</th><th>Rationale</th></tr>
+          <tr><td class="k">Wind alignment S<sub>w</sub></td><td class="num">30%</td><td>max(0, 1 − |Δθ|/2α)</td><td>Plume centerline · max advective transport</td></tr>
+          <tr><td class="k">Chemical match S<sub>c</sub></td><td class="num">25%</td><td>Empirical matrix 0.30–0.91</td><td>Aerosol ratio must match emission type</td></tr>
+          <tr><td class="k">Temporal S<sub>t</sub></td><td class="num">20%</td><td>1.0 active · 0.3 plausible</td><td>Excavation rarely operates at 3 AM</td></tr>
+          <tr><td class="k">Proximity S<sub>p</sub></td><td class="num">15%</td><td>max(0, 1 − d/R)</td><td>Plume dilutes with transport distance</td></tr>
+          <tr><td class="k">Compliance P<sub>v</sub></td><td class="num">10%</td><td>90-day violations + dust controls</td><td>Past non-compliance raises urgency</td></tr>
+        </table>
+      </div>
+
+      <div class="panel">
+        <div class="plabel">Output · Immutable Data Contract <span class="r">JSON v1.0.0</span></div>
+        <div style="display:flex;gap:2.6mm">
+          <div style="flex:1">
+            <div class="micro" style="line-height:1.75"><b style="color:#7dd3fc">{</b> ranked_candidates[] · confidence · ambiguity_flags · receptor_proximity[] (schools / hospitals) · draft_checklists (Air Act 1981 §31A) · advisory_en·hi·mr <b style="color:#7dd3fc">}</b></div>
+          </div>
+        </div>
+        <div class="chiprow" style="margin-top:2.4mm"><span class="chip vi sq">Data Contract Schema v1.0.0</span><span class="chip dp">58 Tests Passing</span></div>
+      </div>
+
+      <div class="panel grow">
+        <div class="plabel">Why Deterministic Rules <span class="r">DESIGN PRINCIPLE</span></div>
+        <ul style="list-style:none">
+          <li class="micro" style="padding:1.4mm 0;border-bottom:1px solid var(--line)">▸ <b>Auditable</b> — every score traces to a named rule and weight in code; an officer can ask “why this rank?” and get an answer.</li>
+          <li class="micro" style="padding:1.4mm 0;border-bottom:1px solid var(--line)">▸ <b>Explainable</b> — confidence is a transparent composite, not an opaque model output.</li>
+          <li class="micro" style="padding:1.4mm 0">▸ <b>Benchmarked</b> — sub-second pipeline runs in local prototype testing.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="citekey" style="margin-top:3mm"><b>[10]</b> AeroTrace codebase — app/pipeline.py, ranker.py, scoring.py, intelligence.py; 58 Pytest unit &amp; integration tests; data_contract_sample.json. Funnel counts from illustrative Pune prototype scenario, not population-level benchmarks.</div>
+
+  <div class="foot"><span>AeroTrace A(Q)I · Environmental Forensic Intelligence</span><span class="tag">PMJIT NGEC 2026–2027 · Sustainable Habitat</span><span class="pn">PAGE 04 / 10</span></div>
+</section>
+
+<!-- ================= PAGE 5 — INTELLIGENCE LIFECYCLE ================= -->
+<section class="page" id="p5">
+  <div class="overline">05 · The Intelligence Lifecycle</div>
+  <h1 class="head">Closed-loop environmental decision support in near-real-time.</h1>
+  <p class="small" style="margin-top:2.2mm;max-width:235mm">AeroTrace connects environmental observation to municipal investigation — supporting authorized decision-making rather than autonomously enforcing law.</p>
+
+  <!-- LIFECYCLE STRIP -->
+  <div class="panel" style="margin-top:3.6mm">
+    <div class="plabel">Six-Node Intelligence Lifecycle <span class="r">OBSERVE → ANALYZE → TRACE → MAP → SCORE → RECOMMEND → FIELD VERIFICATION ↺</span></div>
+    <div class="lc">
+      <div class="step"><div class="no">01</div><div class="t">OBSERVE</div><div class="d">CAAQMS spike: PM10 387 µg/m³ → AQI 310 Very Poor</div></div>
+      <div class="arr">›</div>
+      <div class="step"><div class="no">02</div><div class="t">ANALYZE</div><div class="d">EF<sub>PM10</sub> 3.87 · ratio 0.384 → crustal dust signature</div></div>
+      <div class="arr">›</div>
+      <div class="step"><div class="no">03</div><div class="t">TRACE</div><div class="d">Wind 14.5 km/h @ 290° WNW · Pasquill D → 4.5 km cone</div></div>
+      <div class="arr">›</div>
+      <div class="step"><div class="no">04</div><div class="t">MAP</div><div class="d">PostGIS cone intersection · school flagged 380 m downwind</div></div>
+      <div class="arr">›</div>
+      <div class="step"><div class="no">05</div><div class="t">SCORE</div><div class="d">MCDA rank #1 · 0.91 confidence · priority 0.94</div></div>
+      <div class="arr">›</div>
+      <div class="step" style="border-color:rgba(251,191,36,.45)"><div class="no" style="color:var(--amber)">06</div><div class="t">RECOMMEND</div><div class="d">§31A checklist draft · trilingual advisory · verify</div></div>
+    </div>
+    <!-- feedback loop -->
+    <div style="display:flex;align-items:center;gap:2.6mm;margin-top:2.4mm">
+      <div style="height:1px;flex:1;background:linear-gradient(90deg,rgba(34,211,238,.45),rgba(34,211,238,.05))"></div>
+      <div class="micro" style="letter-spacing:.14em;font-family:var(--mono);color:#7dd3fc">FIELD VERIFICATION → LEARNING LOOP ↺</div>
+      <div style="height:1px;flex:1;background:linear-gradient(270deg,rgba(34,211,238,.45),rgba(34,211,238,.05))"></div>
+    </div>
+  </div>
+
+  <div class="cols g3" style="margin-top:3.4mm;flex:1;min-height:0">
+    <!-- dispatch payload -->
+    <div style="width:52%;display:flex;flex-direction:column;gap:3.4mm">
+      <div class="panel grow">
+        <div class="plabel">Dispatch Payload — Illustrative Pune Scenario <span class="r">app/intelligence.py</span></div>
+        <div class="micro" style="line-height:1.85">
+          <span style="color:#5b8aa5">telemetry</span>  <b>Station</b> Shivajinagar CAAQMS · <b>AQI</b> 310 · <b>Wind</b> 14.5 km/h @ 290° WNW<br>
+          <span style="color:#5b8aa5">diagnosis</span>  <b>Candidate source</b> Hinjewadi Phase-III Construction · <b>type</b> crustal dust<br>
+          <span style="color:#5b8aa5">confidence</span>  0.91 <span style="color:#717d8a">prototype attribution confidence score</span><br>
+          <span style="color:#5b8aa5">receptor</span>  <b>Vibgyor High School</b> — 380 m downwind · sensitive population flagged<br>
+          <span style="color:#5b8aa5">recommend</span>  Air Act 1981 §31A inspection checklist · water-mist suppression verification<br>
+          <span style="color:#5b8aa5">assignment</span>  <b>PMC-AQ-SQUAD-01</b> · modeled prototype response target ≈ 18 min <span style="color:#f59e0b">(simulation payload — not validated arrival time)</span>
+        </div>
+        <div class="rule" style="margin:2.4mm 0"></div>
+        <div class="micro"><b>Ambiguity protocol:</b> if the confidence gap between the top two candidates &lt; 0.15, the scenario is flagged ambiguous and routed for manual ground verification.</div>
+      </div>
+
+      <div class="panel">
+        <div class="plabel">Statutory Boundary <span class="r">DECISION SUPPORT ≠ AUTHORITY</span></div>
+        <p class="micro">The analytical pipeline prepares structured recommendations — draft inspection checklists, prioritized candidate information, notice templates — <b>for authorized officers</b>. Physical inspection, formal statutory orders, and enforcement remain the exclusive domain of authorized municipal and State Board officials under the Air (Prevention &amp; Control of Pollution) Act, 1981 <span class="cite">[11]</span>.</p>
+      </div>
+    </div>
+
+    <!-- trilingual table -->
+    <div style="width:48%;display:flex;flex-direction:column">
+      <div class="panel grow" style="display:flex;flex-direction:column">
+        <div class="plabel">Trilingual Decision-Support Advisories <span class="r">ILLUSTRATIVE PROTOTYPE OUTPUT · intelligence.py</span></div>
+        <table class="t">
+          <tr><th style="width:17mm">Lang</th><th>Audience</th><th>Advisory (abridged)</th></tr>
+          <tr>
+            <td class="k">EN</td><td>Municipal authorities · field squad lead</td>
+            <td>Operational advisory (decision support): AQI 310 Very Poor, PM10 dominant · candidate source: Hinjewadi Phase-III Construction Cluster · confidence 0.91 · school 380 m downwind · <b>next step: field verification / inspection</b></td>
+          </tr>
+          <tr>
+            <td class="k">हिंदी</td><td>Ward officers · community</td>
+            <td>संचालन परामर्श (निर्णय समर्थन): AQI 310 (Very Poor) दर्ज। प्रमुख प्रदूषक PM10 · प्रस्तावित उम्मीदवार स्रोत: Hinjewadi Phase-III Construction Cluster · प्रारूप एट्रिब्यूशन विश्वसनीयता 0.91 · डाउनविंड 380 मीटर पर स्कूल चिन्हित · <b>अनुशंसित अगला कदम: क्षेत्रीय सत्यापन / निरीक्षण</b></td>
+          </tr>
+          <tr>
+            <td class="k">मराठी</td><td>Local municipal teams · public</td>
+            <td>कार्यवाही सल्ला (निर्णय समर्थन): AQI 310 (Very Poor) नोंद. प्रमुख प्रदूषक PM10 · संभाव्य उमेदवार स्त्रोत: Hinjewadi Phase-III Construction Cluster · प्रारूप एट्रिब्युशन विश्वसनीयता 0.91 · वाऱ्याच्या दिशेने 380 मीटर अंतरावर शाळा चिन्हित · <b>पुढील पाऊल: प्रत्यक्ष क्षेत्रीय पडताळणी / पाहणी</b></td>
+          </tr>
+        </table>
+        <p class="micro" style="margin-top:2mm">Illustrative prototype output; candidate attribution requires field verification and does not constitute a statutory determination. Native template generation verified in <b>app/intelligence.py</b>.</p>
+        <div class="chiprow" style="margin-top:auto;padding-top:2mm">
+          <span class="chip vi">Verified Implemented · EN / HI / MR</span>
+          <span class="chip is sq">Illustrative Scenario · Demonstrated Prototype</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="citekey" style="margin-top:3mm"><b>[11]</b> Air (Prevention and Control of Pollution) Act, 1981 — Act No. 14 of 1981, Section 31A (Power to give directions). System output = decision support for authorized officers.</div>
+
+  <div class="foot"><span>AeroTrace A(Q)I · Environmental Forensic Intelligence</span><span class="tag">PMJIT NGEC 2026–2027 · Sustainable Habitat</span><span class="pn">PAGE 05 / 10</span></div>
+</section>
+
+<!-- ================= PAGE 6 — PROOF OF IMPLEMENTATION ================= -->
+<section class="page" id="p6">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <div class="overline">06 · Proof of Implementation</div>
+      <h1 class="head" style="font-size:22px">Evidence of implementation: a functioning environmental intelligence prototype.</h1>
+    </div>
+    <div class="chiprow" style="padding-top:6mm;flex:none">
+      <span class="chip is sq">Prototype Scenario — Not Field Validation</span>
+      <span class="chip dp">58 Automated Tests Passing</span>
+    </div>
+  </div>
+
+  <!-- PRIMARY SHOT -->
+  <div class="shot" style="height:86mm;margin-top:3.4mm">
+    <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+    <div class="slot">[ PLACE FINAL UI SCREENSHOT HERE ]</div>
+    <div class="name">FINAL FORENSIC INVESTIGATION SCREEN — ATTRIBUTION COCKPIT</div>
+    <div class="req"><b>Purpose:</b> shows the transition from pollution observation to source investigation — the operational cockpit.<br>
+    <b>Required capture:</b> station identity (Shivajinagar · AQI 310 Very Poor) · candidate attribution card (Hinjewadi Construction · 0.91 prototype confidence · WNW 15 km/h) · Forensic Action Center (§31A checklist · PMC-AQ-SQUAD-01) · dynamic upwind dispersion cone (GeoJSON, 4.5 km @ 290°) · HUD compass &amp; meteorological strip · 24-h diurnal timeline scrubber.</div>
+    <div class="file">d:\ET hackathon\screen4_after.png</div>
+    <div class="dims">1600 × 900 · unedited application capture</div>
+    <div class="notai">⌘ Authentic application screen capture — unedited prototype view · not an AI render</div>
+  </div>
+
+  <!-- annotation strip -->
+  <div style="display:flex;gap:2.4mm;margin-top:2.4mm">
+    <div class="micro" style="flex:1;border-left:2px solid var(--cyan2);padding-left:2mm"><b>Z1</b> Station ID &amp; AQI badge</div>
+    <div class="micro" style="flex:1;border-left:2px solid var(--cyan2);padding-left:2mm"><b>Z2</b> Candidate attribution · 0.91</div>
+    <div class="micro" style="flex:1;border-left:2px solid var(--cyan2);padding-left:2mm"><b>Z3</b> Forensic Action Center · §31A</div>
+    <div class="micro" style="flex:1;border-left:2px solid var(--cyan2);padding-left:2mm"><b>Z4</b> Upwind dispersion cone</div>
+    <div class="micro" style="flex:1;border-left:2px solid var(--cyan2);padding-left:2mm"><b>Z5</b> HUD compass · wind strip</div>
+  </div>
+
+  <div class="cols g3" style="margin-top:3.2mm;flex:1;min-height:0">
+    <!-- scenario table -->
+    <div style="width:62%;display:flex;flex-direction:column">
+      <div class="panel grow" style="display:flex;flex-direction:column">
+        <div class="plabel">Four Operational Pune Demo Scenarios <span class="r">ILLUSTRATIVE · app/demo_scenarios.py</span></div>
+        <table class="t">
+          <tr><th>Station</th><th>Scenario</th><th>Dominant</th><th>AQI</th><th>Top attributed candidate</th><th>Local context</th></tr>
+          <tr><td class="k">Shivajinagar</td><td>Construction dust spike</td><td class="num">PM10 387</td><td class="num" style="color:#ef4444">310</td><td class="at">Hinjewadi Phase-III Cluster · 0.91</td><td>Excavation; school 380 m downwind</td></tr>
+          <tr><td class="k">Swargate</td><td>Traffic corridor</td><td class="num">NO₂ 142</td><td class="num" style="color:#f97316">285</td><td class="at">Swargate ST Bus Depot · 0.88</td><td>Idling diesel transit at junction</td></tr>
+          <tr><td class="k">Hadapsar</td><td>Industrial emissions</td><td class="num">SO₂ 188</td><td class="num" style="color:#ef4444">340</td><td class="at">Hadapsar MIDC Boiler Stack · 0.86</td><td>Combustion stack; hospital 620 m</td></tr>
+          <tr><td class="k">Kothrud</td><td>Multi-source ambiguity</td><td class="num">PM2.5 164</td><td class="num" style="color:#f97316">265</td><td class="at">Split candidates · gap &lt; 0.15</td><td>Stagnant inversion; ambiguity alert</td></tr>
+        </table>
+        <div class="chiprow" style="margin-top:auto;padding-top:2.2mm">
+          <span class="chip is sq">Illustrative Scenario · Demonstrated Prototype</span>
+          <span class="chip vi">Sensitivity Analysis · 10 perturbation tests — wind shifts rotate cone; speed narrows 25°→12°</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- right column: hindi inset + stack evidence -->
+    <div style="width:38%;display:flex;flex-direction:column;gap:3mm">
+      <div class="shot" style="height:38mm">
+        <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+        <div class="slot">[ SCREENSHOT INSET ]</div>
+        <div class="name" style="font-size:8.4px">FINAL STATION INTELLIGENCE SCREEN — HINDI LOCALIZATION</div>
+        <div class="req" style="max-width:100mm">Full Devanagari UI · audio synthesis (LISTEN) · 24-h trend — regional accessibility evidence</div>
+        <div class="file">d:\ET hackathon\screen4_final.png · 1600 × 900</div>
+      </div>
+      <div class="panel grow">
+        <div class="plabel">What It Demonstrates <span class="r">WHAT WE BUILT</span></div>
+        <ul style="list-style:none">
+          <li class="micro" style="padding:1.3mm 0;border-bottom:1px solid var(--line)">▸ Split-pane cockpit: Leaflet dark GIS canvas + Forensic Action Center</li>
+          <li class="micro" style="padding:1.3mm 0;border-bottom:1px solid var(--line)">▸ Gaussian wind cones, pulsing trigger stations, monitoring network</li>
+          <li class="micro" style="padding:1.3mm 0;border-bottom:1px solid var(--line)">▸ Ranked candidates · ambiguity flags · draft §31A checklists</li>
+          <li class="micro" style="padding:1.3mm 0;border-bottom:1px solid var(--line)">▸ React 19 · Tailwind v4 · FastAPI v3.1.0 · WebSocket alerts · 24-h replay</li>
+          <li class="micro" style="padding:1.3mm 0">▸ Tri-lingual advisories with audio synthesis (EN / HI / MR)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><span>AeroTrace A(Q)I · Environmental Forensic Intelligence</span><span class="tag">PMJIT NGEC 2026–2027 · Sustainable Habitat</span><span class="pn">PAGE 06 / 10</span></div>
+</section>
+
+<!-- ================= PAGE 7 — DIFFERENTIATION ================= -->
+<section class="page" id="p7">
+  <div class="overline">07 · Differentiation — The Operational Gap</div>
+  <h1 class="head">Between consumer dashboards and academic models: the operational layer.</h1>
+  <p class="small" style="margin-top:2.2mm;max-width:230mm">Different approaches address different parts of the environmental monitoring and source-apportionment workflow. AeroTrace focuses on the operational layer connecting continuous measurement, spatial context, atmospheric reasoning, candidate-source analysis, and decision support — designed to complement, not replace, laboratory speciation studies.</p>
+
+  <div class="cols" style="margin-top:3.6mm;flex:1;min-height:0">
+    <!-- LEFT 45%: 2D matrix -->
+    <div style="width:45%;display:flex;flex-direction:column">
+      <div class="panel grow" style="display:flex;flex-direction:column">
+        <div class="plabel">2D Operational Capability Landscape <span class="r">NEUTRAL DIMENSIONS · NO RANKING OF ALTERNATIVES</span></div>
+        <svg viewBox="0 0 420 250" style="width:100%;height:auto;flex:1" preserveAspectRatio="xMidYMid meet">
+          <!-- axes -->
+          <line x1="56" y1="220" x2="404" y2="220" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
+          <line x1="56" y1="220" x2="56" y2="16" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
+          <!-- axis labels -->
+          <text x="230" y="242" font-size="7" fill="#a7b1bc" text-anchor="middle" font-weight="600">TIME TO ANALYTICAL OUTPUT →</text>
+          <g font-size="5.8" fill="#5b6672" font-family="JetBrains Mono">
+            <text x="62" y="233">MONTHS</text><text x="150" y="233">WEEKS</text><text x="240" y="233">HOURS</text><text x="330" y="233">SUB-SECOND</text>
+          </g>
+          <text x="20" y="120" font-size="7" fill="#a7b1bc" text-anchor="middle" font-weight="600" transform="rotate(-90 20 120)">DIAGNOSTIC DEPTH →</text>
+          <g font-size="5.8" fill="#5b6672" font-family="JetBrains Mono">
+            <text x="50" y="214" text-anchor="end">SCALAR AQI</text>
+            <text x="50" y="120" text-anchor="end">MULTI-POLLUTANT</text>
+            <text x="50" y="30" text-anchor="end">CANDIDATE ATTRIBUTION</text>
+          </g>
+          <!-- quadrant shading: top-right = focus zone -->
+          <rect x="240" y="16" width="164" height="100" fill="rgba(14,165,233,.06)" stroke="rgba(34,211,238,.2)" stroke-dasharray="3 3"/>
+          <!-- dots -->
+          <!-- public dashboards: bottom right-ish (fast, shallow) -->
+          <g>
+            <circle cx="330" cy="188" r="5" fill="#f59e0b" opacity=".9"/>
+            <text x="330" y="176" font-size="6.6" fill="#fcd34d" text-anchor="middle" font-weight="600">Public dashboards</text>
+            <text x="330" y="201" font-size="5.8" fill="#a7b1bc" text-anchor="middle">CPCB SAMEER · IQAir · AQICN</text>
+            <text x="330" y="209" font-size="5.6" fill="#717d8a" text-anchor="middle">real-time · scalar · awareness-oriented</text>
+          </g>
+          <!-- annual reports: bottom left -->
+          <g>
+            <circle cx="100" cy="196" r="5" fill="#717d8a"/>
+            <text x="100" y="184" font-size="6.6" fill="#a7b1bc" text-anchor="middle" font-weight="600">Annual status reports</text>
+            <text x="100" y="209" font-size="5.8" fill="#717d8a" text-anchor="middle">periodic · retrospective</text>
+          </g>
+          <!-- academic: top left (slow, deep) -->
+          <g>
+            <circle cx="96" cy="44" r="5" fill="#818cf8" opacity=".95"/>
+            <text x="96" y="32" font-size="6.6" fill="#c7d2fe" text-anchor="middle" font-weight="600">Academic receptor models</text>
+            <text x="96" y="57" font-size="5.8" fill="#a7b1bc" text-anchor="middle">EPA PMF 5.0 · CMB · lab speciation</text>
+            <text x="96" y="66" font-size="5.6" fill="#717d8a" text-anchor="middle">deep · offline · months to report</text>
+          </g>
+          <!-- AeroTrace: top right -->
+          <g>
+            <circle cx="330" cy="52" r="8" fill="none" stroke="#22d3ee" stroke-width="1.4"/>
+            <circle cx="330" cy="52" r="3.4" fill="#22d3ee"/>
+            <text x="330" y="34" font-size="7.4" fill="#7dd3fc" text-anchor="middle" font-weight="700">AEROTRACE A(Q)I</text>
+            <text x="330" y="68" font-size="5.8" fill="#a7b1bc" text-anchor="middle">operational decision-support hybrid</text>
+          </g>
+          <!-- notes -->
+          <text x="322" y="120" font-size="5.8" fill="#4f96b8" text-anchor="end" font-family="JetBrains Mono">BENCHMARK CONTEXT: PROTOTYPE SUB-SECOND</text>
+          <text x="322" y="129" font-size="5.8" fill="#4f96b8" text-anchor="end" font-family="JetBrains Mono">PIPELINE RUNS ≠ FIELD RESPONSE TIME</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- RIGHT 55%: capability table -->
+    <div style="width:55%;display:flex;flex-direction:column">
+      <div class="panel grow" style="display:flex;flex-direction:column">
+        <div class="plabel">Architectural Capability Comparison <span class="r">DOCUMENTED CAPABILITIES · NEUTRAL FRAME</span></div>
+        <table class="t">
+          <tr><th>Capability dimension</th><th>Public dashboards</th><th>Academic models</th><th>AeroTrace A(Q)I</th></tr>
+          <tr><td class="k">Real-time AQI telemetry</td><td>Yes · scalar only</td><td class="no">No · offline</td><td class="at">Yes · multi-pollutant vector</td></tr>
+          <tr><td class="k">Pollutant breakdown</td><td>Partial · often masked</td><td>Yes · elemental</td><td class="at">Yes · exceedance factors</td></tr>
+          <tr><td class="k">Dispersion modeling</td><td class="no">No · static points</td><td>Post-hoc trajectories</td><td class="at">Yes · Pasquill-Gifford cones</td></tr>
+          <tr><td class="k">Ratio signature matching</td><td class="no">No</td><td>Yes · lab filters</td><td class="at">Yes · decision-tree ratios in code</td></tr>
+          <tr><td class="k">Spatial candidate discovery</td><td class="no">No</td><td class="no">No · statistical factors</td><td class="at">Yes · PostGIS / OSM bbox</td></tr>
+          <tr><td class="k">Sensitive receptor context</td><td class="no">No</td><td class="no">No</td><td class="at">Yes · school / hospital buffers ≤ 500 m</td></tr>
+          <tr><td class="k">Draft administrative checklists</td><td class="no">No</td><td class="no">No</td><td class="at">Yes · Air Act 1981 §31A drafts</td></tr>
+          <tr><td class="k">Explainable scoring</td><td class="no">No</td><td>Uncertainty profiles</td><td class="at">Yes · auditable MCDA scores</td></tr>
+          <tr><td class="k">Ambiguity detection</td><td class="no">No</td><td>Yes · matrix metrics</td><td class="at">Yes · flagged at gap &lt; 0.15</td></tr>
+          <tr><td class="k">Time to analytical output</td><td>Immediate · informational</td><td>Months · lab cycle</td><td class="at">Sub-second prototype benchmark *</td></tr>
+        </table>
+        <p class="micro" style="margin-top:2mm">* Analytical computation time — explicitly not equivalent to physical municipal response time. Objective comparison of documented capabilities; traditional receptor models remain essential for retrospective chemical speciation research.</p>
+        <div class="chiprow" style="margin-top:auto;padding-top:2mm"><span class="chip vi sq">Verified Architectural Comparison</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="citekey" style="margin-top:3mm"><b>[12]</b> US EPA PMF 5.0 User Guide — filter collection, lab speciation, multi-linear engine runs &nbsp;·&nbsp; <b>[13]</b> CPCB SAMEER app — station AQI scalars &amp; public grievance lodging &nbsp;·&nbsp; <b>[7]</b> Bhandari et al. (2022)</div>
+
+  <div class="foot"><span>AeroTrace A(Q)I · Environmental Forensic Intelligence</span><span class="tag">PMJIT NGEC 2026–2027 · Sustainable Habitat</span><span class="pn">PAGE 07 / 10</span></div>
+</section>
+
+<!-- ================= PAGE 8 — SUSTAINABLE HABITAT ================= -->
+<section class="page" id="p8">
+  <div class="cols" style="height:100%">
+    <!-- LEFT 50%: mandala -->
+    <div style="width:50%;display:flex;flex-direction:column">
+      <div class="overline">08 · Sustainable Habitat — Panchabhutas &amp; Global Goals</div>
+      <h1 class="head" style="font-size:22px">Protecting environmental balance: the five elements, global goals, and urban habitat health.</h1>
+      <p class="small" style="margin-top:2.2mm;max-width:128mm">Dr. Prem Jain championed sustainable habitats as living urban systems in harmony with the natural environment. AeroTrace draws conceptual inspiration from the Panchabhutas — distinguishing engineering relationships from philosophical symbolism — and contributes to understanding and protecting the <b style="color:#d9f2fb">Vayu / Air</b> dimension of sustainable urban habitats.</p>
+
+      <div class="panel grow" style="margin-top:3.6mm;display:flex;flex-direction:column">
+        <div class="plabel">Panchabhuta Framework → Computational Engine Mapping <span class="r">RADIAL · MAPPED TO CODEBASE</span></div>
+        <svg viewBox="0 0 440 268" style="width:100%;height:auto;flex:1" preserveAspectRatio="xMidYMid meet">
+          <defs><marker id="a8" markerWidth="5.5" markerHeight="5.5" refX="4.5" refY="2.75" orient="auto"><path d="M0 0L5.5 2.75L0 5.5Z" fill="#3d7d99"/></marker></defs>
+          <!-- center: resilient urban habitat -->
+          <circle cx="220" cy="134" r="34" fill="rgba(14,165,233,.1)" stroke="rgba(34,211,238,.6)" stroke-width="1.2"/>
+          <circle cx="220" cy="134" r="44" fill="none" stroke="rgba(34,211,238,.18)" stroke-dasharray="3 3"/>
+          <text x="220" y="129" font-size="7.4" fill="#eaf6fb" text-anchor="middle" font-weight="700">RESILIENT</text>
+          <text x="220" y="139" font-size="7.4" fill="#eaf6fb" text-anchor="middle" font-weight="700">URBAN HABITAT</text>
+          <text x="220" y="150" font-size="5.6" fill="#7dd3fc" text-anchor="middle" font-family="JetBrains Mono">SDG 11.6 · AIRSHED HEALTH</text>
+
+          <!-- VAYU top-left (direct) -->
+          <g>
+            <line x1="192" y1="110" x2="118" y2="66" stroke="#3d7d99" stroke-width="1" marker-end="url(#a8)"/>
+            <rect x="8" y="24" width="128" height="46" rx="3" fill="rgba(14,165,233,.08)" stroke="rgba(34,211,238,.5)"/>
+            <text x="18" y="38" font-size="7.6" fill="#7dd3fc" font-weight="700" letter-spacing="1">VAYU · AIR</text>
+            <text x="18" y="48" font-size="6" fill="#86efac" font-family="JetBrains Mono">DIRECT PHYSICAL RELATIONSHIP</text>
+            <text x="18" y="58" font-size="6" fill="#a7b1bc">Wind advection · plume kinematics</text>
+            <text x="18" y="66" font-size="6" fill="#5b8aa5" font-family="JetBrains Mono">wind_cone.py</text>
+          </g>
+          <!-- GAGAN top-right (direct) -->
+          <g>
+            <line x1="248" y1="110" x2="322" y2="66" stroke="#3d7d99" stroke-width="1" marker-end="url(#a8)"/>
+            <rect x="304" y="24" width="128" height="46" rx="3" fill="rgba(14,165,233,.08)" stroke="rgba(34,211,238,.5)"/>
+            <text x="314" y="38" font-size="7.6" fill="#7dd3fc" font-weight="700" letter-spacing="1">GAGAN · SKY</text>
+            <text x="314" y="48" font-size="6" fill="#86efac" font-family="JetBrains Mono">DIRECT PHYSICAL RELATIONSHIP</text>
+            <text x="314" y="58" font-size="6" fill="#a7b1bc">Boundary-layer stability A–F</text>
+            <text x="314" y="66" font-size="6" fill="#5b8aa5" font-family="JetBrains Mono">pasquill.py</text>
+          </g>
+          <!-- BHUMI bottom-left (direct spatial) -->
+          <g>
+            <line x1="196" y1="158" x2="122" y2="200" stroke="#3d7d99" stroke-width="1" marker-end="url(#a8)"/>
+            <rect x="8" y="200" width="128" height="52" rx="3" fill="rgba(14,165,233,.08)" stroke="rgba(34,211,238,.5)"/>
+            <text x="18" y="214" font-size="7.6" fill="#7dd3fc" font-weight="700" letter-spacing="1">BHUMI · EARTH</text>
+            <text x="18" y="224" font-size="6" fill="#86efac" font-family="JetBrains Mono">DIRECT SPATIAL RELATIONSHIP</text>
+            <text x="18" y="234" font-size="6" fill="#a7b1bc">Land-use registries · zoning</text>
+            <text x="18" y="243" font-size="6" fill="#a7b1bc">School &amp; hospital receptors</text>
+            <text x="18" y="251" font-size="6" fill="#5b8aa5" font-family="JetBrains Mono">models.py · PostGIS</text>
+          </g>
+          <!-- AGNI bottom-right (direct) -->
+          <g>
+            <line x1="244" y1="158" x2="318" y2="200" stroke="#3d7d99" stroke-width="1" marker-end="url(#a8)"/>
+            <rect x="304" y="200" width="128" height="52" rx="3" fill="rgba(14,165,233,.08)" stroke="rgba(34,211,238,.5)"/>
+            <text x="314" y="214" font-size="7.6" fill="#7dd3fc" font-weight="700" letter-spacing="1">AGNI · FIRE</text>
+            <text x="314" y="224" font-size="6" fill="#86efac" font-family="JetBrains Mono">DIRECT COMBUSTION MODELING</text>
+            <text x="314" y="234" font-size="6" fill="#a7b1bc">Diesel · boilers · biomass</text>
+            <text x="314" y="243" font-size="6" fill="#a7b1bc">Stoichiometric ratio profiles</text>
+            <text x="314" y="251" font-size="6" fill="#5b8aa5" font-family="JetBrains Mono">scoring.py</text>
+          </g>
+          <!-- JAL right (conceptual) -->
+          <g>
+            <line x1="254" y1="134" x2="330" y2="134" stroke="#3d7d99" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#a8)"/>
+            <rect x="334" y="108" width="100" height="52" rx="3" fill="none" stroke="rgba(216,180,254,.5)" stroke-dasharray="4 3"/>
+            <text x="344" y="122" font-size="7.6" fill="#d8b4fe" font-weight="700" letter-spacing="1">JAL · WATER</text>
+            <text x="344" y="132" font-size="6" fill="#c4b5fd" font-family="JetBrains Mono">CONCEPTUAL INTERPRETATION</text>
+            <text x="344" y="142" font-size="6" fill="#a7b1bc">Wet-scavenging wash-out</text>
+            <text x="344" y="151" font-size="6" fill="#5b8aa5" font-family="JetBrains Mono">attribution.py · R(P)=e^−λP</text>
+          </g>
+          <!-- JAL left note (conceptual) -->
+          <rect x="8" y="108" width="100" height="52" rx="3" fill="none" stroke="rgba(216,180,254,.35)" stroke-dasharray="4 3"/>
+          <text x="18" y="122" font-size="6" fill="#c4b5fd" font-family="JetBrains Mono">READING THE MANDALA</text>
+          <text x="18" y="132" font-size="6" fill="#a7b1bc">Solid nodes = modeled</text>
+          <text x="18" y="141" font-size="6" fill="#a7b1bc">physical relationships</text>
+          <text x="18" y="150" font-size="6" fill="#c4b5fd">Dashed = conceptual</text>
+          <text x="18" y="158" font-size="6" fill="#c4b5fd">interpretation only</text>
+        </svg>
+        <p class="micro" style="margin-top:1mm">No superficial symbolism: each element maps to a verified module — <span class="mono" style="color:#5b8aa5">pipeline/ · app/</span> — except Jal, shown conceptually. Software does not model ancient philosophy; it protects what the philosophy describes.</p>
+      </div>
+    </div>
+
+    <!-- RIGHT 50%: SDG + interdisciplinary matrix -->
+    <div style="width:50%;display:flex;flex-direction:column;gap:3.4mm">
+      <div class="panel">
+        <div class="plabel">UN SDG Alignment — Relationship, Not Decoration <span class="r">TARGETS 11.6 · 13.3 · 9.4</span></div>
+        <svg viewBox="0 0 430 84" style="width:100%;height:auto">
+          <defs><marker id="a9" markerWidth="5.5" markerHeight="5.5" refX="4.5" refY="2.75" orient="auto"><path d="M0 0L5.5 2.75L0 5.5Z" fill="#3d7d99"/></marker></defs>
+          <rect x="4" y="28" width="96" height="28" rx="3" fill="rgba(14,165,233,.08)" stroke="rgba(34,211,238,.4)"/>
+          <text x="52" y="40" font-size="7" fill="#d9f2fb" text-anchor="middle" font-weight="700">AEROTRACE</text>
+          <text x="52" y="50" font-size="6" fill="#717d8a" text-anchor="middle">environmental intelligence</text>
+          <line x1="100" y1="42" x2="126" y2="42" stroke="#3d7d99" stroke-width="1" marker-end="url(#a9)"/>
+          <rect x="130" y="28" width="112" height="28" rx="3" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.14)"/>
+          <text x="186" y="40" font-size="7" fill="#dfe6ec" text-anchor="middle" font-weight="600">INFORMED DECISIONS</text>
+          <text x="186" y="50" font-size="6" fill="#717d8a" text-anchor="middle">investigation · mitigation support</text>
+          <line x1="242" y1="42" x2="268" y2="42" stroke="#3d7d99" stroke-width="1" marker-end="url(#a9)"/>
+          <rect x="272" y="10" width="154" height="64" rx="3" fill="rgba(34,197,94,.05)" stroke="rgba(74,222,128,.35)"/>
+          <text x="349" y="24" font-size="7.2" fill="#86efac" text-anchor="middle" font-weight="700">SUSTAINABLE HABITAT RELEVANCE</text>
+          <text x="282" y="37" font-size="6.4" fill="#a7b1bc">▸ SDG 11.6.2 — reduce urban ambient air impact</text>
+          <text x="282" y="48" font-size="6.4" fill="#a7b1bc">▸ SDG 13.3 — combustion / SLCP investigation support</text>
+          <text x="282" y="59" font-size="6.4" fill="#a7b1bc">▸ SDG 9.4 — upgrade with existing infrastructure</text>
+          <text x="282" y="69" font-size="5.8" fill="#717d8a">SLCP context: Black Carbon 20-yr GWP 460–1,500× CO₂ [14]</text>
+        </svg>
+        <p class="micro" style="margin-top:1.4mm">AeroTrace can support identification and investigation of combustion-related pollution relevant to short-lived climate pollutants — external scientific context, not a platform performance metric. No emissions reduction or carbon-credit claims.</p>
+      </div>
+
+      <div class="panel grow">
+        <div class="plabel">Interdisciplinary Matrix <span class="r">FRAMEWORK ALIGNMENT</span></div>
+        <table class="t">
+          <tr><th>Discipline / framework</th><th>Core focus</th><th>AeroTrace implementation</th><th>Benchmark</th></tr>
+          <tr><td class="k">SDG 11 · Cities</td><td>Target 11.6 · air quality</td><td>Localized hotspot identification · Indicator 11.6.2</td><td class="num">Population-weighted PM2.5</td></tr>
+          <tr><td class="k">SDG 13 · Climate</td><td>Target 13.3 · SLCP co-benefits</td><td>Combustion-pollution investigation support</td><td class="num">Bond et al. 2013 [14]</td></tr>
+          <tr><td class="k">SDG 9 · Infrastructure</td><td>Target 9.4 · retrofit</td><td>Intelligence layer over existing CAAQMS hardware</td><td class="num">Reuses public networks</td></tr>
+          <tr><td class="k">Atmospheric science</td><td>Fluid mechanics · meteorology</td><td>Advection · dispersion · mixing height</td><td class="num">Pasquill-Gifford A–F</td></tr>
+          <tr><td class="k">Geospatial engineering</td><td>GIS · urban planning</td><td>Sensitive-receptor buffers · land-use queries</td><td class="num">EPSG:4326 / UTM 32643</td></tr>
+          <tr><td class="k">Environmental law</td><td>Municipal governance</td><td>Draft checklists &amp; notice templates for officers</td><td class="num">Air Act 1981 §31A</td></tr>
+        </table>
+        <div class="artifact" style="margin-top:2.6mm;flex-direction:row;gap:4mm;text-align:left;padding:2.2mm 3mm">
+          <span style="font:600 6.2px/1.5 var(--mono);letter-spacing:.16em;color:#86efac;text-transform:uppercase;flex:none">TRIBUTE</span>
+          <span style="font:400 7.2px/1.5 var(--sans);color:var(--ink2)">“A sustainable habitat cannot endure without healthy air sheds.” — in the spirit of Dr. Prem Jain</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="citekey" style="margin-top:3mm"><b>[14]</b> Bond et al., “Bounding the Role of Black Carbon in the Climate System,” J. Geophys. Res. (2013) — external scientific context; not an AeroTrace metric &nbsp;·&nbsp; <b>[15]</b> UN SDG framework — Targets 11.6, 13.3, 9.4</div>
+
+  <div class="foot"><span>AeroTrace A(Q)I · Environmental Forensic Intelligence</span><span class="tag">PMJIT NGEC 2026–2027 · Sustainable Habitat</span><span class="pn">PAGE 08 / 10</span></div>
+</section>
+
+<!-- ================= PAGE 9 — SCALE + ECONOMICS + FUTURE ================= -->
+<section class="page" id="p9">
+  <div class="overline">09 · Feasibility, Economics &amp; Scalability Roadmap</div>
+  <h1 class="head">Scalable architecture, frugal deployment: extending clean air intelligence across cities.</h1>
+
+  <div class="cols g3" style="margin-top:3.6mm;flex:1;min-height:0">
+    <!-- LEFT 46%: scaling engine + econ -->
+    <div style="width:46%;display:flex;flex-direction:column;gap:3.4mm">
+      <div class="panel">
+        <div class="plabel">Geographic-Agnostic Scaling Engine <span class="r">city_config.yml · VERIFIED</span></div>
+        <svg viewBox="0 0 400 150" style="width:100%;height:auto">
+          <defs><marker id="a10" markerWidth="5.5" markerHeight="5.5" refX="4.5" refY="2.75" orient="auto"><path d="M0 0L5.5 2.75L0 5.5Z" fill="#3d7d99"/></marker></defs>
+          <!-- city configs row -->
+          <g font-family="JetBrains Mono">
+            <rect x="6" y="8" width="88" height="20" rx="2" fill="rgba(14,165,233,.09)" stroke="rgba(34,211,238,.45)"/>
+            <text x="50" y="21" font-size="6.8" fill="#7dd3fc" text-anchor="middle">pune.yml</text>
+            <rect x="106" y="8" width="88" height="20" rx="2" fill="rgba(14,165,233,.05)" stroke="rgba(34,211,238,.28)" stroke-dasharray="3 2"/>
+            <text x="150" y="21" font-size="6.8" fill="#5b8aa5" text-anchor="middle">mumbai.yml</text>
+            <rect x="206" y="8" width="88" height="20" rx="2" fill="rgba(14,165,233,.05)" stroke="rgba(34,211,238,.28)" stroke-dasharray="3 2"/>
+            <text x="250" y="21" font-size="6.8" fill="#5b8aa5" text-anchor="middle">delhi.yml</text>
+            <rect x="306" y="8" width="88" height="20" rx="2" fill="rgba(14,165,233,.05)" stroke="rgba(34,211,238,.28)" stroke-dasharray="3 2"/>
+            <text x="350" y="21" font-size="6.8" fill="#5b8aa5" text-anchor="middle">bengaluru.yml</text>
+          </g>
+          <text x="394" y="40" font-size="5.8" fill="#717d8a" text-anchor="end" font-family="JetBrains Mono">SOLID = BUILT · DASHED = ONBOARD BY CONFIG ONLY</text>
+          <line x1="200" y1="30" x2="200" y2="48" stroke="#3d7d99" stroke-width="1.1" marker-end="url(#a10)"/>
+          <rect x="6" y="52" width="388" height="38" rx="3" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.16)"/>
+          <text x="200" y="67" font-size="7.4" fill="#dfe6ec" text-anchor="middle" font-weight="700">STANDARDIZED AEROTRACE ENGINE</text>
+          <text x="200" y="80" font-size="6.4" fill="#a7b1bc" text-anchor="middle" font-family="JetBrains Mono">ingestion → validation → pasquill cones → chemical match → MCDA rank</text>
+          <line x1="200" y1="90" x2="200" y2="104" stroke="#3d7d99" stroke-width="1.1" marker-end="url(#a10)"/>
+          <rect x="6" y="108" width="122" height="32" rx="3" fill="rgba(250,204,21,.06)" stroke="rgba(251,191,36,.4)"/>
+          <text x="67" y="121" font-size="6.6" fill="#fde68a" text-anchor="middle" font-weight="600">OPERATIONS COCKPIT</text>
+          <text x="67" y="132" font-size="6" fill="#a7b1bc" text-anchor="middle">Forensic Action Center</text>
+          <rect x="139" y="108" width="122" height="32" rx="3" fill="rgba(250,204,21,.06)" stroke="rgba(251,191,36,.4)"/>
+          <text x="200" y="121" font-size="6.6" fill="#fde68a" text-anchor="middle" font-weight="600">FIELD-SQUAD WORKFLOWS</text>
+          <text x="200" y="132" font-size="6" fill="#a7b1bc" text-anchor="middle">draft §31A checklists</text>
+          <rect x="272" y="108" width="122" height="32" rx="3" fill="rgba(250,204,21,.06)" stroke="rgba(251,191,36,.4)"/>
+          <text x="333" y="121" font-size="6.6" fill="#fde68a" text-anchor="middle" font-weight="600">REGIONAL ADVISORIES</text>
+          <text x="333" y="132" font-size="6" fill="#a7b1bc" text-anchor="middle">EN / हिंदी / मराठी</text>
+          <text x="200" y="148" font-size="6" fill="#717d8a" text-anchor="middle" font-family="JetBrains Mono">NEW CITY = CONFIG FILE + STATION COORDINATES + LOCAL UTM — NO CORE CODE EDITS</text>
+        </svg>
+      </div>
+
+      <div class="panel grow">
+        <div class="plabel">Deployment Economics <span class="r">ENGINEERED ESTIMATE · NOT AUDITED MUNICIPAL COST</span></div>
+        <div class="ebar" style="margin-top:0">
+          <div class="lbl"><span>NEW CAAQMS STATION — CAPEX + ANNUAL MAINTENANCE</span><span class="v">₹1.2–1.5 Cr</span></div>
+          <div class="track"><div class="fill" style="width:100%;background:linear-gradient(90deg,#7f1d1d,#ef4444)"></div></div>
+        </div>
+        <div class="ebar">
+          <div class="lbl"><span>AEROTRACE LAYER — PROJECTED CLOUD OPEX / CITY / YR</span><span class="v">₹22,800</span></div>
+          <div class="track"><div class="fill" style="width:2%;background:linear-gradient(90deg,#0ea5e9,#22d3ee)"></div></div>
+        </div>
+        <div style="display:flex;gap:3.6mm;margin-top:2.4mm">
+          <div class="metric" style="flex:1"><div class="n">₹1,900<em>/mo</em></div><div class="l">Per city at 10-city shared scale</div></div>
+          <div class="metric" style="flex:1"><div class="n" style="font-size:14px;padding-top:3px">SENSOR HARDWARE REUSE</div><div class="l">Existing CPCB / SPCB CAAQMS + open met data</div></div>
+        </div>
+        <p class="micro" style="margin-top:2mm">AWS RDS db.t3.micro + EC2 t3.small + FastAPI + Vercel — standard-pricing projection <span class="cite">[16]</span>. Reuse minimizes new sensor hardware; standard cloud hosting and municipal integration still apply. CAAQMS procurement range: CPCB tenders 2022–2024.</p>
+      </div>
+    </div>
+
+    <!-- RIGHT 54%: roadmap -->
+    <div style="width:54%;display:flex;flex-direction:column">
+      <div class="panel grow" style="display:flex;flex-direction:column">
+        <div class="plabel">Three-Tier Capability Roadmap <span class="r">TRANSPARENT BOUNDARY: BUILT / NEXT / VISION</span></div>
+        <div class="rm grow">
+          <div class="col built">
+            <div class="h"><span class="t" style="color:#86efac">BUILT</span><span class="chip dp">Verified Implemented</span></div>
+            <ul>
+              <li>CAAQMS ingestion · sentinel screening · NAQI sub-indices</li>
+              <li>Pasquill-Gifford plume cones · geodesic GeoJSON polygons</li>
+              <li>Stoichiometric ratio classification · MCDA candidate ranking</li>
+              <li>Trilingual advisories · draft §31A checklists</li>
+              <li>4 Pune illustrative scenarios · 24-h timeline replay · WebSocket alerts</li>
+              <li>58 automated unit &amp; integration tests passing</li>
+            </ul>
+          </div>
+          <div class="col next">
+            <div class="h"><span class="t" style="color:#fcd34d">NEXT</span><span class="chip pr">Proposed · Near-Term</span></div>
+            <ul>
+              <li>Pre-emptive advective downwind forecasting (ETA / surge modeling)</li>
+              <li>Dedicated vulnerable-zone map layers (schools · hospitals)</li>
+              <li>Automated SMS / WhatsApp field-team notifications</li>
+              <li>Expanded city onboarding via config templates</li>
+            </ul>
+          </div>
+          <div class="col vis">
+            <div class="h"><span class="t" style="color:#d8b4fe">VISION</span><span class="chip lv">Long-Term Vision</span></div>
+            <ul>
+              <li>Participatory citizen observation channels — corroborating signals, never sole proof</li>
+              <li>Regional airshed governance coordination</li>
+              <li>Emissions documentation supporting MRV frameworks — no carbon credits claimed</li>
+            </ul>
+          </div>
+        </div>
+        <div class="rule" style="margin:2.8mm 0"></div>
+        <div class="plabel">Scale Trajectory <span class="r">BUILT → NEXT → VISION</span></div>
+        <svg viewBox="0 0 430 58" style="width:100%;height:auto">
+          <defs><marker id="a11" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6Z" fill="#3d7d99"/></marker></defs>
+          <g font-size="7" text-anchor="middle">
+            <rect x="8" y="16" width="76" height="26" rx="3" fill="rgba(34,197,94,.07)" stroke="rgba(74,222,128,.45)"/>
+            <text x="46" y="27" fill="#86efac" font-weight="700">PUNE</text>
+            <text x="46" y="37" fill="#717d8a" font-size="5.6" font-family="JetBrains Mono">BUILT · PILOT</text>
+            <line x1="86" y1="29" x2="116" y2="29" stroke="#3d7d99" stroke-width="1.1" marker-end="url(#a11)"/>
+            <rect x="120" y="16" width="86" height="26" rx="3" fill="rgba(14,165,233,.06)" stroke="rgba(34,211,238,.4)"/>
+            <text x="163" y="27" fill="#7dd3fc" font-weight="700">MULTI-CITY</text>
+            <text x="163" y="37" fill="#717d8a" font-size="5.6" font-family="JetBrains Mono">CONFIG-DRIVEN</text>
+            <line x1="208" y1="29" x2="238" y2="29" stroke="#3d7d99" stroke-width="1.1" marker-end="url(#a11)"/>
+            <rect x="242" y="16" width="86" height="26" rx="3" fill="rgba(14,165,233,.06)" stroke="rgba(34,211,238,.4)" stroke-dasharray="4 3"/>
+            <text x="285" y="27" fill="#7dd3fc" font-weight="700">REGIONAL AIRSHED</text>
+            <text x="285" y="37" fill="#717d8a" font-size="5.6" font-family="JetBrains Mono">PROPOSED</text>
+            <line x1="330" y1="29" x2="360" y2="29" stroke="#3d7d99" stroke-width="1.1" marker-end="url(#a11)"/>
+            <rect x="364" y="16" width="62" height="26" rx="3" fill="none" stroke="rgba(216,180,254,.5)" stroke-dasharray="4 3"/>
+            <text x="395" y="27" fill="#d8b4fe" font-weight="700">NATIONAL</text>
+            <text x="395" y="37" fill="#717d8a" font-size="5.6" font-family="JetBrains Mono">VISION</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="citekey" style="margin-top:3mm"><b>[16]</b> Engineered cloud cost projection — AWS standard pricing (RDS Postgres · EC2 · FastAPI · Vercel frontend); CPCB CAAQMS procurement tenders 2022–2024. All figures are projections, not audited municipal expenditure.</div>
+
+  <div class="foot"><span>AeroTrace A(Q)I · Environmental Forensic Intelligence</span><span class="tag">PMJIT NGEC 2026–2027 · Sustainable Habitat</span><span class="pn">PAGE 09 / 10</span></div>
+</section>
+
+<!-- ================= PAGE 10 — CLOSING ================= -->
+<section class="page last" id="p10">
+  <div class="cols" style="height:100%">
+    <!-- LEFT 58% -->
+    <div style="width:58%;display:flex;flex-direction:column">
+      <div class="overline">10 · Impact &amp; Closing Argument</div>
+      <h1 class="head" style="font-size:27px">Toward habitats that don't just measure their environment, but <em>understand it</em>.</h1>
+      <p class="small" style="margin-top:3mm;max-width:150mm">A century ago, public health advanced when cities began tracing contamination to its sources. Indian cities now face the parallel challenge with their air. AeroTrace A(Q)I demonstrates a pathway from environmental measurement to environmental intelligence — scientifically grounded, economically feasible, and operationally useful for sustainable habitats.</p>
+
+      <!-- generational arc -->
+      <div class="panel" style="margin-top:4.4mm">
+        <div class="plabel">The Evolutionary Arc of Clean Air Governance <span class="r">THREE GENERATIONS</span></div>
+        <svg viewBox="0 0 440 116" style="width:100%;height:auto">
+          <defs><marker id="a12" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6Z" fill="#3d7d99"/></marker></defs>
+          <line x1="12" y1="86" x2="428" y2="86" stroke="rgba(255,255,255,.14)"/>
+          <!-- gen1 -->
+          <circle cx="60" cy="86" r="4" fill="#717d8a"/>
+          <rect x="18" y="30" width="110" height="46" rx="3" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.14)"/>
+          <text x="28" y="44" font-size="6.4" fill="#717d8a" font-family="JetBrains Mono">GEN 1 · 1980–2010</text>
+          <text x="28" y="56" font-size="7.4" fill="#c8d2da" font-weight="600">MANUAL SAMPLING</text>
+          <text x="28" y="66" font-size="6" fill="#717d8a">Filter papers · lab reports weeks later</text>
+          <!-- gen2 -->
+          <circle cx="225" cy="86" r="4" fill="#f59e0b"/>
+          <rect x="168" y="22" width="120" height="54" rx="3" fill="rgba(250,204,21,.05)" stroke="rgba(251,191,36,.35)"/>
+          <text x="178" y="36" font-size="6.4" fill="#fcd34d" font-family="JetBrains Mono">GEN 2 · 2014–2025</text>
+          <text x="178" y="48" font-size="7.4" fill="#fde68a" font-weight="600">DESCRIPTIVE AQI</text>
+          <text x="178" y="58" font-size="6" fill="#a7b1bc">Continuous sensors · single scalar</text>
+          <text x="178" y="67" font-size="6" fill="#a7b1bc">advisories · limited attribution</text>
+          <!-- gen3 -->
+          <circle cx="392" cy="86" r="4" fill="#22d3ee"/>
+          <rect x="312" y="14" width="120" height="62" rx="3" fill="rgba(14,165,233,.08)" stroke="rgba(34,211,238,.55)"/>
+          <text x="322" y="28" font-size="6.4" fill="#7dd3fc" font-family="JetBrains Mono">GEN 3 · 2026+ · AEROTRACE APPROACH</text>
+          <text x="322" y="40" font-size="7.4" fill="#d9f2fb" font-weight="700">ENVIRONMENTAL INTELLIGENCE</text>
+          <text x="322" y="51" font-size="6" fill="#a7b1bc">Detect → Analyze → Trace → Rank</text>
+          <text x="322" y="60" font-size="6" fill="#a7b1bc">→ Verify → Act → Learn</text>
+          <text x="322" y="71" font-size="5.8" fill="#5b8aa5" font-family="JetBrains Mono">DECISION SUPPORT · FIELD VERIFICATION</text>
+          <line x1="130" y1="66" x2="164" y2="56" stroke="#3d7d99" stroke-width="1" marker-end="url(#a12)"/>
+          <line x1="290" y1="58" x2="308" y2="50" stroke="#3d7d99" stroke-width="1" marker-end="url(#a12)"/>
+          <text x="12" y="104" font-size="6" fill="#5b6672" font-family="JetBrains Mono">MEASURE → UNDERSTAND → TRACE → RANK → VERIFY → ACT → LEARN</text>
+        </svg>
+      </div>
+
+      <!-- imperatives -->
+      <div class="plabel" style="margin-top:3.4mm">Five Impact Imperatives</div>
+      <div class="imp">
+        <div class="i"><div class="k">UNDERSTAND</div><div class="d">Vectors &amp; exceedance factors, not single numbers</div></div>
+        <div class="i"><div class="k">INVESTIGATE</div><div class="d">Physics-grounded candidate attribution</div></div>
+        <div class="i"><div class="k">IDENTIFY</div><div class="d">Schools, clinics &amp; communities in the path</div></div>
+        <div class="i"><div class="k">RESPOND</div><div class="d">Structured decision support under statute</div></div>
+        <div class="i"><div class="k">LEARN</div><div class="d">Progressive airshed intelligence</div></div>
+      </div>
+
+      <div class="grow"></div>
+      <div class="micro" style="margin-top:3mm">National policy alignment: supports NCAP's target of up to 40% reduction in particulate concentrations by 2026 through targeted, source-aware municipal decision support <span class="cite">[17]</span>.</div>
+    </div>
+
+    <!-- RIGHT 42% -->
+    <div style="width:42%;display:flex;flex-direction:column;gap:3.6mm">
+      <!-- habitat vignette placeholder -->
+      <div class="shot" style="flex:1;min-height:0">
+        <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+        <div class="slot">[ PLACE TEAM ARTIFACT HERE ]</div>
+        <div class="name">URBAN HABITAT VIGNETTE — TEAM-CREATED VISUAL</div>
+        <div class="req"><b>Purpose:</b> the closing image — a resilient Indian urban habitat.<br>
+        <b>Required content:</b> breathable neighborhood · vegetated green buffers · pedestrian transit · school safety zones · optional translucent AeroTrace telemetry overlay (wind vectors · receptor pins).</div>
+        <div class="notai">Required team-created artifact · non-AI-generated technical plan / view</div>
+      </div>
+
+      <div class="panel">
+        <div class="plabel">Submission Seal <span class="r">PMJIT NGEC 2026–2027</span></div>
+        <div style="display:flex;align-items:center;gap:3.4mm">
+          <svg width="44" height="44" viewBox="0 0 44 44" style="flex:none">
+            <circle cx="22" cy="22" r="20" fill="none" stroke="rgba(34,211,238,.5)" stroke-width="1"/>
+            <circle cx="22" cy="22" r="15.5" fill="none" stroke="rgba(34,211,238,.25)" stroke-dasharray="2.5 2.5"/>
+            <path d="M22 8 32 30H12Z" stroke="#22d3ee" stroke-width="1.1" fill="rgba(34,211,238,.08)"/>
+            <path d="M14 36c4-2.4 8-2.4 12 0" stroke="#fbbf24" stroke-width="1.1" stroke-linecap="round"/>
+          </svg>
+          <div class="micro" style="line-height:1.8">
+            <b>AeroTrace A(Q)I</b> — Environmental Forensic Intelligence<br>
+            Pipeline v3.1.0 · 58 tests · 4 scenarios · 3 languages<br>
+            Sustainable Habitat Track · Team submission, 2026<br>
+            <span style="color:#717d8a">Decision support for authorized officers — not autonomous enforcement</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="citekey" style="margin-top:3mm"><b>[17]</b> National Clean Air Programme (NCAP), MoEFCC — particulate reduction target &nbsp;·&nbsp; Full citation index: WHO 2021 · Lancet GBD India (Pandey et al.) · AQLI (EPIC UChicago) · CPCB NAQI 2014 &amp; NAAQS 2009 · Pasquill 1961 · Turner/EPA 1970 · Bhandari et al. 2022 · Bond et al. 2013 · Air Act 1981 §31A · US EPA PMF 5.0 Guide</div>
+
+  <div class="foot"><span>AeroTrace A(Q)I · Environmental Forensic Intelligence</span><span class="tag">PMJIT NGEC 2026–2027 · Sustainable Habitat</span><span class="pn">PAGE 10 / 10</span></div>
+</section>
+
+</body>
+</html>

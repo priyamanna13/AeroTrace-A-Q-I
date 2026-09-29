@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import Any, Optional
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class InformationProvenance(str, Enum):
@@ -35,11 +35,31 @@ def resolve_provenance(data_source: Optional[str], is_simulated: bool = False) -
 class AIContext(BaseModel):
     """Complete context model capturing user journey state across screens."""
 
+    model_config = ConfigDict(extra="ignore")
+
     @model_validator(mode="before")
     @classmethod
-    def _default_provenance(cls, data: Any) -> Any:
+    def _sanitize_context(cls, data: Any) -> Any:
         if isinstance(data, dict):
-            if "provenance" not in data or data["provenance"] is None:
+            # 1. Alias station_name to station if station not provided
+            if "station_name" in data and ("station" not in data or not data["station"]):
+                data["station"] = data["station_name"]
+
+            # 2. Map frontend provenance variations to canonical enum
+            prov = data.get("provenance")
+            if prov:
+                prov_str = str(prov).lower()
+                if "sensor" in prov_str or "fact" in prov_str or "measure" in prov_str:
+                    data["provenance"] = InformationProvenance.MEASURED_FACT
+                elif "simulat" in prov_str:
+                    data["provenance"] = InformationProvenance.SIMULATION
+                elif "model" in prov_str or "estimate" in prov_str:
+                    data["provenance"] = InformationProvenance.MODEL_ESTIMATE
+                elif "forecast" in prov_str:
+                    data["provenance"] = InformationProvenance.FORECAST
+                else:
+                    data["provenance"] = InformationProvenance.MEASURED_FACT
+            else:
                 src = data.get("data_source")
                 is_sim = bool(data.get("is_simulated", False))
                 data["provenance"] = resolve_provenance(src, is_sim)
@@ -177,6 +197,7 @@ class AIContext(BaseModel):
 
 class AIInsightRequest(BaseModel):
     """Request payload for an inline 2-4 sentence AI summary card."""
+    model_config = ConfigDict(extra="ignore")
     context: AIContext
 
 

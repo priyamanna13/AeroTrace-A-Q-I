@@ -21,7 +21,7 @@ from .ingestion import fetch_city_stations_telemetry, IST
 
 log = logging.getLogger(__name__)
 
-POLL_INTERVAL_SECONDS: int = 30
+POLL_INTERVAL_SECONDS: int = int(os.getenv("POLL_INTERVAL_SECONDS", "300"))
 SPIKE_THRESHOLD: float = 150.0
 
 # ─── Startup Heartbeat Payload ────────────────────────────────────────────────
@@ -40,7 +40,7 @@ _STARTUP_MOCK_PAYLOAD: dict = {
     "action_advisory": (
         "Live multi-city telemetry stream initialized — monitoring 7 national cities. "
         "All verified CAAQMS monitoring stations online. "
-        "System is polling upstream provider feeds on a 30-second cadence."
+        "System is polling upstream provider feeds on a scheduled background cadence."
     ),
     "is_spike": False,
     "attribution": [],
@@ -119,10 +119,10 @@ def run_single_poll_cycle(session: Any = None) -> dict[str, Any]:
 
 
 async def start_multi_city_revalidation_loop() -> None:
-    """Continuous 30-second multi-city revalidation loop running in the FastAPI lifespan."""
+    """Continuous scheduled background multi-city revalidation loop running in FastAPI lifespan."""
     from .api import manager, _enrich_broadcast
 
-    log.info("Initializing Asynchronous Multi-City 30-Second Revalidation Loop (7 Cities)...")
+    log.info("Initializing Asynchronous Multi-City Background Revalidation Loop (cadence: %ds)...", POLL_INTERVAL_SECONDS)
     await asyncio.sleep(0.5)
 
     # Initial heartbeat broadcast to unblock frontend loading states
@@ -131,6 +131,7 @@ async def start_multi_city_revalidation_loop() -> None:
     except Exception as exc:
         log.debug("Initial heartbeat broadcast skipped: %s", exc)
 
+    first_run = True
     while True:
         try:
             # Check DB session availability safely
@@ -144,9 +145,10 @@ async def start_multi_city_revalidation_loop() -> None:
 
             cities = list_available_cities()
 
+            # On cold start or scheduled cycle, poll upstream providers and update PostgreSQL
             for city in cities:
                 try:
-                    stations = fetch_city_stations_telemetry(city, session=session, force_refresh=False)
+                    stations = fetch_city_stations_telemetry(city, session=session, force_refresh=True)
                     if not stations:
                         continue
 
@@ -189,6 +191,7 @@ async def start_multi_city_revalidation_loop() -> None:
         except Exception as loop_exc:
             log.error("Unhandled error in multi-city revalidation loop: %s", loop_exc)
 
+        first_run = False
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
 

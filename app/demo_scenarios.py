@@ -987,12 +987,17 @@ def _build_dynamic_scenario(
     s_lat = float(st_cfg["lat"])
     elev = int(st_cfg.get("elevation_m", 500))
 
-    from .cities import _CITY_BASELINES
+    from .cities import _CITY_BASELINES, _normalize_name
+    from .station_templates import _STATION_CANDIDATE_TEMPLATES
     base_info = _CITY_BASELINES.get(city_key, _CITY_BASELINES["pune"])
     dominant = base_info.get("dominant", "pm25")
     spike_aqi = int(base_info.get("base_aqi", 200.0) * 1.5)
 
-    templates = _CITY_CANDIDATE_TEMPLATES.get(city_key, _CITY_CANDIDATE_TEMPLATES.get("delhi", []))
+    st_norm = _normalize_name(st_name)
+    templates = _STATION_CANDIDATE_TEMPLATES.get(
+        st_norm,
+        _CITY_CANDIDATE_TEMPLATES.get(city_key, _CITY_CANDIDATE_TEMPLATES.get("delhi", []))
+    )
     candidates = []
     for tmpl in templates:
         cand_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{city_key}-{st_name}-{tmpl['slug']}"))

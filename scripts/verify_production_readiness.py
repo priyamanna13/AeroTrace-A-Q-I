@@ -31,7 +31,16 @@ class ProductionQARunner:
             self._fetch = self._http_fetch
         else:
             # In-process TestClient mode
-            os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+            try:
+                from dotenv import load_dotenv
+                load_dotenv()
+            except ImportError:
+                pass
+            from app.db import init_db
+            try:
+                init_db()
+            except Exception:
+                pass
             from fastapi.testclient import TestClient
             from app.api import app
             self.client = TestClient(app)
