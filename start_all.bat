@@ -10,7 +10,7 @@ echo.
 
 :: 1. Ensure Docker PostGIS is up
 echo [1/3] Ensuring PostgreSQL / PostGIS container is running...
-docker compose up -d
+docker compose up -d db
 echo [OK] Database service verified.
 echo.
 

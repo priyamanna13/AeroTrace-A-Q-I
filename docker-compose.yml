@@ -16,5 +16,36 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aero_backend
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://aq:aq@db:5432/aqdb
+      - AQ_SOURCE=live
+      - WEATHER_SOURCE=live
+      - CORS_ORIGINS=*
+      - PORT=8000
+      - HOST=0.0.0.0
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: aero_frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
 volumes:
   aq_pgdata:
