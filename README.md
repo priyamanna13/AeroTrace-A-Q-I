@@ -4,8 +4,6 @@
 
 AeroTrace A(Q)I is an environmental spatial attribution and atmospheric forensic intelligence platform for India. When ambient air quality sensors detect a pollution spike, conventional dashboards only report the severity number; AeroTrace identifies **where the pollution came from, why it spiked, who is accountable, and how it will disperse downwind**.
 
-Built for the Hack2Skill Google AI Hackathon, track **Clean Air & Climate Resilience**.
-
 - **Live Prototype:** [DEPLOYED LINK]
 - **Demo Video:** [VIDEO LINK]
 - **Pitch Deck:** [DECK LINK]
