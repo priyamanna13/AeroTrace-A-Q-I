@@ -1,32 +1,69 @@
-# AeroTrace A(Q)I
+<div align="center">
 
-**Trace the air. Understand the source.**
+# 🌫️ 🚀 AeroTrace A(Q)I
+### Spatial Atmospheric Attribution & Forensic Air Quality Intelligence for India
 
-AeroTrace A(Q)I is an environmental spatial attribution and atmospheric forensic intelligence platform for India. When ambient air quality sensors detect a pollution spike, conventional dashboards only report the severity number; AeroTrace identifies **where the pollution came from, why it spiked, who is accountable, and how it will disperse downwind**.
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![React 19](https://img.shields.io/badge/React-19.0-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-PostGIS-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgis.net/)
+[![Google Gemini](https://img.shields.io/badge/Google_Gemini-2.5_Flash-8E75C2?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
+[![Three.js](https://img.shields.io/badge/Three.js-WebGL_Globe-000000?style=for-the-badge&logo=threedotjs&logoColor=white)](https://threejs.org/)
+[![Tests](https://img.shields.io/badge/Tests-290%20Passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](https://docs.pytest.org/)
+[![License](https://img.shields.io/badge/License-MIT-blueviolet?style=for-the-badge)](LICENSE)
 
-An enterprise-grade platform for State Pollution Control Boards (SPCBs), Municipal Corporations (PMC, MCGM, DPCC), Environmental Enforcement Squads, and Affected Citizens.
-- **Live Prototype:** [DEPLOYED LINK]
-- **Interactive Documentation & API Docs:** `/docs` on backend host
-- **Target Airsheds:** 28 Continuous Ambient Air Quality Monitoring Stations (CAAQMS) across 7 Indian metropolitan regions.
+<br/>
+
+**Trace the air. Understand the source. Enforce with science.**
+
+*When ambient air quality sensors detect an exceedance spike, conventional dashboards only report the severity number.*  
+*AeroTrace identifies **where the pollution originated, why it spiked, who is accountable, and how it will disperse downwind**.*
+
+<br/>
+
+[🌟 Overview](#-executive-overview) • [🎯 Forensic Workflow](#-what-it-does-4-step-forensic-workflow) • [🏗️ Architecture](#️-system-architecture) • [🔬 Physics Engine](#-how-atmospheric-attribution-works-physics-engine) • [🤖 Google AI](#-where-google-ai--gemini-are-used) • [🚀 Quick Start](#-quick-start--running-locally)
 
 ---
 
-## What It Does
+</div>
 
-Conventional dashboards report **what** the AQI is. AeroTrace answers **where it came from**.
+## 🌟 Executive Overview
 
-1. **Detect (Surveillance & Ingestion):**
+AeroTrace A(Q)I is an environmental spatial attribution and atmospheric forensic intelligence platform engineered specifically for Indian airsheds. It equips State Pollution Control Boards (SPCBs), Municipal Corporations (PMC, MCGM, DPCC), Environmental Enforcement Squads, and Affected Citizens with an actionable, science-backed evidentiary toolkit.
+
+* 📖 **Interactive Documentation & API Docs:** `/docs` on backend host (FastAPI Swagger UI)
+* 📍 **Coverage Airsheds:** 28 Continuous Ambient Air Quality Monitoring Stations (CAAQMS) across 7 Indian metropolitan regions
+* ⚖️ **Statutory Alignment:** Automated inspection directives pursuant to **Section 31A of the Air (Prevention and Control of Pollution) Act, 1981**
+
+---
+
+## 🎯 What It Does: 4-Step Forensic Workflow
+
+Conventional dashboards report **what** the AQI is. AeroTrace answers **where it came from and who is responsible**.
+
+```
+  ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+  │   1. DETECT     │ ───►  │   2. ATTRIBUTE  │ ───►  │   3. FORECAST   │ ───►  │   4. ENFORCE    │
+  │ Real-Time CPCB  │       │ Pasquill Cones  │       │ Downwind Plume  │       │ Sec 31A Warrants│
+  │ 28 CAAQMS Feeds │       │ 5-Factor Metric │       │ Forward Decay   │       │ Trilingual Voice│
+  └─────────────────┘       └─────────────────┘       └─────────────────┘       └─────────────────┘
+```
+
+1. **1️⃣ Detect (Surveillance & Ingestion):**  
    Continuously ingests multi-pollutant telemetry ($\text{PM}_{2.5}, \text{PM}_{10}, \text{NO}_2, \text{SO}_2, \text{CO}, \text{O}_3$) from **28 physical CAAQMS stations across 7 Indian metropolitan airsheds** (Pune, Mumbai, Delhi, Bengaluru, Kolkata, Hyderabad, Chennai) using the official Central Pollution Control Board (CPCB) National AQI sub-index formulas.
-2. **Attribute (Atmospheric Forensic Attribution):**
+
+2. **2️⃣ Attribute (Atmospheric Forensic Attribution):**  
    Classifies planetary boundary layer turbulence into **Turner / Pasquill-Gifford stability classes (A through F)** using live solar elevation, wind velocity, and cloud cover. Constructs an upwind geodesic dispersion cone and ranks candidate industrial, construction, and traffic sources inside it across **five weighted physical and compliance criteria**.
-3. **Forecast (Forward Dispersion & Advection):**
+
+3. **3️⃣ Forecast (Forward Dispersion & Advection):**  
    Projects concentration decay over 1-to-24-hour horizons using stability-dependent decay rates, computing dynamic downwind plume footprints with widening confidence bounds.
-4. **Enforce & Alert (Statutory Directives & Civic Alerts):**
+
+4. **4️⃣ Enforce & Alert (Statutory Directives & Civic Alerts):**  
    Synthesizes legally grounded inspection directives pursuant to **Section 31A of the Air (Prevention and Control of Pollution) Act, 1981**, dispatches municipal rapid-response squads with estimated ETAs, and generates trilingual health advisories in **English, Hindi (हिंदी), and Marathi (मराठी)**.
 
 ---
 
-## System Architecture
+## 🏗️ System Architecture
 
 ```mermaid
 flowchart TD
@@ -97,18 +134,18 @@ flowchart TD
 
 ---
 
-## How Atmospheric Attribution Works
+## 🔬 How Atmospheric Attribution Works (Physics Engine)
 
 When a station experiences an exceedance event ($\text{AQI} > 150$ or sudden species concentration delta), AeroTrace executes a multi-step physics-guided forensic workflow:
 
 | Stage | Scientific Method & Implementation |
 | :--- | :--- |
-| **1. Atmospheric Stability** | Implements the **Turner / Pasquill-Gifford method** in [`app/pasquill.py`](file:///d:/Projects/AeroTrace%20A(Q)I/app/pasquill.py). Determines the atmospheric stability class (A = Extremely Unstable through F = Moderately Stable) based on 10m surface wind speed, solar zenith angle (insolation), and fractional cloud cover. |
-| **2. Upwind Cone Geometry** | Computes the upwind bearing ($\theta_{\text{upwind}} = (\text{wind\_direction} + 180^\circ) \pmod{360^\circ}$) using **Haversine geodesic forward projections** in [`app/wind_cone.py`](file:///d:/Projects/AeroTrace%20A(Q)I/app/wind_cone.py). The half-angle narrows with stability (from $25^\circ$ in Class A down to $12^\circ$ in Class F) and reach scales between $2.5\text{ km}$ and $7.0\text{ km}$. |
-| **3. Spatial Candidate Intersect** | Intersects the upwind polygon with physical candidates from our **station-specific landmark registry** ([`app/station_templates.py`](file:///d:/Projects/AeroTrace%20A(Q)I/app/station_templates.py)) and runtime **OpenStreetMap Overpass QL** spatial queries ([`app/overpass_client.py`](file:///d:/Projects/AeroTrace%20A(Q)I/app/overpass_client.py)). |
-| **4. Multi-Factor Scoring** | Evaluates all candidate sources inside the reach radius using a transparent 5-factor scoring model in [`app/scoring.py`](file:///d:/Projects/AeroTrace%20A(Q)I/app/scoring.py). |
+| **1️⃣ Atmospheric Stability** | Implements the **Turner / Pasquill-Gifford method** in [`app/pasquill.py`](file:///d:/Projects/AeroTrace%20A(Q)I/app/pasquill.py). Determines the atmospheric stability class (A = Extremely Unstable through F = Moderately Stable) based on 10m surface wind speed, solar zenith angle (insolation), and fractional cloud cover. |
+| **2️⃣ Upwind Cone Geometry** | Computes the upwind bearing ($\theta_{\text{upwind}} = (\text{wind\_direction} + 180^\circ) \pmod{360^\circ}$) using **Haversine geodesic forward projections** in [`app/wind_cone.py`](file:///d:/Projects/AeroTrace%20A(Q)I/app/wind_cone.py). The half-angle narrows with stability (from $25^\circ$ in Class A down to $12^\circ$ in Class F) and reach scales between $2.5\text{ km}$ and $7.0\text{ km}$. |
+| **3️⃣ Spatial Candidate Intersect** | Intersects the upwind polygon with physical candidates from our **station-specific landmark registry** ([`app/station_templates.py`](file:///d:/Projects/AeroTrace%20A(Q)I/app/station_templates.py)) and runtime **OpenStreetMap Overpass QL** spatial queries ([`app/overpass_client.py`](file:///d:/Projects/AeroTrace%20A(Q)I/app/overpass_client.py)). |
+| **4️⃣ Multi-Factor Scoring** | Evaluates all candidate sources inside the reach radius using a transparent 5-factor scoring model in [`app/scoring.py`](file:///d:/Projects/AeroTrace%20A(Q)I/app/scoring.py). |
 
-### 5-Factor Weighted Attribution Algorithm
+### 📐 5-Factor Weighted Attribution Algorithm
 
 $$\text{Confidence Score} = w_{\text{wind}} S_{\text{wind}} + w_{\text{chem}} S_{\text{chem}} + w_{\text{time}} S_{\text{time}} + w_{\text{dist}} S_{\text{dist}} - P_{\text{compliance}}$$
 
@@ -125,34 +162,35 @@ $$\text{Confidence Score} = w_{\text{wind}} S_{\text{wind}} + w_{\text{chem}} S_
 
 ---
 
-## Where Google AI & Gemini Are Used
+## 🤖 Where Google AI & Gemini Are Used
 
 AeroTrace pairs rigorous deterministic physics engines with **Google Gemini** for reasoning, contextualization, and multilingual translation:
 
-* **Contextual Intelligence:** Gemini generates grounded technical and policy insights across city overviews, station spikes, weather dynamics, dispersion forecasts, and statutory counterfactuals using strictly typed data contracts.
-* **Indic Language Localization:** Full natural-language explanations and voice capabilities in **English, Hindi (हिंदी), and Marathi (मराठी)**.
-* **Browser Voice Interaction:** Integration with the browser **Web Speech API** for hands-free speech input and audible read-aloud of forensic briefs for field officers.
-* **Deterministic Legal Fallback:** If the Gemini API is unreachable, quota is exhausted, or the host is offline, [`app/ai_service.py`](file:///d:/Projects/AeroTrace%20A(Q)I/app/ai_service.py) automatically activates the built-in deterministic engine (`TemplateFallbackAIService`). It outputs legally structured advisories citing **Section 31A of the Air Act 1981** without failing or stalling the UI.
-* **Backend Security:** The `GEMINI_API_KEY` remains securely isolated on the backend server and is never transmitted to client browsers.
+* 🧠 **Contextual Intelligence:** Gemini generates grounded technical and policy insights across city overviews, station spikes, weather dynamics, dispersion forecasts, and statutory counterfactuals using strictly typed data contracts.
+* 🌐 **Indic Language Localization:** Full natural-language explanations and voice capabilities in **English, Hindi (हिंदी), and Marathi (मराठी)**.
+* 🎙️ **Browser Voice Interaction:** Integration with the browser **Web Speech API** for hands-free speech input and audible read-aloud of forensic briefs for field officers.
+* ⚖️ **Deterministic Legal Fallback:** If the Gemini API is unreachable, quota is exhausted, or the host is offline, [`app/ai_service.py`](file:///d:/Projects/AeroTrace%20A(Q)I/app/ai_service.py) automatically activates the built-in deterministic engine (`TemplateFallbackAIService`). It outputs legally structured advisories citing **Section 31A of the Air Act 1981** without failing or stalling the UI.
+* 🔒 **Backend Security:** The `GEMINI_API_KEY` remains securely isolated on the backend server and is never transmitted to client browsers.
 
 ---
 
-## Ingestion Cascade & Fallback Tiers
+## 🔄 4-Tier Ingestion Cascade & Fallback Tiers
 
 AeroTrace guarantees 100% operational uptime through a 4-tier ingestion failover cascade:
 
 | Tier | Provider / Protocol | Purpose | Fallback Condition |
 | :---: | :--- | :--- | :--- |
-| **1** | **CPCB CAAQMS Real-Time Portal** | Primary physical sensor telemetry from monitoring stations across India. | Rate-limit, connection timeout, or portal downtime. |
-| **2** | **Open-Meteo Air Quality (Copernicus CAMS)** | Satellite-calibrated atmospheric reanalysis data for primary criteria pollutants. | Unreachable network or missing pollutant species. |
-| **3** | **WAQI (World Air Quality Index)** | Global sensor aggregation network feed. | Missing station mapping or token limits. |
-| **4** | **Physical Diurnal Baseline Simulation** | Deterministic diurnal pollutant curves calibrated to the historical baseline of that specific station. | Complete external network outage (explicitly tagged `is_simulated: true`). |
+| **Tier 1** | **CPCB CAAQMS Real-Time Portal** | Primary physical sensor telemetry from monitoring stations across India. | Rate-limit, connection timeout, or portal downtime. |
+| **Tier 2** | **Open-Meteo Air Quality (Copernicus CAMS)** | Satellite-calibrated atmospheric reanalysis data for primary criteria pollutants. | Unreachable network or missing pollutant species. |
+| **Tier 3** | **WAQI (World Air Quality Index)** | Global sensor aggregation network feed. | Missing station mapping or token limits. |
+| **Tier 4** | **Physical Diurnal Baseline Simulation** | Deterministic diurnal pollutant curves calibrated to the historical baseline of that specific station. | Complete external network outage (explicitly tagged `is_simulated: true`). |
 
-**Meteorology Feed:** Live 10m wind speed, wind bearing, air temperature, relative humidity, atmospheric pressure, and planetary boundary layer mixing height are fetched directly from **Open-Meteo** (free, no API key required).
+> [!TIP]
+> **Meteorology Feed:** Live 10m wind speed, wind bearing, air temperature, relative humidity, atmospheric pressure, and planetary boundary layer mixing height are fetched directly from **Open-Meteo** (free, no API key required).
 
 ---
 
-## Supported Metros & Physical CAAQMS Stations
+## 📍 Supported Metros & Physical CAAQMS Stations (28 Stations)
 
 AeroTrace configures **28 verified physical CAAQMS stations across 7 major metropolitan airsheds** (4 stations per city):
 
@@ -171,9 +209,9 @@ AeroTrace configures **28 verified physical CAAQMS stations across 7 major metro
 
 ---
 
-## Quick Start & Running Locally
+## 🚀 Quick Start & Running Locally
 
-### Option A: One-Click Full-Stack Docker (Recommended)
+### 🐳 Option A: One-Click Full-Stack Docker (Recommended)
 
 Requires **Docker Desktop** only. No local Python or Node.js installation is required:
 
@@ -193,13 +231,13 @@ docker compose up --build
 *(On Windows, you can also simply double-click [`docker_start_all.bat`](file:///d:/Projects/AeroTrace%20A(Q)I/docker_start_all.bat)).*
 
 Open your browser to:
-* **Frontend Web App:** `http://localhost:5173`
-* **FastAPI Interactive Docs:** `http://localhost:8000/docs`
-* **Health Check Probe:** `http://localhost:8000/health`
+* 🌐 **Frontend Web App:** `http://localhost:5173`
+* 📚 **FastAPI Interactive Docs:** `http://localhost:8000/docs`
+* 🩺 **Health Check Probe:** `http://localhost:8000/health`
 
 ---
 
-### Option B: Local Development (Host Python + Node.js)
+### 💻 Option B: Local Development (Host Python + Node.js)
 
 For active code development and hot-reloading:
 
@@ -224,7 +262,7 @@ npm run dev
 
 ---
 
-### Option C: Zero-Database Dry-Run Mode
+### ⚡ Option C: Zero-Database Dry-Run Mode
 
 You can run the full attribution pipeline and verify the immutable data contract without running PostgreSQL/PostGIS:
 
@@ -234,7 +272,7 @@ DATABASE_URL="sqlite:///:memory:" python scripts/run_demo.py --dry-run
 
 ---
 
-## Testing & Quality Assurance
+## 🛡️ Testing & Quality Assurance Audit
 
 AeroTrace maintains a comprehensive automated testing and audit suite:
 
@@ -281,7 +319,7 @@ Summary: 20/20 checks passed (100.0%) in 15.24s
 
 ---
 
-## Adding a New City
+## 🌐 Adding a New Airshed
 
 Adding a new metropolitan airshed requires zero code changes to the mathematical and attribution engines:
 
@@ -291,22 +329,22 @@ Adding a new metropolitan airshed requires zero code changes to the mathematical
 
 ---
 
-## Known Limitations & Roadmap
+## 🔮 Limitations & Future Roadmap
 
-### Known Limitations
+### ⚠️ Current Limitations
 * **Single-Station Meteorology:** The upwind cone projection currently uses the wind vector from the monitoring station's immediate coordinates; complex micro-urban canyon flows are modeled via Pasquill dispersion broadening rather than full Computational Fluid Dynamics (CFD).
 * **Public CPCB Access:** Because the national CPCB CCR dashboard does not offer authenticated public REST streams for all stations, our 4-tier cascade utilizes OpenData tokens and satellite reanalysis fallback tiers.
 
-### Future Roadmap
+### 🗺️ Future Roadmap
 * **Crowdsourced Citizen Intake:** WhatsApp and web portal reporting with Gemini Vision photo verification for smouldering garbage piles and unshielded construction dust.
 * **High-Resolution Municipal GIS Integration:** Direct integration with state municipal GIS layers for automated boundary checking of schools and hospitals.
 * **Vertex AI Forecaster:** Training spatio-temporal Graph Neural Networks (GNNs) on historical CAAQMS telemetry for predictive early warnings.
 
 ---
 
-## Team & Attributions
+## 👥 Engineering Team & Data Attributions
 
 * **Development Team:** AeroTrace Core Engineering Team
 * **Map Data:** © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, queried via Overpass API.
 * **Sensor Telemetry:** Central Pollution Control Board (CPCB), Ministry of Environment, Forest and Climate Change (MoEFCC), Government of India; Open-Meteo Copernicus CAMS; WAQI.
-* **License:** MIT License. See `LICENSE` for details.
+* **License:** [MIT License](LICENSE) — see `LICENSE` for details.
