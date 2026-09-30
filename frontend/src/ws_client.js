@@ -1,12 +1,19 @@
-﻿/**
+/**
  * AeroTrace A-Q-I — Real-time WebSocket Client
  * Fixed: URL corrected to port 8000 (FastAPI/Uvicorn).
  * The WS only handles SPIKE_ALERT toast notifications;
  * main dashboard data comes from REST API calls, not WS.
  */
 export class WebSocketClient {
-  constructor(url = "ws://localhost:8000/api/v1/simulation/ws") {
-    this.url = url;
+  constructor(url) {
+    if (!url) {
+      const baseApi = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+      const wsProto = baseApi.startsWith("https") ? "wss:" : "ws:";
+      const host = baseApi.replace(/^https?:\/\//, "");
+      this.url = `${wsProto}//${host}/api/v1/simulation/ws`;
+    } else {
+      this.url = url;
+    }
     this.socket = null;
     this.reconnectTimer = null;
     this.onMessageCallback = null;

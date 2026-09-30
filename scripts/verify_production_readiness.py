@@ -91,7 +91,7 @@ class ProductionQARunner:
 
     def run_all_checks(self) -> bool:
         print("=" * 78)
-        print("  AeroTrace NGEC 2026 — Production QA & Demo Readiness Audit")
+        print("  AeroTrace Platform — Production QA & System Verification Audit")
         print("=" * 78)
         start_time = time.time()
 
@@ -240,7 +240,7 @@ class ProductionQARunner:
         print(f"Summary: {self.checks_passed}/{total} checks passed ({pct}%) in {elapsed:.2f}s")
 
         if self.checks_failed == 0:
-            print("\n>>> VERDICT: PRODUCTION READY FOR PJMT NGEC 2026 EVALUATION <<<")
+            print("\n>>> VERDICT: PRODUCTION READY & SYSTEM VERIFIED <<<")
         else:
             print(f"\n>>> VERDICT: {self.checks_failed} CHECKS FAILED — ACTION REQUIRED <<<")
         print("=" * 78 + "\n")

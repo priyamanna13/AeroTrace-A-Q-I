@@ -3,8 +3,10 @@
  * Supports both local development (http://localhost:8000) and Ngrok/production tunnels.
  */
 
-export const BASE_URL = 'http://localhost:8000';
-export const WS_BASE_URL = 'ws://localhost:8000';
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const wsProto = BASE_URL.startsWith('https') ? 'wss:' : 'ws:';
+const wsHost = BASE_URL.replace(/^https?:\/\//, '');
+export const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || `${wsProto}//${wsHost}`;
 
 export const NGROK_HEADERS = {
   'ngrok-skip-browser-warning': 'true',

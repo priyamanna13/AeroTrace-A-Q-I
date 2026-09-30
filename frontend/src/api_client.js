@@ -5,7 +5,7 @@
  *  - Anish (AI / Intelligence / Voice): /ai/status, /ai/insight, /ai/chat, /alerts, /analytics
  *  - Baseline Attribution Pipeline: /attribution/{station}, /cone/{station}, /timeline, /replay
  */
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 // Fallback data conforming strictly to data_contracts/cities_and_stations_contract.json
 // Used ONLY when backend server is offline/unreachable during independent frontend development.

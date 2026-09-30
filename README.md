@@ -4,10 +4,10 @@
 
 AeroTrace A(Q)I is an environmental spatial attribution and atmospheric forensic intelligence platform for India. When ambient air quality sensors detect a pollution spike, conventional dashboards only report the severity number; AeroTrace identifies **where the pollution came from, why it spiked, who is accountable, and how it will disperse downwind**.
 
+An enterprise-grade platform for State Pollution Control Boards (SPCBs), Municipal Corporations (PMC, MCGM, DPCC), Environmental Enforcement Squads, and Affected Citizens.
 - **Live Prototype:** [DEPLOYED LINK]
-- **Demo Video:** [VIDEO LINK]
-- **Pitch Deck:** [DECK LINK]
-- **Target Audience:** State Pollution Control Boards (SPCBs), Municipal Corporations (PMC, MCGM, DPCC), Environmental Enforcement Squads, and Affected Citizens.
+- **Interactive Documentation & API Docs:** `/docs` on backend host
+- **Target Airsheds:** 28 Continuous Ambient Air Quality Monitoring Stations (CAAQMS) across 7 Indian metropolitan regions.
 
 ---
 
@@ -30,92 +30,69 @@ Conventional dashboards report **what** the AQI is. AeroTrace answers **where it
 
 ```mermaid
 flowchart TD
-    subgraph DataSources["External Data Feeds & Real-World Ingestion"]
-        DS_CPCB["CPCB CAAQMS Portal\n(Tier 1 Physical Sensor Telemetry)"]
-        DS_CAMS["Open-Meteo Copernicus CAMS\n(Tier 2 Secondary Atmospheric Chemistry)"]
-        DS_WAQI["World Air Quality Index - WAQI\n(Tier 3 International Sensor Feed)"]
-        DS_METEO["Open-Meteo Weather API\n(Live Wind Speed, Direction, Temp, Boundary Layer)"]
-        DS_OSM["OpenStreetMap Overpass QL\n(Runtime Candidate Source Discovery)"]
+    %% Styling definitions
+    classDef sourceStyle fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef storageStyle fill:#1e293b,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
+    classDef engineStyle fill:#1e1b4b,stroke:#c084fc,stroke-width:2px,color:#f8fafc;
+    classDef gatewayStyle fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#f8fafc;
+    classDef clientStyle fill:#451a03,stroke:#fb923c,stroke-width:2px,color:#f8fafc;
+
+    subgraph TIER1 ["1. Telemetry & Meteorological Feeds"]
+        direction LR
+        S_CPCB["CPCB CAAQMS Stations<br/>(28 Stations across 7 Metros)"]:::sourceStyle
+        S_METEO["Open-Meteo Weather API<br/>(Live Wind, Temp, Pressure, Boundary Layer)"]:::sourceStyle
+        S_OSM["OpenStreetMap Overpass<br/>(Physical Infrastructure & Land-Use Discovery)"]:::sourceStyle
+        S_FALLBACK["Copernicus CAMS & WAQI<br/>(Secondary Air Quality Failover Tiers)"]:::sourceStyle
     end
 
-    subgraph Ingestion["Ingestion Cascade & Telemetry Layer"]
-        CASCADE["4-Tier Ingestion Cascade\n(CPCB → CAMS → WAQI → Diurnal Baseline)"]
-        CACHE["30s TTL Telemetry Cache & Anomaly Screener\n(Sentinel Value Screening & Outlier Rejection)"]
-        DS_CPCB --> CASCADE
-        DS_CAMS --> CASCADE
-        DS_WAQI --> CASCADE
-        CASCADE --> CACHE
+    subgraph TIER2 ["2. Ingestion Cascade & Spatial Storage"]
+        direction LR
+        INGEST["4-Tier Telemetry Ingestion Cascade<br/>(CPCB → CAMS → WAQI → Diurnal Baseline Simulation)"]:::storageStyle
+        CACHE["30s TTL Real-Time Telemetry Cache<br/>(Outlier Rejection & Sentinel Value Screening)"]:::storageStyle
+        DB[("PostgreSQL / PostGIS Database<br/>(Spatial GIST Indexing & SQLite Fallback)")]:::storageStyle
+        INGEST --> CACHE --> DB
     end
 
-    subgraph CoreEngines["Atmospheric Physics & Forensic Attribution Engines"]
-        AQI_ENG["CPCB NAQI Standards Engine\n(6-Pollutant Sub-Index Linear Breakpoints)"]
-        PASQUILL["Turner Pasquill-Gifford Stability Solver\n(Classes A–F via Wind, Sun Angle & Cloud Cover)"]
-        WIND_CONE["Geodesic Wind Cone Generator\n(Upwind Haversine Sector: 12°–25° Spread, 2.5–7km Reach)"]
-        RANKER["5-Factor Source Attribution Ranker\n(30% Wind · 25% Chem · 20% Schedule · 15% Proximity · 10% Permit)"]
-        PREDICTOR["Atmospheric Dispersion Predictor\n(Exponential Decay Curves & Downwind Plumes)"]
-        INTERVENT["Statutory Intervention Simulator\n(Counterfactual Emission Reduction Factors)"]
+    subgraph TIER3 ["3. Atmospheric Physics & Attribution Engines"]
+        direction TB
+        subgraph CoreMath [" "]
+            direction LR
+            E_AQI["CPCB NAQI Standards Engine<br/>(Sub-Index Breakpoint Math)"]:::engineStyle
+            E_PASQ["Turner Pasquill-Gifford Solver<br/>(Atmospheric Stability Classes A–F)"]:::engineStyle
+            E_CONE["Geodesic Wind Cone Generator<br/>(Upwind Arc: 12°–25°, Reach: 2.5–7km)"]:::engineStyle
+        end
+        subgraph CoreRank [" "]
+            direction LR
+            E_RANK["5-Factor Weighted Source Ranker<br/>(30% Wind · 25% Chem · 20% Schedule · 15% Proximity · 10% Permit)"]:::engineStyle
+            E_PRED["Dispersion Decay Predictor<br/>(Forward Advection & Plume Footprint)"]:::engineStyle
+            E_INTV["Statutory Intervention Simulator<br/>(Counterfactual Emission Reductions)"]:::engineStyle
+        end
+        CoreMath --> CoreRank
     end
 
-    subgraph Database["Persistence & Spatial GIS Layer"]
-        POSTGIS[("PostgreSQL / PostGIS Container\n(GIST Spatial Indexes & Telemetry History)")]
-        SQLITE[("In-Memory SQLite Fallback\n(Zero-Dependency Offline Mode)")]
+    subgraph TIER4 ["4. Application Gateway & Intelligence Services"]
+        direction LR
+        API["FastAPI Modular Application Gateway<br/>(/attribution · /cities · /prediction · /intervention · /alerts)"]:::gatewayStyle
+        AI["Dual-Engine Forensic Intelligence<br/>(Google Gemini LLM + Deterministic Legal Fallback)"]:::gatewayStyle
+        LANG["Trilingual Localization Engine<br/>(English · Hindi · Marathi)"]:::gatewayStyle
+        API <--> AI
+        AI --> LANG
     end
 
-    subgraph AIEngine["Forensic Intelligence Subsystem"]
-        GEMINI["Google Gemini 1.5 / 2.0 / Flash\n(Live Contextual LLM Reasoning)"]
-        FALLBACK_AI["Deterministic Legal & Physics Engine\n(Air Act 1981 Section 31A & Regulatory Directives)"]
-        MULTILINGUAL["Trilingual Explanation Engine\n(English · Hindi · Marathi)"]
+    subgraph TIER5 ["5. Client Application & Field Experience"]
+        direction LR
+        UI_GLOBE["3D Earth Globe<br/>(Three.js WebGL Focus)"]:::clientStyle
+        UI_MAP["Interactive GIS Map<br/>(Leaflet Stations & Upwind Cones)"]:::clientStyle
+        UI_ANALYTICS["Forensic Analytics<br/>(Ranked Suspects & Evidence Cards)"]:::clientStyle
+        UI_FORECAST["Forward Projections<br/>(ECharts Dispersion Decay)"]:::clientStyle
+        UI_VOICE["Web Speech Interface<br/>(Hands-free Voice & Read-Aloud)"]:::clientStyle
     end
 
-    subgraph API["FastAPI Modular Application Gateway (:8000)"]
-        ROUTER_ATTR["/api/v1/attribution\n(6-Block Forensic Contract)"]
-        ROUTER_CITY["/api/v1/cities\n(National & City Telemetry)"]
-        ROUTER_PRED["/api/v1/prediction\n(Forward Dispersion Decay)"]
-        ROUTER_INTV["/api/v1/intervention\n(Counterfactual Scenario Testing)"]
-        ROUTER_AI["/api/v1/ai\n(Copilot & Screen Insights)"]
-        ROUTER_HEALTH["/health\n(Readiness & Status Probes)"]
-    end
-
-    subgraph Frontend["React 19 Vite Web Application (:5173)"]
-        UI_LANDING["Screen 0: 3D Earth Globe\n(Three.js WebGL & India Center Focus)"]
-        UI_NATIONAL["Screen 1: National Airshed Overview\n(Interactive Map & 28 CAAQMS Stations)"]
-        UI_CITY["Screen 2: City Airshed View\n(24h Trends & Meteorology)"]
-        UI_INVEST["Screen 4: Attribution Investigation\n(Upwind Cone, Plume & Ranked Suspects)"]
-        UI_PRED["Screen 5: Forward Dispersion Forecast\n(ECharts Decay & Plume Map)"]
-        UI_INTERV["Screen 6: Statutory Interventions\n(Air Act Directives & Enforcement Squads)"]
-        VOICE["Browser Web Speech API\n(Voice Input & Indic Read-Aloud)"]
-    end
-
-    %% Pipeline linkages
-    CACHE --> AQI_ENG
-    DS_METEO --> PASQUILL
-    AQI_ENG --> POSTGIS
-    POSTGIS -.-> SQLITE
-    PASQUILL --> WIND_CONE
-    WIND_CONE --> RANKER
-    DS_OSM --> RANKER
-    CACHE --> RANKER
-    RANKER --> PREDICTOR
-    RANKER --> INTERVENT
-
-    RANKER --> ROUTER_ATTR
-    AQI_ENG --> ROUTER_CITY
-    PREDICTOR --> ROUTER_PRED
-    INTERVENT --> ROUTER_INTV
-
-    ROUTER_ATTR --> GEMINI
-    ROUTER_ATTR --> FALLBACK_AI
-    GEMINI --> MULTILINGUAL
-    FALLBACK_AI --> MULTILINGUAL
-    MULTILINGUAL --> ROUTER_AI
-
-    ROUTER_ATTR --> UI_INVEST
-    ROUTER_CITY --> UI_NATIONAL
-    ROUTER_CITY --> UI_CITY
-    ROUTER_PRED --> UI_PRED
-    ROUTER_INTV --> UI_INTERV
-    ROUTER_AI --> UI_LANDING
-    ROUTER_AI --> VOICE
+    %% Clean hierarchical progression between tiers
+    TIER1 --> TIER2
+    TIER2 --> TIER3
+    TIER3 --> TIER4
+    TIER4 --> TIER5
 ```
 
 ---
@@ -257,6 +234,73 @@ DATABASE_URL="sqlite:///:memory:" python scripts/run_demo.py --dry-run
 
 ---
 
+## 100% Free Cloud Deployment Guide
+
+AeroTrace can be deployed to production cloud infrastructure **completely free ($0/month) with zero credit cards required**:
+
+### Architecture of the Free Cloud Stack
+* **Database:** **Supabase** (Free Tier: 500 MB PostgreSQL + native PostGIS extension enabled, no credit card required).
+* **Backend:** **Koyeb** or **Render Web Services** (Free Tier: Python/FastAPI container deployed directly from GitHub, no credit card required).
+* **Frontend:** **Vercel** or **Netlify** (Free Tier: High-performance global CDN deployed directly from the `frontend/` folder in GitHub, no credit card required).
+
+---
+
+### Step 1: Deploy PostgreSQL + PostGIS on Supabase (Free & No Credit Card)
+1. Go to [supabase.com](https://supabase.com) and sign in with GitHub.
+2. Click **New Project**, choose a project name (e.g. `aerotrace-db`), set a strong database password, and select region **South Asia (Mumbai)**.
+3. Once the database is ready, go to **Project Settings $\rightarrow$ Database** and copy the **URI** connection string:
+   ```text
+   postgresql://postgres.[PROJECT_REF]:[YOUR_PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:6543/postgres
+   ```
+4. Open the Supabase **SQL Editor** and run this single command to enable spatial PostGIS:
+   ```sql
+   CREATE EXTENSION IF NOT EXISTS postgis;
+   ```
+
+---
+
+### Step 2: Deploy Backend on Koyeb or Render (Free & No Credit Card)
+
+#### Option 1: Koyeb (Zero Sleep, Fast Startup)
+1. Go to [koyeb.com](https://www.koyeb.com) and sign in with GitHub.
+2. Click **Create Service** $\rightarrow$ select **GitHub** $\rightarrow$ choose repository `priyamanna13/AeroTrace-A-Q-I` (branch: `main`).
+3. Set the build type to **Dockerfile** (or Buildpack: Python).
+4. Under **Environment Variables**, add:
+   * `DATABASE_URL`: Your Supabase connection string from Step 1.
+   * `AQ_SOURCE`: `live`
+   * `WEATHER_SOURCE`: `live`
+   * `CORS_ORIGINS`: `*`
+   * `GEMINI_API_KEY`: Your Gemini API key (optional for AI insights).
+5. Click **Deploy**. Koyeb will generate an HTTPS URL (e.g., `https://aerotrace-api-[username].koyeb.app`).
+6. Verify deployment by visiting `https://your-backend-url/health` — it should return `{"status": "ok"}`.
+
+#### Option 2: Render Free Web Service
+1. Go to [render.com](https://render.com) and sign in with GitHub (Render free web service does not require a credit card when logging in with GitHub).
+2. Click **New + $\rightarrow$ Web Service** $\rightarrow$ connect `priyamanna13/AeroTrace-A-Q-I`.
+3. Set:
+   * **Runtime:** Python 3
+   * **Build Command:** `pip install -r requirements.txt`
+   * **Start Command:** `uvicorn app.api:app --host 0.0.0.0 --port 8000`
+4. Add the same Environment Variables as above.
+5. Click **Create Web Service**.
+
+---
+
+### Step 3: Deploy Frontend on Vercel (Free & No Credit Card)
+1. Go to [vercel.com](https://vercel.com) and sign in with GitHub.
+2. Click **Add New... $\rightarrow$ Project** $\rightarrow$ import repository `priyamanna13/AeroTrace-A-Q-I`.
+3. In the configuration screen:
+   * **Root Directory:** Click Edit and select **`frontend`**.
+   * **Framework Preset:** `Vite` (automatically detected).
+   * **Build Command:** `npm run build`
+   * **Output Directory:** `dist`
+4. Expand **Environment Variables** and add:
+   * `VITE_API_BASE_URL`: The backend URL from Step 2 (e.g. `https://aerotrace-api.koyeb.app` or `https://aerotrace-backend.onrender.com`).
+5. Click **Deploy**. Vercel will build and assign an instant production URL (e.g., `https://aerotrace.vercel.app`).
+6. Open the live URL — the frontend is now connected to your live cloud backend and live PostGIS database!
+
+---
+
 ## Testing & Quality Assurance
 
 AeroTrace maintains a comprehensive automated testing and audit suite:
@@ -272,7 +316,7 @@ python scripts/verify_production_readiness.py
 ### Production Readiness Verification Report
 ```text
 ==============================================================================
-  AeroTrace NGEC 2026 — Production QA & Demo Readiness Audit
+  AeroTrace Platform — Production QA & System Verification Audit
 ==============================================================================
 Category        | Verification Check                       | Result            
 ------------------------------------------------------------------------------
@@ -298,7 +342,7 @@ Security        | Security Headers Attached (nosniff, DENY)| [PASS] X-Content-Ty
                 | Database Password Masking Verified       | [PASS] sanitized_database_url operational
 ------------------------------------------------------------------------------
 Summary: 20/20 checks passed (100.0%) in 15.24s
->>> VERDICT: PRODUCTION READY FOR PJMT NGEC 2026 EVALUATION <<<
+>>> VERDICT: PRODUCTION READY & SYSTEM VERIFIED <<<
 ==============================================================================
 ```
 
@@ -329,7 +373,7 @@ Adding a new metropolitan airshed requires zero code changes to the mathematical
 
 ## Team & Attributions
 
-* **Development Team:** AeroTrace Engineering Team (Clean Air & Climate Resilience Track)
+* **Development Team:** AeroTrace Core Engineering Team
 * **Map Data:** © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, queried via Overpass API.
 * **Sensor Telemetry:** Central Pollution Control Board (CPCB), Ministry of Environment, Forest and Climate Change (MoEFCC), Government of India; Open-Meteo Copernicus CAMS; WAQI.
 * **License:** MIT License. See `LICENSE` for details.
