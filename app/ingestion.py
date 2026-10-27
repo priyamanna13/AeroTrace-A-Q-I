@@ -1,36 +1,41 @@
 """Multi-City Ingestion & Provider Fallback Cascade Engine for AeroTrace NGEC 2026.
 
-Implements the 4-tier live environmental data ingestion cascade across all 7 cities:
-  - Tier 1 (Primary): Live CPCB CAAQMS / Sameer portal data.
-  - Tier 2 (Secondary): Open-Meteo Air Quality API (Copernicus CAMS atmospheric dispersion model).
-  - Tier 3 (Tertiary): WAQI API (when WAQI_TOKEN is configured).
-  - Tier 4 (Emergency Floor): Deterministic diurnal baseline, STRICTLY labeled
+Implements the multi-source normalized environmental data ingestion ensemble across all 7 cities:
+  - Provider 1 (Primary Government Ground Sensor Network): Live CPCB CAAQMS official RSS feed.
+  - Provider 2 (Secondary Global Weather Grid): Open-Meteo Air Quality (Copernicus CAMS).
+  - Provider 3 (Secondary Global Weather Grid): OpenWeatherMap Air Pollution API (OWM_API_KEY).
+  - Provider 4 (Tertiary Station Feed): WAQI feed with US EPA -> Indian CPCB inverse normalization and distance guarding.
+  - Emergency Floor: Deterministic diurnal baseline, STRICTLY labeled
     'SIMULATED — live source unreachable' with is_simulated=True.
 
 Guarantees:
   1. Physical Station Integrity: Only verified physical CAAQMS stations from city_configs/
      are ever ingested or emitted as station entities.
   2. Data Provenance Transparency: Every telemetry frame carries upstream data_source,
-     upstream data_timestamp, 30-second last_polled_at, is_stale (>60m), and is_simulated.
+     upstream data_timestamp, 30-second last_polled_at, is_stale (>120m), and is_simulated.
   3. 30-Second Refresh Cadence: 30-second in-memory TTL caching prevents API spam and
      rate limits while ensuring responsive data delivery.
+  4. Multi-Source Normalization: All upstream feeds are normalized to Indian CPCB NAQI standards.
 """
 from __future__ import annotations
 
 import hashlib
 import json
 import logging
+import math
 import os
 import ssl
+import threading
 import time
 import urllib.request
+import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
-from .standards import compute_aqi, _category_for_index
+from .standards import compute_aqi, _category_for_index, us_aqi_to_concentration, cpcb_sub_index_to_concentration
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +51,12 @@ STALENESS_THRESHOLD_SECONDS: float = 7200.0
 # In-memory cache: station_key -> (StationTelemetry, float_timestamp)
 _TELEMETRY_CACHE: dict[str, tuple[StationTelemetry, float]] = {}
 
-# Baseline fallback concentrations when all live networks are unreachable (Tier 4)
+# CPCB CAAQMS Official Feed In-Memory Cache (15-minute TTL to respect upstream server)
+_CPCB_FEED_CACHE: dict[str, Any] = {"stations": [], "last_polled": 0.0}
+_CPCB_FEED_LOCK = threading.Lock()
+CPCB_FEED_TTL_SECONDS: float = 900.0
+
+# Baseline fallback concentrations when all live networks are unreachable (Emergency Floor)
 _CITY_BASELINES: dict[str, dict[str, float]] = {
     "pune": {"pm25": 78.4, "pm10": 156.2, "no2": 44.0, "so2": 18.0, "co": 1.2, "o3": 34.0},
     "mumbai": {"pm25": 54.2, "pm10": 128.6, "no2": 42.0, "so2": 16.5, "co": 1.1, "o3": 38.0},
@@ -85,8 +95,10 @@ class StationTelemetry:
 
 def clear_telemetry_cache() -> None:
     """Clear in-memory telemetry cache (primarily for tests)."""
-    global _TELEMETRY_CACHE
+    global _TELEMETRY_CACHE, _CPCB_FEED_CACHE
     _TELEMETRY_CACHE.clear()
+    with _CPCB_FEED_LOCK:
+        _CPCB_FEED_CACHE = {"stations": [], "last_polled": 0.0}
 
 
 def _format_iso_ist(dt: datetime) -> str:
@@ -98,82 +110,196 @@ def _format_iso_ist(dt: datetime) -> str:
     return dt.isoformat()
 
 
-# ── Tier 1: CPCB CAAQMS / Sameer Portal ──────────────────────────────────────
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance between two GPS coordinates in kilometers."""
+    r = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (
+        math.sin(dlat / 2.0) ** 2
+        + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2.0) ** 2
+    )
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(max(0.0, 1.0 - a)))
+    return r * c
+
+
+def _normalize_str(s: str) -> str:
+    """Normalize string for fuzzy station and city matching."""
+    return "".join(c for c in s.lower() if c.isalnum())
+
+
+# ── Provider 1: Official CPCB CAAQMS Feed (Government Ground Sensors) ────────
+def _get_cpcb_rss_stations(timeout: float = 8.0) -> list[dict[str, Any]]:
+    """Fetch and parse all physical stations from official CPCB CAAQMS RSS feed with 15m in-memory cache."""
+    global _CPCB_FEED_CACHE
+    now = time.time()
+    with _CPCB_FEED_LOCK:
+        if _CPCB_FEED_CACHE["stations"] and (now - _CPCB_FEED_CACHE["last_polled"]) < CPCB_FEED_TTL_SECONDS:
+            return _CPCB_FEED_CACHE["stations"]
+
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        url = "https://airquality.cpcb.gov.in/caaqms/rss_feed"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+            "Accept": "application/xml, text/xml, */*",
+        }
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+                xml_data = resp.read()
+            root = ET.fromstring(xml_data)
+
+            parsed_stations = []
+            for state in root.findall(".//State"):
+                for city in state.findall(".//City"):
+                    c_name = city.get("id", "").strip()
+                    for st in city.findall(".//Station"):
+                        st_name = st.get("id", "").strip()
+                        lastupdate = st.get("lastupdate", "").strip()
+                        lat = float(st.get("latitude", 0) or 0)
+                        lon = float(st.get("longitude", 0) or 0)
+
+                        aq_tag = st.find("Air_Quality_Index")
+                        official_aqi = (
+                            int(aq_tag.get("Value"))
+                            if aq_tag is not None and aq_tag.get("Value", "").isdigit()
+                            else None
+                        )
+                        official_pred = aq_tag.get("Predominant_Parameter") if aq_tag is not None else None
+
+                        sub_indices = {}
+                        hourly_sub_indices = {}
+                        for p in st.findall(".//Pollutant_Index"):
+                            raw_id = p.get("id", "").lower().replace(".", "").strip()
+                            # Normalize pollutant id: ozone -> o3, pm25 -> pm25
+                            p_id = "o3" if "zone" in raw_id or raw_id == "o" else raw_id
+                            avg_val = p.get("Avg")
+                            hr_val = p.get("Hourly_sub_index")
+                            if avg_val and avg_val != "NA":
+                                try:
+                                    sub_indices[p_id] = float(avg_val)
+                                except ValueError:
+                                    pass
+                            if hr_val and hr_val != "NA":
+                                try:
+                                    hourly_sub_indices[p_id] = float(hr_val)
+                                except ValueError:
+                                    pass
+
+                        parsed_stations.append({
+                            "city": c_name,
+                            "name": st_name,
+                            "norm_name": _normalize_str(st_name),
+                            "lastupdate": lastupdate,
+                            "lat": lat,
+                            "lon": lon,
+                            "official_aqi": official_aqi,
+                            "official_pred": official_pred,
+                            "sub_indices": sub_indices,
+                            "hourly_sub_indices": hourly_sub_indices,
+                        })
+
+            _CPCB_FEED_CACHE["stations"] = parsed_stations
+            _CPCB_FEED_CACHE["last_polled"] = now
+            return parsed_stations
+        except Exception as exc:
+            log.warning("CPCB CAAQMS RSS feed fetch failed: %s", exc)
+            return _CPCB_FEED_CACHE.get("stations", [])
+
+
 def _fetch_tier1_cpcb(
     station_cfg: dict[str, Any],
     city_cfg: dict[str, Any],
-    timeout: float = 3.0,
+    timeout: float = 6.0,
 ) -> Optional[dict[str, Any]]:
-    """Attempt Tier 1 live ingestion from CPCB location-data proxy or CCR portal."""
-    lat = station_cfg.get("lat")
-    lon = station_cfg.get("lon")
-    if lat is None or lon is None:
+    """Live ingestion directly from official CPCB CAAQMS national monitoring feed."""
+    stations = _get_cpcb_rss_stations(timeout=timeout)
+    if not stations:
         return None
 
-    # SSL context bypass for occasional self-signed government portal certs
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    c_name = city_cfg.get("city", {}).get("name", "")
+    st_name = station_cfg.get("name", "")
+    st_lat = float(station_cfg.get("lat", 0) or 0)
+    st_lon = float(station_cfg.get("lon", 0) or 0)
+    norm = _normalize_str(st_name)
 
-    headers = {
-        "User-Agent": "AeroTrace-NGEC/3.1 (Academic Environmental Intelligence)",
-        "Accept": "application/json, text/plain, */*",
-        "Referer": "https://app.cpcbccr.com/",
+    # 1. Match by station name within matching city
+    matched = None
+    for xs in stations:
+        city_match = (
+            xs["city"].lower() in c_name.lower()
+            or c_name.lower() in xs["city"].lower()
+            or (c_name.lower() == "bengaluru" and "bangalore" in xs["city"].lower())
+        )
+        if city_match:
+            if norm in xs["norm_name"] or xs["norm_name"] in norm:
+                matched = xs
+                break
+
+    # 2. Match by GPS proximity within 15 km in same city
+    if not matched and st_lat and st_lon:
+        best_d = 999.0
+        for xs in stations:
+            city_match = (
+                xs["city"].lower() in c_name.lower()
+                or c_name.lower() in xs["city"].lower()
+                or (c_name.lower() == "bengaluru" and "bangalore" in xs["city"].lower())
+            )
+            if city_match and xs["lat"] and xs["lon"]:
+                d = _haversine_km(st_lat, st_lon, xs["lat"], xs["lon"])
+                if d < best_d and d <= 15.0:
+                    best_d = d
+                    matched = xs
+
+    if not matched:
+        return None
+
+    # Prioritize hourly sub-index (current conditions), fallback to 24-hr average
+    pollutants_sub = {}
+    all_keys = set(matched["sub_indices"].keys()) | set(matched["hourly_sub_indices"].keys())
+    for k in all_keys:
+        if k in matched["hourly_sub_indices"]:
+            pollutants_sub[k] = matched["hourly_sub_indices"][k]
+        elif k in matched["sub_indices"]:
+            pollutants_sub[k] = matched["sub_indices"][k]
+
+    # Convert CPCB sub-indices to canonical physical concentrations (ug/m3 or mg/m3)
+    pollutants_conc = {k: cpcb_sub_index_to_concentration(k, v) for k, v in pollutants_sub.items()}
+
+    # Ensure canonical key coverage
+    for req in ("pm25", "pm10", "no2", "so2", "co", "o3"):
+        if req not in pollutants_conc or pollutants_conc[req] is None:
+            pollutants_conc[req] = 0.0
+
+    # Parse lastupdate timestamp: format "DD-MM-YYYY HH:MM:SS" in IST
+    ts_str = matched.get("lastupdate", "")
+    try:
+        dt = datetime.strptime(ts_str, "%d-%m-%Y %H:%M:%S").replace(tzinfo=IST)
+    except Exception:
+        dt = datetime.now(IST)
+
+    # Staleness check: if station has not updated in > 2 hours, reject
+    now_ist = datetime.now(IST)
+    if (now_ist - dt).total_seconds() > STALENESS_THRESHOLD_SECONDS:
+        log.debug("CPCB station %s is stale (>2h old).", matched["name"])
+        return None
+
+    return {
+        "pollutants": pollutants_conc,
+        "data_source": "CPCB_CAAQMS",
+        "data_timestamp": _format_iso_ist(dt),
     }
 
-    url = f"https://app.cpcbccr.com/api/location-data?lat={lat}&lon={lon}"
-    try:
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
 
-        cur = data.get("airQuality", {}).get("current", {})
-        pm25 = float(cur.get("pm2_5", 0) or 0)
-        pm10 = float(cur.get("pm10", 0) or 0)
-        no2 = float(cur.get("nitrogen_dioxide", 0) or 0)
-        so2 = float(cur.get("sulphur_dioxide", 0) or 0)
-        o3 = float(cur.get("ozone", 0) or 0)
-        co_mg = float(cur.get("carbon_monoxide", 0) or 0) / 1000.0
-
-        if any([pm25, pm10, no2, so2, o3]):
-            time_str = cur.get("timestamp") or cur.get("time")
-            if time_str:
-                try:
-                    dt = datetime.fromisoformat(time_str).replace(tzinfo=IST)
-                except Exception:
-                    dt = datetime.now(IST)
-            else:
-                dt = datetime.now(IST)
-
-            return {
-                "pollutants": {
-                    "pm25": round(pm25, 1),
-                    "pm10": round(pm10, 1),
-                    "no2": round(no2, 1),
-                    "so2": round(so2, 1),
-                    "co": round(co_mg, 2),
-                    "o3": round(o3 * 0.15, 1) if o3 > 50 else round(o3, 1),
-                },
-                "data_source": "CPCB_CAAQMS",
-                "data_timestamp": _format_iso_ist(dt),
-            }
-    except Exception as exc:
-        log.debug("Tier 1 CPCB fetch failed for %s: %s", station_cfg.get("name"), exc)
-
-    return None
-
-
-# ── Tier 2: Open-Meteo Air Quality API (Copernicus CAMS Model) ────────────────
+# ── Provider 2: Open-Meteo Air Quality (Copernicus CAMS) ────────────────────
 def _fetch_tier2_open_meteo(
     station_cfg: dict[str, Any],
     city_cfg: dict[str, Any],
     timeout: float = 4.0,
 ) -> Optional[dict[str, Any]]:
-    """Attempt Tier 2 live ingestion via Open-Meteo Air Quality (Copernicus CAMS).
-    
-    Evaluates atmospheric chemical dispersion model at the exact coordinates of
-    the physical station pin.
-    """
+    """Live ingestion via Open-Meteo Air Quality (Copernicus CAMS). Pure raw model data."""
     lat = station_cfg.get("lat")
     lon = station_cfg.get("lon")
     if lat is None or lon is None:
@@ -185,7 +311,6 @@ def _fetch_tier2_open_meteo(
         "&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone"
         "&timezone=Asia%2FKolkata"
     )
-
     headers = {"User-Agent": "AeroTrace-NGEC/3.1 (AeroTrace Air Quality Intelligence)"}
 
     try:
@@ -196,32 +321,21 @@ def _fetch_tier2_open_meteo(
         cur = data.get("current", {})
         pm25_raw = float(cur.get("pm2_5", 0) or 0)
         pm10_raw = float(cur.get("pm10", 0) or 0)
-        co_raw = float(cur.get("carbon_monoxide", 0) or 0) / 1000.0  # µg/m³ -> mg/m³
+        co_raw = float(cur.get("carbon_monoxide", 0) or 0) / 1000.0
         no2_raw = float(cur.get("nitrogen_dioxide", 0) or 0)
         so2_raw = float(cur.get("sulphur_dioxide", 0) or 0)
         o3_raw = float(cur.get("ozone", 0) or 0)
 
-        # CAMS grid covers ~10-25km cells; add subtle deterministic local micro-dispersion
-        # based on station name hash to reflect physical micro-environment without inventing data.
-        h = int(hashlib.md5(station_cfg.get("name", "").encode("utf-8")).hexdigest(), 16)
-        dispersion_var = 0.90 + ((h % 21) / 100.0)  # 0.90 to 1.10 multiplier
-
-        # Open-Meteo returns 1-hour modeled photochemical ozone.
-        # Ground-level urban CAAQMS stations in Indian coastal and inland cities
-        # measure background ozone between 15-35 µg/m³.
-        # Calibrate modeled tropical surface ozone to real CAAQMS baseline (factor 0.15).
-        o3_conc = max(5.0, round(o3_raw * 0.15 * dispersion_var, 1))
-
+        # Raw Copernicus CAMS concentrations without synthetic hash multipliers
         pollutants = {
-            "pm25": max(1.0, round(pm25_raw * dispersion_var, 1)),
-            "pm10": max(2.0, round(pm10_raw * dispersion_var, 1)),
-            "no2": max(1.0, round(no2_raw * dispersion_var, 1)),
-            "so2": max(0.5, round(so2_raw * dispersion_var, 1)),
-            "co": max(0.1, round(co_raw * dispersion_var, 2)),
-            "o3": o3_conc,
+            "pm25": max(1.0, round(pm25_raw, 1)),
+            "pm10": max(2.0, round(pm10_raw, 1)),
+            "no2": max(1.0, round(no2_raw, 1)),
+            "so2": max(0.5, round(so2_raw, 1)),
+            "co": max(0.1, round(co_raw, 2)),
+            "o3": max(5.0, round(o3_raw * 0.15, 1)),
         }
 
-        # Parse upstream model timestamp (Open-Meteo returns e.g. "2026-09-22T13:00")
         time_str = cur.get("time")
         if time_str:
             try:
@@ -237,18 +351,75 @@ def _fetch_tier2_open_meteo(
             "data_timestamp": _format_iso_ist(dt),
         }
     except Exception as exc:
-        log.debug("Tier 2 Open-Meteo fetch failed for %s: %s", station_cfg.get("name"), exc)
+        log.debug("Open-Meteo fetch failed for %s: %s", station_cfg.get("name"), exc)
 
     return None
 
 
-# ── Tier 3: WAQI API (World Air Quality Index) ───────────────────────────────
+# ── Provider 3: OpenWeatherMap Air Pollution API ─────────────────────────────
+def _fetch_provider_owm(
+    station_cfg: dict[str, Any],
+    city_cfg: dict[str, Any],
+    timeout: float = 4.0,
+) -> Optional[dict[str, Any]]:
+    """Live ingestion via OpenWeatherMap Air Pollution API."""
+    token = os.getenv("OWM_API_KEY", "").strip()
+    if not token:
+        return None
+
+    lat = station_cfg.get("lat")
+    lon = station_cfg.get("lon")
+    if lat is None or lon is None:
+        return None
+
+    url = f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={token}"
+    headers = {"User-Agent": "AeroTrace-NGEC/3.1 (AeroTrace Air Quality Intelligence)"}
+
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        items = data.get("list", [])
+        if not items:
+            return None
+
+        cur = items[0]
+        comps = cur.get("components", {})
+        unix_ts = cur.get("dt", 0)
+        dt = (
+            datetime.fromtimestamp(unix_ts, tz=timezone.utc).astimezone(IST)
+            if unix_ts
+            else datetime.now(IST)
+        )
+
+        pollutants = {
+            "pm25": max(1.0, round(float(comps.get("pm2_5", 0) or 0), 1)),
+            "pm10": max(2.0, round(float(comps.get("pm10", 0) or 0), 1)),
+            "no2": max(1.0, round(float(comps.get("no2", 0) or 0), 1)),
+            "so2": max(0.5, round(float(comps.get("so2", 0) or 0), 1)),
+            "co": max(0.1, round(float(comps.get("co", 0) or 0) / 1000.0, 2)),
+            "o3": max(5.0, round(float(comps.get("o3", 0) or 0) * 0.15, 1)),
+        }
+
+        return {
+            "pollutants": pollutants,
+            "data_source": "OpenWeatherMap",
+            "data_timestamp": _format_iso_ist(dt),
+        }
+    except Exception as exc:
+        log.debug("OpenWeatherMap fetch failed for %s: %s", station_cfg.get("name"), exc)
+
+    return None
+
+
+# ── Provider 4: WAQI API (World Air Quality Index) ───────────────────────────
 def _fetch_tier3_waqi(
     station_cfg: dict[str, Any],
     city_cfg: dict[str, Any],
     timeout: float = 4.0,
 ) -> Optional[dict[str, Any]]:
-    """Attempt Tier 3 live ingestion via WAQI feed."""
+    """Live ingestion via WAQI feed with distance guard and US EPA inverse conversion."""
     token = os.getenv("WAQI_TOKEN") or os.getenv("WAQI_API_KEY", "")
     if not token:
         return None
@@ -265,16 +436,47 @@ def _fetch_tier3_waqi(
             data = json.loads(resp.read().decode("utf-8"))
 
         if data.get("status") == "ok":
-            iaqi = data.get("data", {}).get("iaqi", {})
-            pm25 = float((iaqi.get("pm25") or {}).get("v", 0) or 0)
-            pm10 = float((iaqi.get("pm10") or {}).get("v", 0) or 0)
-            no2 = float((iaqi.get("no2") or {}).get("v", 0) or 0)
-            so2 = float((iaqi.get("so2") or {}).get("v", 0) or 0)
-            o3 = float((iaqi.get("o3") or {}).get("v", 0) or 0)
-            co = float((iaqi.get("co") or {}).get("v", 0) or 0)
+            d = data.get("data", {})
 
-            if pm25 > 0 or pm10 > 0:
-                time_s = data.get("data", {}).get("time", {}).get("s")
+            # Distance Guard: verify WAQI didn't fall back to a distant city station
+            w_geo = d.get("city", {}).get("geo", [])
+            if len(w_geo) >= 2:
+                dist_km = _haversine_km(lat, lon, float(w_geo[0]), float(w_geo[1]))
+                if dist_km > 50.0:
+                    log.warning(
+                        "WAQI distance guard triggered for %s: returned station %s is %.1fkm away. Discarding.",
+                        station_cfg.get("name"),
+                        d.get("city", {}).get("name"),
+                        dist_km,
+                    )
+                    return None
+
+            iaqi = d.get("iaqi", {})
+            pm25_iaqi = float((iaqi.get("pm25") or {}).get("v", 0) or 0)
+            pm10_iaqi = float((iaqi.get("pm10") or {}).get("v", 0) or 0)
+            no2_iaqi = float((iaqi.get("no2") or {}).get("v", 0) or 0)
+            so2_iaqi = float((iaqi.get("so2") or {}).get("v", 0) or 0)
+            o3_iaqi = float((iaqi.get("o3") or {}).get("v", 0) or 0)
+            co_iaqi = float((iaqi.get("co") or {}).get("v", 0) or 0)
+
+            # Invert US EPA AQI values back to canonical mass concentrations (µg/m³ / mg/m³)
+            pm25_c = us_aqi_to_concentration("pm25", pm25_iaqi) if pm25_iaqi > 0 else None
+            pm10_c = us_aqi_to_concentration("pm10", pm10_iaqi) if pm10_iaqi > 0 else None
+            no2_c = us_aqi_to_concentration("no2", no2_iaqi) if no2_iaqi > 0 else None
+            so2_c = us_aqi_to_concentration("so2", so2_iaqi) if so2_iaqi > 0 else None
+            o3_c = us_aqi_to_concentration("o3", o3_iaqi) if o3_iaqi > 0 else None
+            co_c = us_aqi_to_concentration("co", co_iaqi) if co_iaqi > 0 else None
+
+            pollutants = {}
+            if pm25_c is not None: pollutants["pm25"] = pm25_c
+            if pm10_c is not None: pollutants["pm10"] = pm10_c
+            if no2_c is not None: pollutants["no2"] = no2_c
+            if so2_c is not None: pollutants["so2"] = so2_c
+            if o3_c is not None: pollutants["o3"] = o3_c
+            if co_c is not None: pollutants["co"] = co_c
+
+            if pm25_c or pm10_c:
+                time_s = d.get("time", {}).get("s")
                 if time_s:
                     try:
                         dt = datetime.fromisoformat(time_s).replace(tzinfo=IST)
@@ -284,19 +486,12 @@ def _fetch_tier3_waqi(
                     dt = datetime.now(IST)
 
                 return {
-                    "pollutants": {
-                        "pm25": round(pm25, 1),
-                        "pm10": round(pm10, 1),
-                        "no2": round(no2, 1),
-                        "so2": round(so2, 1),
-                        "co": round(co, 2),
-                        "o3": round(o3, 1),
-                    },
+                    "pollutants": pollutants,
                     "data_source": "WAQI (World Air Quality Index)",
                     "data_timestamp": _format_iso_ist(dt),
                 }
     except Exception as exc:
-        log.debug("Tier 3 WAQI fetch failed for %s: %s", station_cfg.get("name"), exc)
+        log.debug("WAQI fetch failed for %s: %s", station_cfg.get("name"), exc)
 
     return None
 
@@ -306,18 +501,10 @@ def _fetch_tier4_simulation(
     station_cfg: dict[str, Any],
     city_cfg: dict[str, Any],
 ) -> dict[str, Any]:
-    """Tier 4 Emergency Floor Simulation.
-    
-    STRICT COMPLIANCE REQUIREMENT:
-    Triggered ONLY when all live networks are unreachable.
-    Must be visibly and unambiguously labeled:
-      data_source: 'SIMULATED — live source unreachable'
-      is_simulated: True
-    """
+    """Tier 4 Emergency Floor Simulation. Triggered ONLY when all live networks are unreachable."""
     city_name = city_cfg.get("city", {}).get("name", "pune").lower()
     base = _CITY_BASELINES.get(city_name, _CITY_BASELINES["pune"])
 
-    # Diurnal variation multiplier matching Indian urban traffic peaks (08:30 and 19:30)
     now_ist = datetime.now(IST)
     hour = now_ist.hour + now_ist.minute / 60.0
     morning_peak = 0.25 * (1.0 / (1.0 + ((hour - 8.5) / 1.5) ** 2))
@@ -336,7 +523,6 @@ def _fetch_tier4_simulation(
         "o3": max(5.0, round((base["o3"] - offset * 0.1) * (2.0 - factor), 1)),
     }
 
-    # Mark data timestamp as slightly historical to represent simulated floor
     est_timestamp = now_ist - timedelta(minutes=15)
 
     return {
@@ -347,26 +533,67 @@ def _fetch_tier4_simulation(
     }
 
 
-# ── Master Ingestion Cascade Function ─────────────────────────────────────────
+def _combine_providers(provider_results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Multi-source consensus averaging and dynamic source labeling."""
+    if len(provider_results) == 1:
+        return provider_results[0]
+
+    active_sources = [r["data_source"] for r in provider_results]
+
+    # Calculate individual CPCB AQI per provider
+    prov_aqis: list[float] = []
+    for r in provider_results:
+        r_aqi = compute_aqi(r["pollutants"])
+        if r_aqi.total_aqi is not None:
+            prov_aqis.append(float(r_aqi.total_aqi))
+
+    if prov_aqis:
+        consensus_aqi = round(sum(prov_aqis) / len(prov_aqis), 1)
+    else:
+        consensus_aqi = 100.0
+
+    consensus_pollutants: dict[str, float] = {}
+    for p_key in ("pm25", "pm10", "no2", "so2", "co", "o3"):
+        p_vals = [
+            float(r["pollutants"][p_key])
+            for r in provider_results
+            if p_key in r["pollutants"] and float(r["pollutants"][p_key]) > 0
+        ]
+        if p_vals:
+            consensus_pollutants[p_key] = round(
+                sum(p_vals) / len(p_vals), 2 if p_key == "co" else 1
+            )
+        else:
+            consensus_pollutants[p_key] = 0.0
+
+    short_names = []
+    for s in active_sources:
+        if "CPCB" in s: short_names.append("CPCB")
+        elif "Open-Meteo" in s: short_names.append("Open-Meteo")
+        elif "OpenWeather" in s: short_names.append("OpenWeather")
+        elif "WAQI" in s: short_names.append("WAQI")
+        else: short_names.append(s)
+
+    data_source = f"Ensemble ({', '.join(short_names)})"
+    latest_ts = max(r["data_timestamp"] for r in provider_results)
+
+    return {
+        "pollutants": consensus_pollutants,
+        "current_aqi": consensus_aqi,
+        "data_source": data_source,
+        "data_timestamp": latest_ts,
+        "is_simulated": False,
+    }
+
+
+# ── Master Ingestion & Normalization Cascade Engine ───────────────────────────
 def fetch_station_telemetry(
     station_cfg: dict[str, Any],
     city_cfg: dict[str, Any],
     force_refresh: bool = False,
     force_tier_fail_until: Optional[int] = None,
 ) -> StationTelemetry:
-    """Execute the 4-tier provider cascade for a single physical CAAQMS station.
-    
-    Parameters
-    ----------
-    station_cfg : dict
-        Station configuration from city YAML.
-    city_cfg : dict
-        Parent city configuration from city YAML.
-    force_refresh : bool
-        If True, bypasses the 30-second TTL in-memory cache.
-    force_tier_fail_until : int, optional
-        Used in automated testing to simulate outages (e.g. 3 forces tiers 1-3 to fail).
-    """
+    """Execute provider cascade and normalization for a verified physical CAAQMS station."""
     station_name = station_cfg["name"]
     city_name = city_cfg.get("city", {}).get("name", "")
     cache_key = f"{city_name.lower()}:{station_name.lower()}"
@@ -379,30 +606,54 @@ def fetch_station_telemetry(
         if (now_time - cached_at) < TELEMETRY_CACHE_TTL_SECONDS:
             return cached_item
 
-    # 2. Execute 4-tier provider cascade
-    result: Optional[dict[str, Any]] = None
     fail_threshold = force_tier_fail_until or 0
 
-    # Tier 1
-    if fail_threshold < 1:
-        result = _fetch_tier1_cpcb(station_cfg, city_cfg)
-
-    # Tier 2
-    if result is None and fail_threshold < 2:
-        result = _fetch_tier2_open_meteo(station_cfg, city_cfg)
-
-    # Tier 3
-    if result is None and fail_threshold < 3:
-        result = _fetch_tier3_waqi(station_cfg, city_cfg)
-
-    # Tier 4 (Emergency Floor)
-    if result is None:
+    # Handle explicit test cascade simulation
+    if fail_threshold >= 3:
         result = _fetch_tier4_simulation(station_cfg, city_cfg)
+    else:
+        # Step 1: Attempt Tier 1 CPCB CAAQMS (Official Statutory Ground Truth)
+        p1 = None
+        if fail_threshold < 1:
+            p1 = _fetch_tier1_cpcb(station_cfg, city_cfg)
 
-    # 3. Calculate CPCB NAQI and dominant pollutant
+        if p1 is not None:
+            # Physical CAAQMS ground sensor is actively operating!
+            # If WAQI is also available for this station (within 50km), ensemble the two ground monitors
+            p_waqi = _fetch_tier3_waqi(station_cfg, city_cfg) if fail_threshold < 3 else None
+            if p_waqi is not None:
+                result = _combine_providers([p1, p_waqi])
+            else:
+                result = p1
+        else:
+            # CPCB CAAQMS offline or bypassed in cascade test -> Fall back to secondary networks
+            fallback_providers = []
+            if fail_threshold < 2:
+                p_meteo = _fetch_tier2_open_meteo(station_cfg, city_cfg)
+                if p_meteo:
+                    fallback_providers.append(p_meteo)
+
+            if fail_threshold < 3:
+                p_owm = _fetch_provider_owm(station_cfg, city_cfg)
+                if p_owm:
+                    fallback_providers.append(p_owm)
+                p_waqi = _fetch_tier3_waqi(station_cfg, city_cfg)
+                if p_waqi:
+                    fallback_providers.append(p_waqi)
+
+            if fallback_providers:
+                result = _combine_providers(fallback_providers)
+            else:
+                result = _fetch_tier4_simulation(station_cfg, city_cfg)
+
+    # Calculate final CPCB dominant pollutant and category
     pollutants = result["pollutants"]
     aqi_res = compute_aqi(pollutants)
-    current_aqi = float(aqi_res.total_aqi) if aqi_res.total_aqi is not None else 100.0
+    if "current_aqi" in result:
+        current_aqi = result["current_aqi"]
+    else:
+        current_aqi = float(aqi_res.total_aqi) if aqi_res.total_aqi is not None else 100.0
+
     raw_dom = (aqi_res.dominant_pollutant or "pm25").lower()
     canonical_dom_map = {
         "pm25": "PM2.5",
@@ -415,7 +666,7 @@ def fetch_station_telemetry(
     dominant_pollutant = canonical_dom_map.get(raw_dom, raw_dom.upper())
     aqi_cat = _category_for_index(current_aqi)
 
-    # 4. Check staleness against 60-minute threshold
+    # Check staleness against 120-minute threshold
     data_ts_str = result["data_timestamp"]
     is_stale = False
     try:
@@ -426,31 +677,28 @@ def fetch_station_telemetry(
         if age_seconds > STALENESS_THRESHOLD_SECONDS:
             is_stale = True
     except Exception:
-        is_stale = False
-
-    is_sim = result.get("is_simulated", False)
-    coords = [float(station_cfg["lon"]), float(station_cfg["lat"])]
+        pass
 
     telemetry = StationTelemetry(
         station_id=station_cfg.get("cpcb_station_id", f"site_{station_name.lower()}"),
         name=station_name,
         network=station_cfg.get("network", "CPCB_CAAQMS"),
-        city=city_name,
-        state=city_cfg.get("city", {}).get("state", ""),
-        coordinates=coords,
-        elevation_m=int(station_cfg.get("elevation_m", 500)),
-        current_aqi=round(current_aqi, 1),
+        city=city_cfg.get("city", {}).get("name", "Unknown"),
+        state=city_cfg.get("city", {}).get("state", "Unknown"),
+        coordinates=[float(station_cfg["lon"]), float(station_cfg["lat"])],
+        elevation_m=int(station_cfg.get("elevation_m", 0)),
+        current_aqi=current_aqi,
         aqi_category=aqi_cat,
         dominant_pollutant=dominant_pollutant,
         pollutants=pollutants,
         data_source=result["data_source"],
-        data_timestamp=data_ts_str,
+        data_timestamp=result["data_timestamp"],
         last_polled_at=_format_iso_ist(now_ist),
         is_stale=is_stale,
-        is_simulated=is_sim,
+        is_simulated=bool(result.get("is_simulated", False)),
     )
 
-    # Cache result
+    # Cache for 30 seconds
     _TELEMETRY_CACHE[cache_key] = (telemetry, now_time)
     return telemetry
 
@@ -463,7 +711,7 @@ def fetch_city_stations_telemetry(
     force_tier_fail_until: Optional[int] = None,
 ) -> Optional[list[dict[str, Any]]]:
     """Fetch live telemetry for all verified physical stations in a city concurrently.
-    
+
     Returns a list of dicts conforming to the Screen 2 Station Pins contract.
     Persists readings to database if an active session is provided.
     """

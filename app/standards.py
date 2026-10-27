@@ -244,3 +244,118 @@ def compute_aqi(concentrations: dict[str, float]) -> AqiResult:
 def aqi_category(aqi: int) -> str:
     """Public helper: category label for an integer AQI."""
     return _category_for_index(aqi)
+
+
+# --------------------------------------------------------------------------- #
+# US EPA AQI Inverse Mapping (US AQI -> Concentration -> Indian CPCB NAQI)
+# --------------------------------------------------------------------------- #
+_US_EPA_BANDS: dict[str, tuple[AqiBand, ...]] = {
+    "pm25": (
+        AqiBand(0, 50, 0.0, 12.0),
+        AqiBand(51, 100, 12.1, 35.4),
+        AqiBand(101, 150, 35.5, 55.4),
+        AqiBand(151, 200, 55.5, 150.4),
+        AqiBand(201, 300, 150.5, 250.4),
+        AqiBand(301, 400, 250.5, 350.4),
+        AqiBand(401, 500, 350.5, 500.4),
+    ),
+    "pm10": (
+        AqiBand(0, 50, 0.0, 54.0),
+        AqiBand(51, 100, 55.0, 154.0),
+        AqiBand(101, 150, 155.0, 254.0),
+        AqiBand(151, 200, 255.0, 354.0),
+        AqiBand(201, 300, 355.0, 424.0),
+        AqiBand(301, 400, 425.0, 504.0),
+        AqiBand(401, 500, 505.0, 604.0),
+    ),
+    "no2": (
+        AqiBand(0, 50, 0.0, 100.0),
+        AqiBand(51, 100, 101.0, 188.0),
+        AqiBand(101, 150, 189.0, 677.0),
+        AqiBand(151, 200, 678.0, 1220.0),
+        AqiBand(201, 300, 1221.0, 2349.0),
+        AqiBand(301, 500, 2350.0, 3850.0),
+    ),
+    "so2": (
+        AqiBand(0, 50, 0.0, 92.0),
+        AqiBand(51, 100, 93.0, 197.0),
+        AqiBand(101, 150, 198.0, 485.0),
+        AqiBand(151, 200, 486.0, 796.0),
+        AqiBand(201, 300, 797.0, 1582.0),
+        AqiBand(301, 500, 1583.0, 2630.0),
+    ),
+    "co": (  # mg/m³
+        AqiBand(0, 50, 0.0, 5.0),
+        AqiBand(51, 100, 5.1, 10.8),
+        AqiBand(101, 150, 10.9, 14.3),
+        AqiBand(151, 200, 14.4, 17.7),
+        AqiBand(201, 300, 17.8, 35.0),
+        AqiBand(301, 500, 35.1, 58.0),
+    ),
+    "o3": (  # µg/m³
+        AqiBand(0, 50, 0.0, 108.0),
+        AqiBand(51, 100, 109.0, 140.0),
+        AqiBand(101, 150, 141.0, 170.0),
+        AqiBand(151, 200, 171.0, 210.0),
+        AqiBand(201, 300, 211.0, 400.0),
+        AqiBand(301, 500, 401.0, 600.0),
+    ),
+}
+_US_EPA_BANDS["pm2.5"] = _US_EPA_BANDS["pm25"]
+
+
+def us_aqi_to_concentration(pollutant: str, aqi: float) -> Optional[float]:
+    """Inverse US EPA AQI mapping: convert US EPA AQI to mass concentration.
+
+    Concentration is returned in canonical units (mg/m³ for CO, µg/m³ for others).
+    """
+    p = pollutant.lower().replace(".", "").replace("-", "")
+    if p not in _US_EPA_BANDS:
+        return None
+    bands = _US_EPA_BANDS[p]
+    aqi_f = float(max(aqi, 0.0))
+
+    for band in bands:
+        if band.i_lo <= aqi_f <= band.i_hi:
+            span_i = band.i_hi - band.i_lo or 1.0
+            return round((band.c_hi - band.c_lo) / span_i * (aqi_f - band.i_lo) + band.c_lo, 2)
+
+    last = bands[-1]
+    if aqi_f > last.i_hi:
+        span_i = last.i_hi - last.i_lo or 1.0
+        return round((last.c_hi - last.c_lo) / span_i * (aqi_f - last.i_lo) + last.c_lo, 2)
+
+    return round(bands[0].c_lo, 2)
+
+
+def us_aqi_to_cpcb_aqi(pollutant: str, aqi: float) -> Optional[int]:
+    """Convert a US EPA AQI for a given pollutant directly to Indian CPCB NAQI."""
+    conc = us_aqi_to_concentration(pollutant, aqi)
+    if conc is None:
+        return None
+    si = sub_index(pollutant, conc)
+    return int(si) if si is not None else None
+
+
+def cpcb_sub_index_to_concentration(pollutant: str, si: float) -> Optional[float]:
+    """Inverse Indian CPCB NAQI mapping: convert a CPCB sub-index into mass concentration.
+
+    Concentration is returned in canonical units (mg/m³ for CO, µg/m³ for others).
+    """
+    p = pollutant.lower().replace(".", "").replace("-", "")
+    if p not in _AQI_BANDS:
+        return None
+    bands = _AQI_BANDS[p]
+    si_f = float(max(si, 0.0))
+
+    for band in bands:
+        if band.i_lo <= si_f <= band.i_hi:
+            span_i = band.i_hi - band.i_lo or 1.0
+            return round((band.c_hi - band.c_lo) / span_i * (si_f - band.i_lo) + band.c_lo, 2)
+
+    last = bands[-1]
+    if si_f > last.i_hi:
+        span_i = last.i_hi - last.i_lo or 1.0
+        return round((last.c_hi - last.c_lo) / span_i * (si_f - last.i_lo) + last.c_lo, 2)
+
+    return round(bands[0].c_lo, 2)

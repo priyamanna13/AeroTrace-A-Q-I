@@ -63,6 +63,10 @@ class TemplateFallbackAIService(BaseAIService):
             return f"SIMULATED DATA — live source unreachable. Fallback observation dated {ts}."
         if "COPERNICUS" in src_upper or "CAMS" in src_upper or "OPENMETEO" in src_upper or prov == InformationProvenance.MODEL_ESTIMATE:
             return f"Copernicus CAMS atmospheric model estimate via {src} (Not direct physical sensor). Model cycle: {ts}."
+        if "ENSEMBLE" in src_upper:
+            return f"Multi-source verified consensus feed via {src} (Observed: {ts})."
+        if "OPENWEATHER" in src_upper or "OWM" in src_upper:
+            return f"OpenWeatherMap air quality network feed via {src} (Observed: {ts})."
         if "WAQI" in src_upper:
             return f"WAQI global air quality network feed via {src} (Observed: {ts})."
         if prov == InformationProvenance.FORECAST or "FORECAST" in src_upper:

@@ -294,6 +294,11 @@ def _get_city_stations_from_db(city_name: str, session: Any = None) -> Optional[
             })
 
         if len(results) >= len(cfg.get("stations", [])):
+            # If any station reading is stale (> 2 hours old), do not serve stale DB data.
+            # Returning None causes get_city_verified_stations to trigger live ensemble refresh.
+            if any(r["is_stale"] for r in results):
+                log.info("DB station readings for %s are stale (>2h old); triggering live ensemble refresh.", city_name)
+                return None
             return results
         return None
     except Exception as exc:

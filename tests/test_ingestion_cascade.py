@@ -64,11 +64,14 @@ class TestIngestionCascade:
         assert telemetry.dominant_pollutant in {"PM2.5", "PM10", "NO2", "SO2", "CO", "O3"}
         assert "pm25" in telemetry.pollutants
         assert "pm10" in telemetry.pollutants
-        assert telemetry.data_source in {
-            "CPCB_CAAQMS",
-            "Open-Meteo Air Quality (Copernicus CAMS)",
-            "WAQI (World Air Quality Index)",
-        }
+        assert (
+            telemetry.data_source in {
+                "CPCB_CAAQMS",
+                "Open-Meteo Air Quality (Copernicus CAMS)",
+                "WAQI (World Air Quality Index)",
+            }
+            or telemetry.data_source.startswith("Ensemble")
+        )
         assert telemetry.is_simulated is False
         assert "+05:30" in telemetry.data_timestamp
         assert "+05:30" in telemetry.last_polled_at

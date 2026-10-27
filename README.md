@@ -174,16 +174,19 @@ AeroTrace pairs rigorous deterministic physics engines with **Google Gemini** fo
 
 ---
 
-## 🔄 4-Tier Ingestion Cascade & Fallback Tiers
+## 🔄 4-Tier Ingestion Cascade & Indian Standards Normalization
 
-AeroTrace guarantees 100% operational uptime through a 4-tier ingestion failover cascade:
+AeroTrace guarantees 100% operational uptime and statutory accuracy through an intelligent 4-tier ingestion cascade fully normalized to **Indian CPCB National Air Quality Index (NAQI)** standards:
 
 | Tier | Provider / Protocol | Purpose | Fallback Condition |
 | :---: | :--- | :--- | :--- |
-| **Tier 1** | **CPCB CAAQMS Real-Time Portal** | Primary physical sensor telemetry from monitoring stations across India. | Rate-limit, connection timeout, or portal downtime. |
-| **Tier 2** | **Open-Meteo Air Quality (Copernicus CAMS)** | Satellite-calibrated atmospheric reanalysis data for primary criteria pollutants. | Unreachable network or missing pollutant species. |
-| **Tier 3** | **WAQI (World Air Quality Index)** | Global sensor aggregation network feed. | Missing station mapping or token limits. |
-| **Tier 4** | **Physical Diurnal Baseline Simulation** | Deterministic diurnal pollutant curves calibrated to the historical baseline of that specific station. | Complete external network outage (explicitly tagged `is_simulated: true`). |
+| **Tier 1** | **Official CPCB CAAQMS Real-Time Feed** | Direct live ground telemetry from official CPCB/SPCB physical monitoring stations across India (`airquality.cpcb.gov.in/caaqms/rss_feed`), cached with a 15-minute thread-safe in-memory poller. | Upstream portal timeout, maintenance window, or unmonitored station. |
+| **Tier 2** | **Open-Meteo Air Quality (Copernicus CAMS)** | Satellite-calibrated atmospheric dispersion and chemical reanalysis data for primary criteria pollutants. | Network unreachability or missing criteria pollutant species. |
+| **Tier 3** | **OpenWeatherMap & WAQI Multi-Network** | Secondary global weather grid (OWM) and international sensor networks (WAQI) normalized using **US EPA $\to$ Indian CPCB NAQI inverse conversion formulas** and 50km Haversine geofence guarding. | Missing station mapping or API key exhaustion. |
+| **Tier 4** | **Physical Diurnal Baseline Simulation** | Deterministic diurnal pollutant curves calibrated to the historical baseline of that specific station. | Complete external network outage (strictly tagged `is_simulated: true`). |
+
+> [!IMPORTANT]
+> **Strict Indian NAQI Calibration:** Global providers (such as WAQI) report indices on the US EPA AQI scale. AeroTrace passes all foreign telemetry through mathematical inverse piecewise linear breakpoint solvers ([`app/standards.py`](file:///d:/Projects/AeroTrace%20A(Q)I/app/standards.py)) to convert US EPA AQI back into mass concentrations ($\mu\text{g/m}^3$, $\text{mg/m}^3$) and recompute authentic Indian CPCB NAQI values before persistence and visualization.
 
 > [!TIP]
 > **Meteorology Feed:** Live 10m wind speed, wind bearing, air temperature, relative humidity, atmospheric pressure, and planetary boundary layer mixing height are fetched directly from **Open-Meteo** (free, no API key required).
@@ -333,7 +336,7 @@ Adding a new metropolitan airshed requires zero code changes to the mathematical
 
 ### ⚠️ Current Limitations
 * **Single-Station Meteorology:** The upwind cone projection currently uses the wind vector from the monitoring station's immediate coordinates; complex micro-urban canyon flows are modeled via Pasquill dispersion broadening rather than full Computational Fluid Dynamics (CFD).
-* **Public CPCB Access:** Because the national CPCB CCR dashboard does not offer authenticated public REST streams for all stations, our 4-tier cascade utilizes OpenData tokens and satellite reanalysis fallback tiers.
+* **Upstream Ingestion Latency:** The official all-India continuous ambient air quality feed (`airquality.cpcb.gov.in/caaqms/rss_feed`) updates on an hourly basis; between statutory broadcast cycles, AeroTrace maintains sub-minute freshness through an in-memory 15-minute poller cache and secondary Copernicus CAMS / OpenWeatherMap validation.
 
 ### 🗺️ Future Roadmap
 * **Crowdsourced Citizen Intake:** WhatsApp and web portal reporting with Gemini Vision photo verification for smouldering garbage piles and unshielded construction dust.
