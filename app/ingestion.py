@@ -129,7 +129,7 @@ def _normalize_str(s: str) -> str:
 
 
 # ── Provider 1: Official CPCB CAAQMS Feed (Government Ground Sensors) ────────
-def _get_cpcb_rss_stations(timeout: float = 8.0) -> list[dict[str, Any]]:
+def _get_cpcb_rss_stations(timeout: float = 25.0) -> list[dict[str, Any]]:
     """Fetch and parse all physical stations from official CPCB CAAQMS RSS feed with 15m in-memory cache."""
     global _CPCB_FEED_CACHE
     now = time.time()
@@ -212,7 +212,7 @@ def _get_cpcb_rss_stations(timeout: float = 8.0) -> list[dict[str, Any]]:
 def _fetch_tier1_cpcb(
     station_cfg: dict[str, Any],
     city_cfg: dict[str, Any],
-    timeout: float = 6.0,
+    timeout: float = 25.0,
 ) -> Optional[dict[str, Any]]:
     """Live ingestion directly from official CPCB CAAQMS national monitoring feed."""
     stations = _get_cpcb_rss_stations(timeout=timeout)
