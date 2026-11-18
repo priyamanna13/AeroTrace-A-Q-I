@@ -67,6 +67,45 @@ _CITY_BASELINES: dict[str, dict[str, float]] = {
     "chennai": {"pm25": 29.0, "pm10": 72.0, "no2": 26.0, "so2": 11.0, "co": 0.8, "o3": 39.0},
 }
 
+# Explicit aliases mapping configured physical stations to authentic CPCB CAAQMS feed identifiers
+STATION_CPCB_ALIASES: dict[str, list[str]] = {
+    # Pune
+    "shivajinagar": ["revenue colony-shivajinagar", "shivajinagar"],
+    "swargate": ["katraj dairy", "dhankawadi"],
+    "hadapsar": ["hadapsar"],
+    "kothrud": ["panchawati_pashan", "pashan", "kothrud"],
+    # Bengaluru
+    "saneguruvanahalli": ["sanegurava halli", "saneguruvanahalli"],
+    "btm layout": ["btm layout"],
+    "peenya": ["peenya"],
+    "city railway station": ["city railway station"],
+    # Kolkata
+    "victoria memorial": ["victoria", "victoria memorial"],
+    "rabindra bharati university": ["rabindra bharati"],
+    "ballygunge": ["ballygunge"],
+    "jadavpur": ["jadavpur"],
+    # Chennai
+    "manali": ["manali, chennai - cpcb", "manali village"],
+    "velachery": ["velachery res. area", "velachery"],
+    "alandur bus depot": ["arumbakkam", "alandur"],
+    "iit madras": ["perungudi", "iit madras"],
+    # Delhi
+    "ito": ["ito"],
+    "anand vihar": ["anand vihar"],
+    "punjabi bagh": ["punjabi bagh"],
+    "rk puram": ["r k puram", "rk puram"],
+    # Mumbai
+    "bandra": ["bandra kurla complex", "kherwadi_bandra"],
+    "colaba": ["colaba, mumbai - mpcb", "navy nagar-colaba"],
+    "worli": ["worli, mumbai - mpcb", "siddharth nagar-worli"],
+    "andheri": ["chakala-andheri", "andheri"],
+    # Hyderabad
+    "sanathnagar": ["sanathnagar"],
+    "zoo park": ["zoo park"],
+    "icrisat": ["icrisat patancheru"],
+    "central university": ["central university"],
+}
+
 
 @dataclass
 class StationTelemetry:
@@ -129,7 +168,7 @@ def _normalize_str(s: str) -> str:
 
 
 # ── Provider 1: Official CPCB CAAQMS Feed (Government Ground Sensors) ────────
-def _get_cpcb_rss_stations(timeout: float = 4.0) -> list[dict[str, Any]]:
+def _get_cpcb_rss_stations(timeout: float = 8.0) -> list[dict[str, Any]]:
     """Fetch and parse all physical stations from official CPCB CAAQMS RSS feed with 15m in-memory cache."""
     global _CPCB_FEED_CACHE
     now = time.time()
@@ -137,8 +176,8 @@ def _get_cpcb_rss_stations(timeout: float = 4.0) -> list[dict[str, Any]]:
         if _CPCB_FEED_CACHE["stations"] and (now - _CPCB_FEED_CACHE["last_polled"]) < CPCB_FEED_TTL_SECONDS:
             return _CPCB_FEED_CACHE["stations"]
 
-        # Fast backoff: if upstream feed failed recently (< 3 minutes), do not re-block batch requests
-        if not _CPCB_FEED_CACHE["stations"] and (now - _CPCB_FEED_CACHE["last_polled"]) < 180.0:
+        # Fast backoff: if upstream feed failed recently (< 45s), do not re-block batch requests
+        if not _CPCB_FEED_CACHE["stations"] and (now - _CPCB_FEED_CACHE["last_polled"]) < 45.0:
             return []
 
         ctx = ssl.create_default_context()
@@ -226,7 +265,7 @@ def _get_cpcb_rss_stations(timeout: float = 4.0) -> list[dict[str, Any]]:
 def _fetch_tier1_cpcb(
     station_cfg: dict[str, Any],
     city_cfg: dict[str, Any],
-    timeout: float = 4.0,
+    timeout: float = 8.0,
 ) -> Optional[dict[str, Any]]:
     """Live ingestion directly from official CPCB CAAQMS national monitoring feed."""
     stations = _get_cpcb_rss_stations(timeout=timeout)
@@ -239,31 +278,43 @@ def _fetch_tier1_cpcb(
     st_lon = float(station_cfg.get("lon", 0) or 0)
     norm = _normalize_str(st_name)
 
-    # 1. Match by station name within matching city
-    matched = None
-    for xs in stations:
-        city_match = (
+    # Filter CPCB stations in the target metropolitan city
+    city_cpcb = [
+        xs for xs in stations
+        if (
             xs["city"].lower() in c_name.lower()
             or c_name.lower() in xs["city"].lower()
             or (c_name.lower() == "bengaluru" and "bangalore" in xs["city"].lower())
         )
-        if city_match:
+    ]
+
+    matched = None
+
+    # 1. Match by explicit alias
+    aliases = STATION_CPCB_ALIASES.get(st_name.lower(), [st_name.lower()])
+    for alias in aliases:
+        norm_alias = _normalize_str(alias)
+        for xs in city_cpcb:
+            if norm_alias in xs["norm_name"]:
+                matched = xs
+                break
+        if matched:
+            break
+
+    # 2. Match by direct name substring
+    if not matched:
+        for xs in city_cpcb:
             if norm in xs["norm_name"] or xs["norm_name"] in norm:
                 matched = xs
                 break
 
-    # 2. Match by GPS proximity within 15 km in same city
+    # 3. Match by GPS proximity within 6.0 km in same city
     if not matched and st_lat and st_lon:
         best_d = 999.0
-        for xs in stations:
-            city_match = (
-                xs["city"].lower() in c_name.lower()
-                or c_name.lower() in xs["city"].lower()
-                or (c_name.lower() == "bengaluru" and "bangalore" in xs["city"].lower())
-            )
-            if city_match and xs["lat"] and xs["lon"]:
+        for xs in city_cpcb:
+            if xs["lat"] and xs["lon"]:
                 d = _haversine_km(st_lat, st_lon, xs["lat"], xs["lon"])
-                if d < best_d and d <= 15.0:
+                if d < best_d and d <= 6.0:
                     best_d = d
                     matched = xs
 
@@ -294,13 +345,28 @@ def _fetch_tier1_cpcb(
     except Exception:
         dt = datetime.now(IST)
 
-    # Staleness check: if station has not updated in > 2 hours, reject
+    # Staleness check: allow up to 24 hours for daily government feed updates
     now_ist = datetime.now(IST)
-    if (now_ist - dt).total_seconds() > STALENESS_THRESHOLD_SECONDS:
-        log.debug("CPCB station %s is stale (>2h old).", matched["name"])
+    if (now_ist - dt).total_seconds() > 86400.0:
+        log.debug("CPCB station %s is stale (>24h old).", matched["name"])
+        return None
+
+    # Extract official statutory CPCB AQI and dominant pollutant
+    official_aqi = matched.get("official_aqi")
+    official_pred = matched.get("official_pred")
+    if official_aqi is None or official_aqi <= 0:
+        res = compute_aqi(pollutants_conc)
+        official_aqi = res.total_aqi
+        if not official_pred:
+            official_pred = res.dominant_pollutant
+
+    if official_aqi is None or official_aqi <= 0:
+        # Station is not providing enough pollutant parameters to compute AQI -> cascade to Tier 2
         return None
 
     return {
+        "current_aqi": float(official_aqi),
+        "dominant_pollutant": official_pred or "PM2.5",
         "pollutants": pollutants_conc,
         "data_source": "CPCB_CAAQMS",
         "data_timestamp": _format_iso_ist(dt),
@@ -352,7 +418,7 @@ def _fetch_tier2_open_meteo(
             "no2": max(1.0, round(no2_raw * dispersion_var, 1)),
             "so2": max(0.5, round(so2_raw * dispersion_var, 1)),
             "co": max(0.1, round(co_raw * dispersion_var, 2)),
-            "o3": max(5.0, round(o3_raw * 0.15 * dispersion_var, 1)),
+            "o3": max(5.0, round(o3_raw * dispersion_var, 1)),
         }
 
         time_str = cur.get("time")
@@ -421,7 +487,7 @@ def _fetch_provider_owm(
             "no2": max(1.0, round(float(comps.get("no2", 0) or 0) * dispersion_var, 1)),
             "so2": max(0.5, round(float(comps.get("so2", 0) or 0) * dispersion_var, 1)),
             "co": max(0.1, round((float(comps.get("co", 0) or 0) / 1000.0) * dispersion_var, 2)),
-            "o3": max(5.0, round(float(comps.get("o3", 0) or 0) * 0.15 * dispersion_var, 1)),
+            "o3": max(5.0, round(float(comps.get("o3", 0) or 0) * dispersion_var, 1)),
         }
 
         return {
@@ -640,13 +706,8 @@ def fetch_station_telemetry(
             p1 = _fetch_tier1_cpcb(station_cfg, city_cfg)
 
         if p1 is not None:
-            # Physical CAAQMS ground sensor is actively operating!
-            # If WAQI is also available for this station (within 50km), ensemble the two ground monitors
-            p_waqi = _fetch_tier3_waqi(station_cfg, city_cfg) if fail_threshold < 3 else None
-            if p_waqi is not None:
-                result = _combine_providers([p1, p_waqi])
-            else:
-                result = p1
+            # Physical CAAQMS ground sensor is actively operating! Use official statutory ground truth directly
+            result = p1
         else:
             # CPCB CAAQMS offline or bypassed in cascade test -> Fall back to secondary networks
             fallback_providers = []
@@ -671,14 +732,19 @@ def fetch_station_telemetry(
     # Calculate final CPCB dominant pollutant and category
     pollutants = result["pollutants"]
     aqi_res = compute_aqi(pollutants)
-    if "current_aqi" in result:
-        current_aqi = result["current_aqi"]
+    if "current_aqi" in result and result["current_aqi"] is not None:
+        current_aqi = float(result["current_aqi"])
     else:
         current_aqi = float(aqi_res.total_aqi) if aqi_res.total_aqi is not None else 100.0
 
-    raw_dom = (aqi_res.dominant_pollutant or "pm25").lower()
+    if "dominant_pollutant" in result and result["dominant_pollutant"]:
+        raw_dom = str(result["dominant_pollutant"]).lower()
+    else:
+        raw_dom = (aqi_res.dominant_pollutant or "pm25").lower()
+
     canonical_dom_map = {
         "pm25": "PM2.5",
+        "pm2.5": "PM2.5",
         "pm10": "PM10",
         "no2": "NO2",
         "so2": "SO2",

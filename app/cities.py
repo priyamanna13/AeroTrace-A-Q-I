@@ -345,8 +345,15 @@ def get_city_overview(city_name: str, session: Any = None) -> Optional[dict[str,
     avg_pm25 = round(sum(s["pollutants"]["pm25"] for s in stations) / len(stations), 1)
     avg_pm10 = round(sum(s["pollutants"]["pm10"] for s in stations) / len(stations), 1)
 
-    any_simulated = any(s["is_simulated"] for s in stations)
-    data_source = "SIMULATED — live source unreachable" if any_simulated else stations[0]["data_source"]
+    all_simulated = all(s.get("is_simulated", False) for s in stations)
+    cpcb_station = next((s for s in stations if "CPCB" in s.get("data_source", "")), None)
+    if cpcb_station:
+        data_source = cpcb_station["data_source"]
+    elif all_simulated:
+        data_source = "SIMULATED — live source unreachable"
+    else:
+        data_source = stations[0]["data_source"]
+
     latest_timestamp = max(s["data_timestamp"] for s in stations)
     is_stale = any(s["is_stale"] for s in stations)
 
@@ -357,7 +364,7 @@ def get_city_overview(city_name: str, session: Any = None) -> Optional[dict[str,
         "pm10": avg_pm10,
         "no2": round(sum(s["pollutants"]["no2"] for s in stations) / len(stations), 1),
         "so2": round(sum(s["pollutants"]["so2"] for s in stations) / len(stations), 1),
-        "co": round(sum(s["pollutants"]["co"] for s in stations) / len(stations), 1),
+        "co": round(sum(s["pollutants"]["co"] for s in stations) / len(stations), 2),
         "o3": round(sum(s["pollutants"]["o3"] for s in stations) / len(stations), 1),
     }
     try:
@@ -365,6 +372,22 @@ def get_city_overview(city_name: str, session: Any = None) -> Optional[dict[str,
         dom_key = aqi_res.dominant_pollutant or "pm25"
     except Exception:
         dom_key = "pm25"
+
+    weather_snapshot = None
+    try:
+        from .weather_sources.base import get_weather_source
+        w_src = get_weather_source("live")
+        raw_w = w_src.fetch_snapshot(stations[0]["name"])
+        if raw_w:
+            weather_snapshot = {
+                "temperature_c": round(raw_w.temperature_c, 1),
+                "humidity_pct": int(raw_w.relative_humidity_pct),
+                "wind_speed_kmh": round(raw_w.wind_speed_kmh, 1),
+                "wind_direction_deg": int(raw_w.wind_direction_deg),
+                "wind_cardinal": raw_w.wind_direction_cardinal,
+            }
+    except Exception:
+        pass
 
     return {
         "city": cfg["city"]["name"],
@@ -376,11 +399,13 @@ def get_city_overview(city_name: str, session: Any = None) -> Optional[dict[str,
         "dominant_pollutant": (dom_key or "PM2.5").upper(),
         "pm25": avg_pm25,
         "pm10": avg_pm10,
+        "pollutants": pollutant_totals,
+        "weather": weather_snapshot,
         "data_source": data_source,
         "data_timestamp": latest_timestamp,
         "last_polled_at": now_ist.isoformat(),
         "is_stale": is_stale,
-        "is_simulated": any_simulated,
+        "is_simulated": all_simulated,
     }
 
 
